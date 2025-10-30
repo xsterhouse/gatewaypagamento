@@ -148,6 +148,13 @@ export function Login() {
                 src="/logo-dimpay.png" 
                 alt="DiMPay" 
                 className="h-12 w-auto"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  const fallback = document.createElement('div')
+                  fallback.className = 'text-2xl font-bold text-primary'
+                  fallback.textContent = 'DiMPay'
+                  e.currentTarget.parentElement?.appendChild(fallback)
+                }}
               />
             </div>
             <p className="text-gray-400 text-sm">Sistema de Pagamentos Inteligente</p>
