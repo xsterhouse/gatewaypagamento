@@ -86,7 +86,8 @@ export function Sidebar() {
         .single()
 
       // Se estiver impersonando, considerar como não-admin para mostrar menu de cliente
-      if (data?.role === 'admin' && !isImpersonating) {
+      // Gerentes também têm acesso ao menu admin
+      if ((data?.role === 'admin' || data?.role === 'manager') && !isImpersonating) {
         setIsAdmin(true)
       } else {
         setIsAdmin(false)

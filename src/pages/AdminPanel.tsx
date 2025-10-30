@@ -54,15 +54,21 @@ export function AdminPanel() {
 
   const loadUsers = async () => {
     try {
+      console.log('📋 Carregando apenas CLIENTES (excluindo admin e manager)...')
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .neq('role', 'admin')
+        .neq('role', 'manager')
         .order('created_at', { ascending: false })
 
       if (error) throw error
+      
+      console.log('✅ Clientes carregados:', data?.length || 0)
       setUsers(data || [])
     } catch (error) {
+      console.error('❌ Erro ao carregar clientes:', error)
       toast.error('Erro ao carregar usuários')
     } finally {
       setLoading(false)

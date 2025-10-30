@@ -30,7 +30,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         console.log('✅ Sessão encontrada:', session.user.email)
         setIsAuthenticated(true)
 
-        // Verificar se é admin
+        // Verificar se é admin ou manager
         const { data: userData } = await supabase
           .from('users')
           .select('role')
@@ -40,19 +40,22 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         if (!mounted) return
 
         const userIsAdmin = userData?.role === 'admin'
-        console.log('👤 Tipo de usuário:', userIsAdmin ? 'Admin' : 'Cliente')
+        const userIsManager = userData?.role === 'manager'
+        const isAdminOrManager = userIsAdmin || userIsManager
+        
+        console.log('👤 Tipo de usuário:', userIsAdmin ? 'Admin' : userIsManager ? 'Gerente' : 'Cliente')
 
         // Verificar se há impersonation ativa
         const impersonationData = localStorage.getItem('impersonation')
         const isImpersonating = !!impersonationData
 
-        // Rotas de cliente que admin não deve acessar sem impersonation
+        // Rotas de cliente que admin/manager não devem acessar sem impersonation
         const clientRoutes = ['/', '/gerente', '/financeiro', '/relatorios', '/premiacoes', '/checkout', '/wallets', '/exchange', '/deposits', '/extrato']
         const isClientRoute = clientRoutes.includes(location.pathname)
 
-        // Se é admin, não está impersonando e está tentando acessar rota de cliente
-        if (userIsAdmin && !isImpersonating && isClientRoute) {
-          console.log('🔀 Admin acessando rota cliente, redirecionando...')
+        // Se é admin/manager, não está impersonando e está tentando acessar rota de cliente
+        if (isAdminOrManager && !isImpersonating && isClientRoute) {
+          console.log('🔀 Admin/Gerente acessando rota cliente, redirecionando...')
           setShouldRedirect(true)
         }
 
