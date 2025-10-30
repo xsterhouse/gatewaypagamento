@@ -184,6 +184,7 @@ export function ConfiguracoesAvancadas() {
         email: newManager.email,
         password: newManager.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/login`,
           data: {
             name: newManager.name,
             role: 'manager',
@@ -200,6 +201,9 @@ export function ConfiguracoesAvancadas() {
       if (!authData.user) {
         throw new Error('Usuário não foi criado no Auth')
       }
+
+      console.log('✅ Usuário criado no Auth:', authData.user.id)
+      console.log('📧 Email confirmado:', authData.user.email_confirmed_at ? 'Sim' : 'Não')
 
       // Upload da foto
       let photoUrl = null
@@ -249,9 +253,24 @@ export function ConfiguracoesAvancadas() {
         throw new Error(`Erro ao salvar no banco: ${profileError.message} - ${profileError.details || ''} - ${profileError.hint || ''}`)
       }
 
-      console.log('Gerente inserido com sucesso:', insertedData)
+      console.log('✅ Gerente inserido com sucesso:', insertedData)
 
-      toast.success('Gerente criado com sucesso!')
+      // Verificar se email foi confirmado
+      if (!authData.user.email_confirmed_at) {
+        toast.warning(
+          `⚠️ Gerente criado! ${newManager.name} precisará confirmar o email antes de fazer login.`,
+          { 
+            duration: 7000,
+            description: 'Verifique a caixa de entrada ou desabilite a confirmação de email no Supabase.'
+          }
+        )
+      } else {
+        toast.success(
+          `✅ Gerente criado! ${newManager.name} já pode fazer login com a senha definida.`,
+          { duration: 5000 }
+        )
+      }
+
       setModalOpen(false)
       setNewManager({ name: '', email: '', cpf: '', whatsapp: '', password: '', max_clients: 50 })
       setPhotoFile(null)
