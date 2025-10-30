@@ -96,11 +96,6 @@ export function useCryptoPrices(options: UseCryptoPricesOptions = {}) {
     return prices.find(p => p.cryptocurrency_symbol === symbol)
   }
 
-  // Obter preço em BRL
-  const getPriceBRL = (symbol: string): number => {
-    const price = getPrice(symbol)
-    return price?.price_brl || 0
-  }
 
   // Verificar se está desatualizado (mais de X minutos)
   const isStale = (minutes: number = 10): boolean => {
@@ -138,7 +133,6 @@ export function useCryptoPrices(options: UseCryptoPricesOptions = {}) {
     error,
     lastUpdate,
     getPrice,
-    getPriceBRL,
     updateFromAPI,
     refresh: () => loadFromDatabase(),
     isStale: isStale()

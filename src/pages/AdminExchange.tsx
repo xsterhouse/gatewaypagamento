@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
-import { TrendingUp, TrendingDown, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, Clock, CheckCircle } from 'lucide-react'
 
 interface OrderWithUser {
   id: string
@@ -118,7 +118,6 @@ export function AdminExchange() {
     const { label, variant } = statusMap[status] || { label: status, variant: 'outline' }
     return <Badge variant={variant}>{label}</Badge>
   }
-
 
   const filteredOrders = filter === 'all' 
     ? orders 

@@ -20,6 +20,7 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
   const [pixCode, setPixCode] = useState('')
   const [showQRCode, setShowQRCode] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [, setDepositId] = useState<string | null>(null)
 
   const quickValues = [
     { label: '+R$ 10,00', value: 10 },
