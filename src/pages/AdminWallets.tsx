@@ -10,11 +10,13 @@ interface WalletWithUser {
   user_id: string
   currency_code: string
   currency_type: string
+  wallet_name: string
   balance: number
   available_balance: number
   blocked_balance: number
   user_name: string
   user_email: string
+  created_at: string
 }
 
 export function AdminWallets() {
@@ -212,6 +214,7 @@ export function AdminWallets() {
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-3">Usuário</th>
+                  <th className="text-left p-3">Nome da Carteira</th>
                   <th className="text-left p-3">Moeda</th>
                   <th className="text-right p-3">Saldo Total</th>
                   <th className="text-right p-3">Disponível</th>
@@ -222,17 +225,23 @@ export function AdminWallets() {
               <tbody>
                 {filteredWallets.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-500">
+                    <td colSpan={7} className="text-center py-8 text-gray-500">
                       Nenhuma carteira encontrada
                     </td>
                   </tr>
                 ) : (
                   filteredWallets.map((wallet) => (
-                    <tr key={wallet.id} className="border-b hover:bg-gray-50">
+                    <tr key={wallet.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="p-3">
                         <div>
                           <p className="font-semibold">{wallet.user_name}</p>
                           <p className="text-sm text-gray-500">{wallet.user_email}</p>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="h-4 w-4 text-primary" />
+                          <span className="font-medium">{wallet.wallet_name || 'Sem nome'}</span>
                         </div>
                       </td>
                       <td className="p-3">
