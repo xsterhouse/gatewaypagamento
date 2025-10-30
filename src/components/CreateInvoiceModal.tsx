@@ -59,23 +59,40 @@ export function CreateInvoiceModal({ isOpen, onClose, onSuccess }: CreateInvoice
       // Converter data usando função utilitária que garante o dia correto
       const dueDateISO = convertDateToISO(formData.due_date)
       
-      const { error } = await supabase
+      console.log('🔍 DEBUG - Criar Fatura:')
+      console.log('  Input do usuário:', formData.due_date)
+      console.log('  Após conversão:', dueDateISO)
+      console.log('  Tipo:', typeof dueDateISO)
+      
+      const payload = {
+        user_id: formData.user_id,
+        amount: parseFloat(formData.amount),
+        due_date: dueDateISO,
+        description: formData.description,
+        status: 'pending'
+      }
+      
+      console.log('  Payload completo:', JSON.stringify(payload, null, 2))
+      
+      const { data, error } = await supabase
         .from('invoices')
-        .insert({
-          user_id: formData.user_id,
-          amount: parseFloat(formData.amount),
-          due_date: dueDateISO,
-          description: formData.description,
-          status: 'pending'
-        })
+        .insert(payload)
+        .select()
 
       if (error) throw error
+
+      console.log('✅ Fatura salva:', data)
+      
+      // Verificar o que foi realmente salvo
+      if (data && data.length > 0) {
+        console.log('  Data salva no banco:', data[0].due_date)
+      }
 
       toast.success('Fatura criada com sucesso!')
       setFormData({ user_id: '', amount: '', due_date: '', description: '' })
       onSuccess()
     } catch (error: any) {
-      console.error('Erro ao criar fatura:', error)
+      console.error('❌ Erro ao criar fatura:', error)
       toast.error(error.message || 'Erro ao criar fatura')
     } finally {
       setLoading(false)
