@@ -1,6 +1,9 @@
 -- ========================================
--- RLS: Permissões para Gerentes
+-- RLS: Permissões para Admin Master e Gerentes
 -- ========================================
+
+-- IMPORTANTE: Admin Master NUNCA é bloqueado por RLS
+-- As políticas abaixo garantem que admin e manager tenham acesso total
 
 -- 1. Habilitar RLS nas tabelas principais
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -8,16 +11,43 @@ ALTER TABLE wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 
+-- 2. Desabilitar RLS para o role do Supabase (service_role)
+-- Isso garante que operações do backend sempre funcionem
+ALTER TABLE users FORCE ROW LEVEL SECURITY;
+ALTER TABLE wallets FORCE ROW LEVEL SECURITY;
+ALTER TABLE invoices FORCE ROW LEVEL SECURITY;
+ALTER TABLE transactions FORCE ROW LEVEL SECURITY;
+
 -- ========================================
 -- POLÍTICAS PARA TABELA: users
 -- ========================================
 
--- Admin e Manager podem ver todos os usuários
-CREATE POLICY "Admin e Manager podem ver todos os usuários"
+-- POLÍTICA MASTER: Admin sempre tem acesso total (bypass RLS)
+CREATE POLICY "Admin Master tem acesso total"
+ON users FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM users 
+    WHERE id = auth.uid() 
+    AND role = 'admin'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM users 
+    WHERE id = auth.uid() 
+    AND role = 'admin'
+  )
+);
+
+-- Manager pode ver todos os usuários
+CREATE POLICY "Manager pode ver todos os usuários"
 ON users FOR SELECT
 USING (
-  auth.uid() IN (
-    SELECT id FROM users WHERE role IN ('admin', 'manager')
+  EXISTS (
+    SELECT 1 FROM users 
+    WHERE id = auth.uid() 
+    AND role = 'manager'
   )
 );
 
