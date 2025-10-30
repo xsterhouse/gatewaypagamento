@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Wallet, TrendingUp, TrendingDown, Calendar, RefreshCw, Download, Filter } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, Calendar, RefreshCw, Download, Filter, Eye, CreditCard, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -106,6 +106,24 @@ export function Financeiro() {
     setRefreshing(true)
     await loadInvoices()
     toast.success('Faturas atualizadas!')
+  }
+
+  const handlePayInvoice = (invoice: Invoice) => {
+    // Abrir modal de detalhes com foco em pagamento
+    setSelectedInvoice(invoice)
+    setIsDetailsModalOpen(true)
+    toast.info('Selecione a forma de pagamento')
+  }
+
+  const handleDownloadInvoice = async (invoice: Invoice) => {
+    try {
+      toast.info('Gerando PDF da fatura...')
+      await exportInvoicesToPDF([invoice])
+      toast.success('PDF baixado com sucesso!')
+    } catch (error) {
+      console.error('Erro ao baixar PDF:', error)
+      toast.error('Erro ao gerar PDF')
+    }
   }
 
   const handleExportPDF = async () => {
@@ -289,12 +307,13 @@ export function Financeiro() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Vencimento</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Criado em</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredInvoices.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={6} className="text-center py-8 text-muted-foreground">
                       {invoices.length === 0 ? 'Nenhuma fatura encontrada' : 'Nenhuma fatura com este filtro'}
                     </td>
                   </tr>
@@ -302,8 +321,7 @@ export function Financeiro() {
                   filteredInvoices.map((invoice) => (
                     <tr 
                       key={invoice.id} 
-                      onClick={() => handleInvoiceClick(invoice)}
-                      className="border-b border-border hover:bg-accent/50 transition-all hover:shadow-md cursor-pointer"
+                      className="border-b border-border hover:bg-accent/50 transition-all"
                     >
                       <td className="py-3 px-4 text-sm text-muted-foreground">
                         {invoice.invoice_number || invoice.id.slice(0, 8)}
@@ -312,6 +330,44 @@ export function Financeiro() {
                       <td className="py-3 px-4 text-sm text-muted-foreground">{formatDate(invoice.due_date)}</td>
                       <td className="py-3 px-4">{getStatusBadge(invoice.status)}</td>
                       <td className="py-3 px-4 text-sm text-muted-foreground">{formatDate(invoice.created_at)}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* Botão Visualizar */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleInvoiceClick(invoice)}
+                            className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-500"
+                            title="Visualizar detalhes"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+
+                          {/* Botão Pagar (apenas se pendente) */}
+                          {invoice.status === 'pending' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePayInvoice(invoice)}
+                              className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-500"
+                              title="Pagar fatura"
+                            >
+                              <CreditCard className="h-4 w-4" />
+                            </Button>
+                          )}
+
+                          {/* Botão Baixar PDF */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadInvoice(invoice)}
+                            className="h-8 w-8 p-0 hover:bg-purple-500/10 hover:text-purple-500"
+                            title="Baixar PDF"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
