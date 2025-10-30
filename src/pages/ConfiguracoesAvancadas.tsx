@@ -160,7 +160,14 @@ export function ConfiguracoesAvancadas() {
         password: newManager.password
       })
 
-      if (authError) throw authError
+      if (authError) {
+        console.error('Erro no Auth:', authError)
+        throw new Error(`Erro ao criar usuário: ${authError.message}`)
+      }
+
+      if (!authData.user) {
+        throw new Error('Usuário não foi criado no Auth')
+      }
 
       // Upload da foto
       let photoUrl = null
@@ -172,7 +179,7 @@ export function ConfiguracoesAvancadas() {
       const { error: profileError } = await supabase
         .from('users')
         .insert({
-          id: authData.user?.id,
+          id: authData.user.id,
           name: newManager.name,
           email: newManager.email,
           cpf: newManager.cpf,
@@ -181,10 +188,14 @@ export function ConfiguracoesAvancadas() {
           role: 'manager',
           max_clients: newManager.max_clients,
           status: 'active',
-          kyc_status: 'approved'
+          kyc_status: 'approved',
+          current_clients: 0
         })
 
-      if (profileError) throw profileError
+      if (profileError) {
+        console.error('Erro no banco de dados:', profileError)
+        throw new Error(`Database error saving new user: ${profileError.message}`)
+      }
 
       toast.success('Gerente criado com sucesso!')
       setModalOpen(false)
@@ -193,6 +204,7 @@ export function ConfiguracoesAvancadas() {
       setPhotoPreview('')
       loadManagers()
     } catch (error: any) {
+      console.error('Erro completo:', error)
       toast.error(error.message || 'Erro ao criar gerente')
     }
   }
