@@ -3,30 +3,36 @@
  */
 
 /**
- * Converte uma data do input (YYYY-MM-DD) para ISO string
+ * Converte uma data do input (YYYY-MM-DD) para o formato correto de salvamento
  * mantendo o dia correto independente do timezone
  * 
+ * IMPORTANTE: Esta função garante que a data escolhida pelo usuário
+ * seja EXATAMENTE a data salva no banco, sem mudança de dia.
+ * 
  * @param dateString - Data no formato YYYY-MM-DD (do input type="date")
- * @returns ISO string da data às 12:00 UTC
+ * @returns String da data no formato YYYY-MM-DD (sem hora, sem timezone)
+ * 
+ * @example
+ * // Usuário escolhe 20/11/2025 no input
+ * convertDateToISO("2025-11-20") // Retorna: "2025-11-20"
+ * // Salva no banco: "2025-11-20"
+ * // Exibe no CRUD: "20/11/2025" ✅
  */
 export function convertDateToISO(dateString: string): string {
   if (!dateString) {
     throw new Error('Data inválida')
   }
 
-  // Dividir a data em partes
-  const [year, month, day] = dateString.split('-').map(Number)
-  
-  // Validar
-  if (!year || !month || !day) {
+  // Validar formato YYYY-MM-DD
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+  if (!dateRegex.test(dateString)) {
     throw new Error('Formato de data inválido. Use YYYY-MM-DD')
   }
 
-  // Criar a data diretamente em UTC às 12:00
-  // Isso garante que o dia não mude independente do timezone
-  const isoString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T12:00:00.000Z`
-  
-  return isoString
+  // Retornar a data exatamente como está (YYYY-MM-DD)
+  // NÃO adicionar horário, NÃO converter para Date object
+  // Isso evita QUALQUER problema de timezone
+  return dateString
 }
 
 /**
