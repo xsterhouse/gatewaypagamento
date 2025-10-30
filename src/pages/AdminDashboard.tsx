@@ -69,6 +69,18 @@ export function AdminDashboard() {
     console.log('🔵 AdminDashboard montado')
     console.log('authLoading:', authLoading, 'user:', !!user)
     
+    // Timeout de segurança para evitar tela preta infinita
+    const safetyTimeout = setTimeout(() => {
+      if (loading) {
+        console.log('⚠️ Timeout de segurança atingido, forçando carregamento')
+        if (user) {
+          loadDashboardData()
+        } else {
+          setLoading(false)
+        }
+      }
+    }, 3000) // 3 segundos de timeout
+    
     // Só tenta carregar quando authLoading terminar E user existir
     if (!authLoading && user) {
       console.log('✅ Auth pronto, carregando dados do dashboard...')
@@ -77,6 +89,8 @@ export function AdminDashboard() {
       console.log('⚠️ Auth completo mas sem usuário')
       setLoading(false)
     }
+
+    return () => clearTimeout(safetyTimeout)
   }, [authLoading, user])
 
   const loadDashboardData = async () => {
@@ -262,12 +276,25 @@ export function AdminDashboard() {
   // Aguardar tanto a autenticação quanto o carregamento dos dados
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-foreground text-lg">
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center max-w-md px-4">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-6"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-12 h-12 border-4 border-primary/20 border-b-primary rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+            </div>
+          </div>
+          <h2 className="text-foreground text-xl font-semibold mb-2">
             {authLoading ? 'Verificando autenticação...' : 'Carregando Dashboard Admin...'}
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            {authLoading ? 'Aguarde enquanto validamos suas credenciais' : 'Carregando estatísticas e dados do sistema'}
           </p>
+          <div className="mt-6 flex items-center justify-center gap-1">
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+          </div>
         </div>
       </div>
     )
