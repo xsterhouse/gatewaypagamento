@@ -56,7 +56,12 @@ export function Financeiro() {
 
   const loadInvoices = async () => {
     try {
-      if (!effectiveUserId) return
+      if (!effectiveUserId) {
+        console.log('⚠️ effectiveUserId não definido')
+        return
+      }
+
+      console.log('🔍 Buscando faturas para user_id:', effectiveUserId)
 
       const { data, error } = await supabase
         .from('invoices')
@@ -65,9 +70,14 @@ export function Financeiro() {
         .order('due_date', { ascending: false })
 
       if (error) {
-        console.error('Erro ao carregar faturas:', error)
+        console.error('❌ Erro ao carregar faturas:', error)
         toast.error('Erro ao carregar faturas')
         return
+      }
+
+      console.log('✅ Faturas encontradas:', data?.length || 0)
+      if (data && data.length > 0) {
+        console.log('📋 Primeira fatura:', data[0])
       }
 
       if (data) {
@@ -84,7 +94,7 @@ export function Financeiro() {
         console.log('💰 Faturas carregadas:', data.length)
       }
     } catch (error) {
-      console.error('Erro ao carregar faturas:', error)
+      console.error('❌ Erro ao carregar faturas:', error)
       toast.error('Erro ao carregar faturas')
     } finally {
       setLoading(false)

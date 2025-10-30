@@ -60,6 +60,7 @@ export function CreateInvoiceModal({ isOpen, onClose, onSuccess }: CreateInvoice
       const dueDateISO = convertDateToISO(formData.due_date)
       
       console.log('🔍 DEBUG - Criar Fatura:')
+      console.log('  user_id selecionado:', formData.user_id)
       console.log('  Input do usuário:', formData.due_date)
       console.log('  Após conversão:', dueDateISO)
       console.log('  Tipo:', typeof dueDateISO)
@@ -85,7 +86,9 @@ export function CreateInvoiceModal({ isOpen, onClose, onSuccess }: CreateInvoice
       
       // Verificar o que foi realmente salvo
       if (data && data.length > 0) {
-        console.log('  Data salva no banco:', data[0].due_date)
+        console.log('  user_id salvo:', data[0].user_id)
+        console.log('  due_date salvo:', data[0].due_date)
+        console.log('  Fatura completa:', data[0])
       }
 
       toast.success('Fatura criada com sucesso!')
