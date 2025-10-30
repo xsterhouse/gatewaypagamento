@@ -87,5 +87,10 @@ EXCEPTION
   WHEN OTHERS THEN NULL;
 END $$;
 
--- 8. Testar a função manualmente
-SELECT public.handle_new_user();
+-- 8. Verificar se o trigger foi criado
+SELECT 
+  trigger_name,
+  event_manipulation,
+  event_object_table
+FROM information_schema.triggers
+WHERE trigger_name = 'on_auth_user_created';
