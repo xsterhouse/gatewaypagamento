@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { convertDateToISO } from '@/lib/dateUtils'
 
 interface CreateInvoiceModalProps {
   isOpen: boolean
@@ -55,21 +56,15 @@ export function CreateInvoiceModal({ isOpen, onClose, onSuccess }: CreateInvoice
     setLoading(true)
 
     try {
-      // Converter data para formato correto ajustando timezone
-      // Cria a data no timezone local e ajusta para UTC mantendo o dia correto
-      const [year, month, day] = formData.due_date.split('-')
-      const dueDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0)
-      
-      // Ajustar para UTC mantendo o mesmo dia
-      const timezoneOffset = dueDate.getTimezoneOffset()
-      const adjustedDate = new Date(dueDate.getTime() - (timezoneOffset * 60 * 1000))
+      // Converter data usando função utilitária que garante o dia correto
+      const dueDateISO = convertDateToISO(formData.due_date)
       
       const { error } = await supabase
         .from('invoices')
         .insert({
           user_id: formData.user_id,
           amount: parseFloat(formData.amount),
-          due_date: adjustedDate.toISOString(),
+          due_date: dueDateISO,
           description: formData.description,
           status: 'pending'
         })
