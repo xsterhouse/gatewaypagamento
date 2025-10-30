@@ -956,17 +956,3 @@ export function ConfiguracoesAvancadas() {
   )
 }
 
-function formatLabel(key: string): string {
-  const labels: { [key: string]: string } = {
-    'pix_send_fee_percentage': 'Taxa PIX Envio (%)',
-    'pix_send_fee_fixed': 'Taxa PIX Envio (Fixa)',
-    'pix_receive_fee_percentage': 'Taxa PIX Recebimento (%)',
-    'pix_receive_fee_fixed': 'Taxa PIX Recebimento (Fixa)',
-    'interest_rate_monthly': 'Taxa de Juros Mensal',
-  }
-  
-  return labels[key] || key
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-}

@@ -119,18 +119,6 @@ export function AdminExchange() {
     return <Badge variant={variant}>{label}</Badge>
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-5 w-5 text-green-600" />
-      case 'pending':
-        return <Clock className="h-5 w-5 text-yellow-600" />
-      case 'cancelled':
-        return <XCircle className="h-5 w-5 text-red-600" />
-      default:
-        return <Clock className="h-5 w-5 text-gray-400" />
-    }
-  }
 
   const filteredOrders = filter === 'all' 
     ? orders 

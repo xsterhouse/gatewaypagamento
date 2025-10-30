@@ -79,7 +79,7 @@ export function Documents() {
       const fileExt = file.name.split('.').pop()
       const fileName = `${userData?.id}/${documentType}_${Date.now()}.${fileExt}`
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('kyc-documents')
         .upload(fileName, file, {
           cacheControl: '3600',

@@ -6,10 +6,8 @@ import { Button } from '@/components/ui/button'
 import { 
   Activity, 
   Search, 
-  Filter,
   TrendingUp,
   TrendingDown,
-  User,
   Shield,
   Settings,
   LogIn,

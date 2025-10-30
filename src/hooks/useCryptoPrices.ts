@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { CoinGeckoService, fetchCryptoPrices, updatePricesInDatabase } from '@/services/coingeckoService'
+import { fetchCryptoPrices, updatePricesInDatabase } from '@/services/coingeckoService'
 import { toast } from 'sonner'
 
 interface CryptoPrice {
@@ -147,7 +147,7 @@ export function useCryptoPrices(options: UseCryptoPricesOptions = {}) {
 
 // Hook para preço de uma cripto específica
 export function useCryptoPrice(symbol: string) {
-  const { prices, loading, error, getPriceBRL, updateFromAPI } = useCryptoPrices()
+  const { prices, loading, error, updateFromAPI } = useCryptoPrices()
   
   const price = prices.find(p => p.cryptocurrency_symbol === symbol)
 

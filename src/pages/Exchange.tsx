@@ -14,12 +14,6 @@ interface TradingPair {
   fee_percentage: number
 }
 
-interface CryptoPrice {
-  cryptocurrency_symbol: string
-  price_brl: number
-  change_24h: number
-}
-
 export function Exchange() {
   const [pairs, setPairs] = useState<TradingPair[]>([])
   const [selectedPair, setSelectedPair] = useState<TradingPair | null>(null)
