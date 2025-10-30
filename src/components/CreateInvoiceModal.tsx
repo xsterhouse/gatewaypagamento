@@ -55,16 +55,21 @@ export function CreateInvoiceModal({ isOpen, onClose, onSuccess }: CreateInvoice
     setLoading(true)
 
     try {
-      // Converter data para formato correto (mantém o dia selecionado)
-      // Adiciona horário meio-dia para evitar problemas de timezone
-      const dueDate = new Date(formData.due_date + 'T12:00:00')
+      // Converter data para formato correto ajustando timezone
+      // Cria a data no timezone local e ajusta para UTC mantendo o dia correto
+      const [year, month, day] = formData.due_date.split('-')
+      const dueDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0)
+      
+      // Ajustar para UTC mantendo o mesmo dia
+      const timezoneOffset = dueDate.getTimezoneOffset()
+      const adjustedDate = new Date(dueDate.getTime() - (timezoneOffset * 60 * 1000))
       
       const { error } = await supabase
         .from('invoices')
         .insert({
           user_id: formData.user_id,
           amount: parseFloat(formData.amount),
-          due_date: dueDate.toISOString(),
+          due_date: adjustedDate.toISOString(),
           description: formData.description,
           status: 'pending'
         })
