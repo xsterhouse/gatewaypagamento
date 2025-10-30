@@ -20,7 +20,7 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
   const [pixCode, setPixCode] = useState('')
   const [showQRCode, setShowQRCode] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [, setDepositId] = useState<string | null>(null)
+  const [depositId, setDepositId] = useState<string | null>(null)
 
   const quickValues = [
     { label: '+R$ 10,00', value: 10 },
@@ -138,7 +138,7 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
       setPixCode(code)
       setShowQRCode(true)
       toast.success('QR Code gerado com sucesso!')
-      console.log('💵 Depósito PIX criado:', data.id)
+      console.log('💵 Depósito PIX criado:', data.id, 'Deposit ID:', depositId || data.id)
     } catch (error) {
       console.error('Erro ao gerar PIX:', error)
       toast.error('Erro ao processar solicitação')

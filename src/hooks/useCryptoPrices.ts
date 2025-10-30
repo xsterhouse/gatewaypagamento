@@ -144,10 +144,11 @@ export function useCryptoPrice(symbol: string) {
   const { prices, loading, error, updateFromAPI } = useCryptoPrices()
   
   const price = prices.find(p => p.cryptocurrency_symbol === symbol)
+  const getPriceBRL = () => price?.price_brl || 0
 
   return {
     price,
-    priceBRL: price?.price_brl || 0,
+    priceBRL: getPriceBRL(),
     priceUSD: price?.price_usd || 0,
     change24h: price?.change_24h || 0,
     loading,
