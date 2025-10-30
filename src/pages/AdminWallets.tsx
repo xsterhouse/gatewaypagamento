@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase'
-import { Search, Wallet, TrendingUp, Users, RefreshCw } from 'lucide-react'
+import { Search, Wallet, TrendingUp, Users, RefreshCw, Eye, Lock, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface WalletWithUser {
   id: string
@@ -14,6 +15,7 @@ interface WalletWithUser {
   balance: number
   available_balance: number
   blocked_balance: number
+  is_active: boolean
   user_name: string
   user_email: string
   created_at: string
@@ -111,6 +113,59 @@ export function AdminWallets() {
     setRefreshing(true)
     await loadWallets()
     await loadStats()
+  }
+
+  const handleViewWallet = (wallet: WalletWithUser) => {
+    // Mostrar detalhes da carteira
+    toast.info(`Visualizando: ${wallet.wallet_name} - ${wallet.currency_code}`)
+    console.log('Detalhes da carteira:', wallet)
+    // TODO: Abrir modal com detalhes completos
+  }
+
+  const handleBlockWallet = async (wallet: WalletWithUser) => {
+    try {
+      const newStatus = !wallet.is_active
+      
+      const { error } = await supabase
+        .from('wallets')
+        .update({ is_active: newStatus })
+        .eq('id', wallet.id)
+
+      if (error) throw error
+
+      toast.success(
+        `${wallet.wallet_name} foi ${newStatus ? 'desbloqueada' : 'bloqueada'} com sucesso`
+      )
+      
+      await loadWallets()
+      await loadStats()
+    } catch (error: any) {
+      console.error('Erro ao bloquear/desbloquear carteira:', error)
+      toast.error(`Erro ao atualizar carteira: ${error.message}`)
+    }
+  }
+
+  const handleDeleteWallet = async (wallet: WalletWithUser) => {
+    if (!confirm(`Tem certeza que deseja excluir a carteira "${wallet.wallet_name}"?\n\nEsta ação não pode ser desfeita!`)) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('wallets')
+        .delete()
+        .eq('id', wallet.id)
+
+      if (error) throw error
+
+      toast.success(`${wallet.wallet_name} foi excluída com sucesso`)
+      
+      await loadWallets()
+      await loadStats()
+    } catch (error: any) {
+      console.error('Erro ao excluir carteira:', error)
+      toast.error(`Erro ao excluir carteira: ${error.message}`)
+    }
   }
 
   const loadStats = async () => {
@@ -321,10 +376,41 @@ export function AdminWallets() {
                       <td className="p-3 text-right text-red-600">
                         {formatCurrency(Number(wallet.blocked_balance), wallet.currency_code)}
                       </td>
-                      <td className="p-3 text-center">
-                        <Button variant="outline" size="sm">
-                          Gerenciar
-                        </Button>
+                      <td className="p-3">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* Botão Visualizar */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewWallet(wallet)}
+                            className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-500"
+                            title="Visualizar detalhes"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+
+                          {/* Botão Bloquear/Desbloquear */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleBlockWallet(wallet)}
+                            className="h-8 w-8 p-0 hover:bg-yellow-500/10 hover:text-yellow-500"
+                            title={wallet.is_active ? 'Bloquear carteira' : 'Desbloquear carteira'}
+                          >
+                            <Lock className="h-4 w-4" />
+                          </Button>
+
+                          {/* Botão Excluir */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteWallet(wallet)}
+                            className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-500"
+                            title="Excluir carteira"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
