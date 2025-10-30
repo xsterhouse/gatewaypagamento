@@ -316,21 +316,32 @@ export function ConfiguracoesAvancadas() {
     }
 
     try {
-      // Atualizar senha usando Admin API
-      const { error } = await supabase.auth.admin.updateUserById(
-        selectedManager.id,
-        { password: newPassword }
+      console.log('🔑 Enviando email de redefinição para:', selectedManager.email)
+
+      // Enviar email de redefinição de senha
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        selectedManager.email,
+        {
+          redirectTo: `${window.location.origin}/reset-password`
+        }
       )
 
-      if (error) throw error
+      if (error) {
+        console.error('Erro ao enviar email:', error)
+        throw error
+      }
 
-      toast.success('Senha atualizada com sucesso!')
+      toast.success(
+        `✅ Email enviado para ${selectedManager.email}! O gerente deve verificar a caixa de entrada.`,
+        { duration: 5000 }
+      )
+      
       setPasswordModalOpen(false)
       setNewPassword('')
       setConfirmPassword('')
     } catch (error: any) {
-      console.error('Erro ao atualizar senha:', error)
-      toast.error(error.message || 'Erro ao atualizar senha')
+      console.error('❌ Erro ao enviar email:', error)
+      toast.error(error.message || 'Erro ao enviar email de redefinição')
     }
   }
 
@@ -739,37 +750,28 @@ export function ConfiguracoesAvancadas() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Key size={24} className="text-purple-500" />
-                  Trocar Senha
+                  Redefinir Senha
                 </DialogTitle>
                 <DialogDescription>
-                  Defina uma nova senha para {selectedManager?.name}
+                  Enviar email de redefinição de senha para {selectedManager?.name}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label className="text-foreground">Nova Senha *</Label>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="bg-input border-border text-foreground"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Mínimo de 6 caracteres
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                  <p className="text-sm text-blue-400">
+                    <span className="font-medium">📧 Como funciona:</span>
+                    <br />
+                    Um email será enviado para <strong>{selectedManager?.email}</strong> com um link para redefinir a senha.
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-foreground">Confirmar Senha *</Label>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="bg-input border-border text-foreground"
-                  />
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                  <p className="text-sm text-yellow-400">
+                    <span className="font-medium">⚠️ Importante:</span>
+                    <br />
+                    O gerente precisará acessar o email e clicar no link para definir uma nova senha.
+                  </p>
                 </div>
 
                 <div className="flex gap-3 justify-end pt-4 border-t border-border">
@@ -785,7 +787,7 @@ export function ConfiguracoesAvancadas() {
                     className="bg-purple-500 hover:bg-purple-600"
                   >
                     <Key size={18} className="mr-2" />
-                    Atualizar Senha
+                    Enviar Email
                   </Button>
                 </div>
               </div>
