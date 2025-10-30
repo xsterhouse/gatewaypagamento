@@ -17,7 +17,11 @@ import {
   Lock,
   Upload,
   MessageCircle,
-  Camera
+  Camera,
+  Eye,
+  Edit,
+  Ban,
+  CheckCircle
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -51,8 +55,11 @@ export function ConfiguracoesAvancadas() {
   
   // Modal estado
   const [modalOpen, setModalOpen] = useState(false)
+  const [viewModalOpen, setViewModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string>('')
+  const [selectedManager, setSelectedManager] = useState<Manager | null>(null)
   
   // Novo Gerente
   const [newManager, setNewManager] = useState({
@@ -61,6 +68,14 @@ export function ConfiguracoesAvancadas() {
     cpf: '',
     whatsapp: '',
     password: '',
+    max_clients: 50
+  })
+
+  // Editar Gerente
+  const [editManager, setEditManager] = useState({
+    name: '',
+    cpf: '',
+    whatsapp: '',
     max_clients: 50
   })
 
@@ -257,6 +272,69 @@ export function ConfiguracoesAvancadas() {
       loadTaxes()
     } catch (error) {
       toast.error('Erro ao atualizar taxas')
+    }
+  }
+
+  const handleViewManager = (manager: Manager) => {
+    setSelectedManager(manager)
+    setViewModalOpen(true)
+  }
+
+  const handleEditManager = (manager: Manager) => {
+    setSelectedManager(manager)
+    setEditManager({
+      name: manager.name,
+      cpf: manager.cpf,
+      whatsapp: manager.whatsapp,
+      max_clients: manager.max_clients
+    })
+    setEditModalOpen(true)
+  }
+
+  const handleUpdateManager = async () => {
+    if (!selectedManager) return
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: editManager.name,
+          cpf: editManager.cpf,
+          whatsapp: editManager.whatsapp,
+          max_clients: editManager.max_clients
+        })
+        .eq('id', selectedManager.id)
+
+      if (error) throw error
+
+      toast.success('Gerente atualizado com sucesso!')
+      setEditModalOpen(false)
+      loadManagers()
+    } catch (error: any) {
+      console.error('Erro ao atualizar gerente:', error)
+      toast.error(error.message || 'Erro ao atualizar gerente')
+    }
+  }
+
+  const handleSuspendManager = async (manager: Manager) => {
+    const newStatus = manager.status === 'active' ? 'suspended' : 'active'
+    const action = newStatus === 'suspended' ? 'suspender' : 'reativar'
+    
+    if (!confirm(`Deseja realmente ${action} este gerente?`)) return
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ status: newStatus })
+        .eq('id', manager.id)
+
+      if (error) throw error
+
+      toast.success(`Gerente ${newStatus === 'suspended' ? 'suspenso' : 'reativado'} com sucesso!`)
+      loadManagers()
+    } catch (error: any) {
+      console.error('Erro ao atualizar status:', error)
+      toast.error(error.message || 'Erro ao atualizar status')
     }
   }
 
@@ -465,6 +543,153 @@ export function ConfiguracoesAvancadas() {
             </DialogContent>
           </Dialog>
 
+          {/* Modal Visualizar Gerente */}
+          <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Eye size={24} className="text-blue-500" />
+                  Detalhes do Gerente
+                </DialogTitle>
+              </DialogHeader>
+
+              {selectedManager && (
+                <div className="space-y-6 mt-4">
+                  {/* Foto */}
+                  <div className="flex justify-center">
+                    {selectedManager.photo_url ? (
+                      <img
+                        src={selectedManager.photo_url}
+                        alt={selectedManager.name}
+                        className="w-32 h-32 rounded-full object-cover border-4 border-primary"
+                      />
+                    ) : (
+                      <div className="w-32 h-32 bg-primary rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-4xl">
+                          {selectedManager.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Informações */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Nome</Label>
+                      <p className="text-foreground font-medium">{selectedManager.name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Email</Label>
+                      <p className="text-foreground font-medium">{selectedManager.email}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">CPF</Label>
+                      <p className="text-foreground font-medium">{selectedManager.cpf}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">WhatsApp</Label>
+                      <p className="text-foreground font-medium">{selectedManager.whatsapp}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Clientes</Label>
+                      <p className="text-foreground font-medium">
+                        {selectedManager.current_clients || 0}/{selectedManager.max_clients}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Status</Label>
+                      <p className={`font-medium ${
+                        selectedManager.status === 'active' ? 'text-green-500' : 'text-red-500'
+                      }`}>
+                        {selectedManager.status === 'active' ? 'Ativo' : 'Suspenso'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      onClick={() => setViewModalOpen(false)}
+                      variant="outline"
+                    >
+                      Fechar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Modal Editar Gerente */}
+          <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Edit size={24} className="text-yellow-500" />
+                  Editar Gerente
+                </DialogTitle>
+              </DialogHeader>
+
+              {selectedManager && (
+                <div className="space-y-6 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nome Completo *</Label>
+                      <Input
+                        value={editManager.name}
+                        onChange={(e) => setEditManager({ ...editManager, name: e.target.value })}
+                        placeholder="Nome do gerente"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>CPF *</Label>
+                      <Input
+                        value={editManager.cpf}
+                        onChange={(e) => setEditManager({ ...editManager, cpf: e.target.value })}
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>WhatsApp *</Label>
+                      <Input
+                        value={editManager.whatsapp}
+                        onChange={(e) => setEditManager({ ...editManager, whatsapp: e.target.value })}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Máximo de Clientes *</Label>
+                      <Input
+                        type="number"
+                        value={editManager.max_clients}
+                        onChange={(e) => setEditManager({ ...editManager, max_clients: parseInt(e.target.value) || 0 })}
+                        min="1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      onClick={() => setEditModalOpen(false)}
+                      variant="outline"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleUpdateManager}
+                      className="bg-primary hover:bg-primary/90"
+                    >
+                      <Save size={18} className="mr-2" />
+                      Salvar Alterações
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
           {/* Lista de Gerentes */}
           <Card className="bg-card border-border">
             <CardHeader>
@@ -537,14 +762,50 @@ export function ConfiguracoesAvancadas() {
                           </span>
                         </div>
 
-                        <Button
-                          onClick={() => handleDeleteManager(manager.id)}
-                          variant="outline"
-                          size="sm"
-                          className="border-red-500 text-red-500 hover:bg-red-500/10"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={() => handleViewManager(manager)}
+                            variant="outline"
+                            size="sm"
+                            className="border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                            title="Visualizar"
+                          >
+                            <Eye size={16} />
+                          </Button>
+
+                          <Button
+                            onClick={() => handleEditManager(manager)}
+                            variant="outline"
+                            size="sm"
+                            className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10"
+                            title="Editar"
+                          >
+                            <Edit size={16} />
+                          </Button>
+
+                          <Button
+                            onClick={() => handleSuspendManager(manager)}
+                            variant="outline"
+                            size="sm"
+                            className={manager.status === 'active' 
+                              ? 'border-orange-500 text-orange-500 hover:bg-orange-500/10' 
+                              : 'border-green-500 text-green-500 hover:bg-green-500/10'
+                            }
+                            title={manager.status === 'active' ? 'Suspender' : 'Reativar'}
+                          >
+                            {manager.status === 'active' ? <Ban size={16} /> : <CheckCircle size={16} />}
+                          </Button>
+
+                          <Button
+                            onClick={() => handleDeleteManager(manager.id)}
+                            variant="outline"
+                            size="sm"
+                            className="border-red-500 text-red-500 hover:bg-red-500/10"
+                            title="Excluir"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))
