@@ -7,6 +7,7 @@ import { PublicRoute } from './components/PublicRoute'
 import { Toaster } from './components/ui/toast'
 import { Layout } from './components/Layout'
 import { LogoutLoadingScreen } from './components/LogoutLoadingScreen'
+import { InstallPWA } from './components/InstallPWA'
 import { Dashboard } from './pages/Dashboard'
 import { Gerente } from './pages/Gerente'
 import { Financeiro } from './pages/Financeiro'
@@ -92,6 +93,7 @@ function App() {
           </Route>
         </Routes>
         <Toaster />
+        <InstallPWA />
         </Router>
       </ImpersonationProvider>
     </AuthProvider>
