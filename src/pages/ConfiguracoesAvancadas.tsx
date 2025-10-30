@@ -21,7 +21,8 @@ import {
   Eye,
   Edit,
   Ban,
-  CheckCircle
+  CheckCircle,
+  Key
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -57,9 +58,12 @@ export function ConfiguracoesAvancadas() {
   const [modalOpen, setModalOpen] = useState(false)
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string>('')
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   
   // Novo Gerente
   const [newManager, setNewManager] = useState({
@@ -289,6 +293,45 @@ export function ConfiguracoesAvancadas() {
       max_clients: manager.max_clients
     })
     setEditModalOpen(true)
+  }
+
+  const handleChangePassword = (manager: Manager) => {
+    setSelectedManager(manager)
+    setNewPassword('')
+    setConfirmPassword('')
+    setPasswordModalOpen(true)
+  }
+
+  const handleUpdatePassword = async () => {
+    if (!selectedManager) return
+
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('A senha deve ter no mínimo 6 caracteres')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('As senhas não coincidem')
+      return
+    }
+
+    try {
+      // Atualizar senha usando Admin API
+      const { error } = await supabase.auth.admin.updateUserById(
+        selectedManager.id,
+        { password: newPassword }
+      )
+
+      if (error) throw error
+
+      toast.success('Senha atualizada com sucesso!')
+      setPasswordModalOpen(false)
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (error: any) {
+      console.error('Erro ao atualizar senha:', error)
+      toast.error(error.message || 'Erro ao atualizar senha')
+    }
   }
 
   const handleUpdateManager = async () => {
@@ -690,6 +733,65 @@ export function ConfiguracoesAvancadas() {
             </DialogContent>
           </Dialog>
 
+          {/* Modal Trocar Senha */}
+          <Dialog open={passwordModalOpen} onOpenChange={setPasswordModalOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Key size={24} className="text-purple-500" />
+                  Trocar Senha
+                </DialogTitle>
+                <DialogDescription>
+                  Defina uma nova senha para {selectedManager?.name}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label className="text-foreground">Nova Senha *</Label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="bg-input border-border text-foreground"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Mínimo de 6 caracteres
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground">Confirmar Senha *</Label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="bg-input border-border text-foreground"
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end pt-4 border-t border-border">
+                  <Button
+                    onClick={() => setPasswordModalOpen(false)}
+                    variant="outline"
+                    className="border-border"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleUpdatePassword}
+                    className="bg-purple-500 hover:bg-purple-600"
+                  >
+                    <Key size={18} className="mr-2" />
+                    Atualizar Senha
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {/* Lista de Gerentes */}
           <Card className="bg-card border-border">
             <CardHeader>
@@ -781,6 +883,16 @@ export function ConfiguracoesAvancadas() {
                             title="Editar"
                           >
                             <Edit size={16} />
+                          </Button>
+
+                          <Button
+                            onClick={() => handleChangePassword(manager)}
+                            variant="outline"
+                            size="sm"
+                            className="border-purple-500 text-purple-500 hover:bg-purple-500/10"
+                            title="Trocar Senha"
+                          >
+                            <Key size={16} />
                           </Button>
 
                           <Button
