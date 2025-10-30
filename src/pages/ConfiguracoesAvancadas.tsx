@@ -176,7 +176,21 @@ export function ConfiguracoesAvancadas() {
       }
 
       // Criar perfil de gerente
-      const { error: profileError } = await supabase
+      console.log('Tentando inserir gerente com dados:', {
+        id: authData.user.id,
+        name: newManager.name,
+        email: newManager.email,
+        cpf: newManager.cpf,
+        whatsapp: newManager.whatsapp,
+        photo_url: photoUrl,
+        role: 'manager',
+        max_clients: newManager.max_clients,
+        status: 'active',
+        kyc_status: 'approved',
+        current_clients: 0
+      })
+
+      const { data: insertedData, error: profileError } = await supabase
         .from('users')
         .insert({
           id: authData.user.id,
@@ -191,11 +205,19 @@ export function ConfiguracoesAvancadas() {
           kyc_status: 'approved',
           current_clients: 0
         })
+        .select()
 
       if (profileError) {
-        console.error('Erro no banco de dados:', profileError)
-        throw new Error(`Database error saving new user: ${profileError.message}`)
+        console.error('Erro detalhado no banco de dados:', {
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+          code: profileError.code
+        })
+        throw new Error(`Erro ao salvar no banco: ${profileError.message} - ${profileError.details || ''} - ${profileError.hint || ''}`)
       }
+
+      console.log('Gerente inserido com sucesso:', insertedData)
 
       toast.success('Gerente criado com sucesso!')
       setModalOpen(false)
