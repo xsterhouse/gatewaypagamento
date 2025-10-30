@@ -13,6 +13,14 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(date: string | Date): string {
+  // Se for string ISO, extrair apenas a parte da data (YYYY-MM-DD)
+  // para evitar problemas de timezone
+  if (typeof date === 'string' && date.includes('T')) {
+    const [datePart] = date.split('T')
+    const [year, month, day] = datePart.split('-')
+    return `${day}/${month}/${year}`
+  }
+  
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
