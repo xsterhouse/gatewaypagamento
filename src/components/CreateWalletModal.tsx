@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
@@ -35,6 +35,36 @@ export function CreateWalletModal({ open, onOpenChange, onWalletCreated }: Creat
   const { effectiveUserId } = useAuth()
   const [selectedCurrency, setSelectedCurrency] = useState('')
   const [loading, setLoading] = useState(false)
+  const [existingCurrencies, setExistingCurrencies] = useState<string[]>([])
+  const [loadingCurrencies, setLoadingCurrencies] = useState(false)
+
+  // Carregar moedas existentes quando o modal abrir
+  useEffect(() => {
+    if (open && effectiveUserId) {
+      loadExistingCurrencies()
+    }
+  }, [open, effectiveUserId])
+
+  const loadExistingCurrencies = async () => {
+    setLoadingCurrencies(true)
+    try {
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('currency_code')
+        .eq('user_id', effectiveUserId)
+        .eq('is_active', true)
+
+      if (error) throw error
+
+      const currencies = data?.map(w => w.currency_code) || []
+      setExistingCurrencies(currencies)
+      console.log('💳 Moedas existentes:', currencies)
+    } catch (error) {
+      console.error('Erro ao carregar moedas existentes:', error)
+    } finally {
+      setLoadingCurrencies(false)
+    }
+  }
 
   const handleCreateWallet = async () => {
     if (!selectedCurrency) {
@@ -55,23 +85,40 @@ export function CreateWalletModal({ open, onOpenChange, onWalletCreated }: Creat
 
     setLoading(true)
     try {
-      // Verificar se já existe carteira para essa moeda
-      const { data: existingWallet, error: checkError } = await supabase
+      console.log('🔍 Verificando carteira existente:', {
+        user_id: effectiveUserId,
+        currency_code: currency.code
+      })
+
+      // Verificar se já existe carteira para essa moeda (incluindo inativas)
+      const { data: existingWallets, error: checkError } = await supabase
         .from('wallets')
-        .select('id')
+        .select('id, is_active')
         .eq('user_id', effectiveUserId)
         .eq('currency_code', currency.code)
-        .eq('is_active', true)
-        .single()
 
-      if (existingWallet) {
-        toast.error(`Você já possui uma carteira de ${currency.name}`)
-        return
-      }
-
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
+        console.error('❌ Erro ao verificar carteira:', checkError)
         throw checkError
       }
+
+      console.log('📋 Carteiras encontradas:', existingWallets)
+
+      // Se encontrou alguma carteira (ativa ou inativa)
+      if (existingWallets && existingWallets.length > 0) {
+        const activeWallet = existingWallets.find(w => w.is_active)
+        
+        if (activeWallet) {
+          toast.error(`Você já possui uma carteira de ${currency.name}`)
+          return
+        } else {
+          // Tem carteira inativa, reativar em vez de criar nova
+          toast.error(`Você já possui uma carteira de ${currency.name} (inativa). Entre em contato com o suporte para reativá-la.`)
+          return
+        }
+      }
+
+      console.log('✅ Nenhuma carteira encontrada, criando nova...')
 
       // Criar nova carteira
       const { data, error } = await supabase
@@ -88,17 +135,32 @@ export function CreateWalletModal({ open, onOpenChange, onWalletCreated }: Creat
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // Tratamento específico para erro de chave duplicada
+        if (error.code === '23505' || error.message.includes('duplicate key')) {
+          console.error('❌ Erro de chave duplicada:', error)
+          toast.error(`Você já possui uma carteira de ${currency.name}. Atualize a página e tente novamente.`)
+          return
+        }
+        throw error
+      }
+
+      console.log('✅ Carteira criada com sucesso:', data)
 
       toast.success(`Carteira de ${currency.name} criada com sucesso!`)
-      console.log('💳 Carteira criada:', data.id, currency.code)
       
       setSelectedCurrency('')
       onWalletCreated()
       onOpenChange(false)
     } catch (error: any) {
-      console.error('Erro ao criar carteira:', error)
-      toast.error(error.message || 'Erro ao criar carteira. Tente novamente.')
+      console.error('❌ Erro ao criar carteira:', error)
+      
+      // Mensagem de erro mais amigável
+      if (error.code === '23505' || error.message?.includes('duplicate key')) {
+        toast.error(`Você já possui uma carteira de ${currency.name}. Atualize a página e tente novamente.`)
+      } else {
+        toast.error(error.message || 'Erro ao criar carteira. Tente novamente.')
+      }
     } finally {
       setLoading(false)
     }
@@ -127,32 +189,60 @@ export function CreateWalletModal({ open, onOpenChange, onWalletCreated }: Creat
                 <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                   Moedas Fiat
                 </div>
-                {AVAILABLE_CURRENCIES.filter(c => c.type === 'fiat').map((currency) => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{currency.symbol}</span>
-                      <div>
-                        <div className="font-medium">{currency.code}</div>
-                        <div className="text-xs text-muted-foreground">{currency.name}</div>
+                {AVAILABLE_CURRENCIES.filter(c => c.type === 'fiat').map((currency) => {
+                  const alreadyExists = existingCurrencies.includes(currency.code)
+                  return (
+                    <SelectItem 
+                      key={currency.code} 
+                      value={currency.code}
+                      disabled={alreadyExists}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{currency.symbol}</span>
+                        <div>
+                          <div className="font-medium flex items-center gap-2">
+                            {currency.code}
+                            {alreadyExists && (
+                              <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded">
+                                Já possui
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{currency.name}</div>
+                        </div>
                       </div>
-                    </div>
-                  </SelectItem>
-                ))}
+                    </SelectItem>
+                  )
+                })}
                 
                 <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t border-border mt-2">
                   Criptomoedas
                 </div>
-                {AVAILABLE_CURRENCIES.filter(c => c.type === 'crypto').map((currency) => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{currency.symbol}</span>
-                      <div>
-                        <div className="font-medium">{currency.code}</div>
-                        <div className="text-xs text-muted-foreground">{currency.name}</div>
+                {AVAILABLE_CURRENCIES.filter(c => c.type === 'crypto').map((currency) => {
+                  const alreadyExists = existingCurrencies.includes(currency.code)
+                  return (
+                    <SelectItem 
+                      key={currency.code} 
+                      value={currency.code}
+                      disabled={alreadyExists}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{currency.symbol}</span>
+                        <div>
+                          <div className="font-medium flex items-center gap-2">
+                            {currency.code}
+                            {alreadyExists && (
+                              <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded">
+                                Já possui
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{currency.name}</div>
+                        </div>
                       </div>
-                    </div>
-                  </SelectItem>
-                ))}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>
