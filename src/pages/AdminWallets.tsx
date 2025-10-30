@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase'
-import { Search, Wallet, TrendingUp, Users } from 'lucide-react'
+import { Search, Wallet, TrendingUp, Users, RefreshCw } from 'lucide-react'
 
 interface WalletWithUser {
   id: string
@@ -23,6 +23,7 @@ export function AdminWallets() {
   const [wallets, setWallets] = useState<WalletWithUser[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [stats, setStats] = useState({
     total_wallets: 0,
     total_balance_brl: 0,
@@ -36,6 +37,8 @@ export function AdminWallets() {
 
   const loadWallets = async () => {
     try {
+      console.log('🔍 Carregando carteiras no admin...')
+      
       const { data, error } = await supabase
         .from('wallets')
         .select(`
@@ -45,9 +48,15 @@ export function AdminWallets() {
             email
           )
         `)
-        .order('balance', { ascending: false })
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
 
       if (error) throw error
+
+      console.log('✅ Carteiras carregadas:', data?.length || 0)
+      if (data && data.length > 0) {
+        console.log('📋 Primeira carteira:', data[0])
+      }
 
       const walletsWithUser = data?.map(wallet => ({
         ...wallet,
@@ -57,10 +66,17 @@ export function AdminWallets() {
 
       setWallets(walletsWithUser)
     } catch (error) {
-      console.error('Erro ao carregar wallets:', error)
+      console.error('❌ Erro ao carregar wallets:', error)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await loadWallets()
+    await loadStats()
   }
 
   const loadStats = async () => {
@@ -145,9 +161,19 @@ export function AdminWallets() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Gerenciar Carteiras</h1>
-        <p className="text-gray-500 mt-1">Visualize e gerencie todas as carteiras dos usuários</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Gerenciar Carteiras</h1>
+          <p className="text-gray-500 mt-1">Visualize e gerencie todas as carteiras dos usuários</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Atualizar
+        </Button>
       </div>
 
       {/* Estatísticas */}
