@@ -1,7 +1,35 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl) {
+  throw new Error(
+    '❌ VITE_SUPABASE_URL não configurada!\n\n' +
+    'Configure as variáveis de ambiente:\n' +
+    '1. Copie .env.example para .env\n' +
+    '2. Adicione suas credenciais do Supabase\n' +
+    '3. Reinicie o servidor\n\n' +
+    'Em produção (Vercel):\n' +
+    '1. Vá em Settings → Environment Variables\n' +
+    '2. Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY\n' +
+    '3. Faça redeploy'
+  )
+}
+
+if (!supabaseAnonKey) {
+  throw new Error(
+    '❌ VITE_SUPABASE_ANON_KEY não configurada!\n\n' +
+    'Configure as variáveis de ambiente:\n' +
+    '1. Copie .env.example para .env\n' +
+    '2. Adicione suas credenciais do Supabase\n' +
+    '3. Reinicie o servidor\n\n' +
+    'Em produção (Vercel):\n' +
+    '1. Vá em Settings → Environment Variables\n' +
+    '2. Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY\n' +
+    '3. Faça redeploy'
+  )
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
