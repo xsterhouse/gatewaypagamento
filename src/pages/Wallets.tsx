@@ -280,11 +280,16 @@ export function Wallets() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
+                              if (!wallet.is_active) {
+                                toast.error('Carteira bloqueada! Entre em contato com o suporte.')
+                                return
+                              }
                               setSelectedWallet(wallet)
                               setIsDepositModalOpen(true)
                             }}
-                            className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-500"
-                            title="Depositar"
+                            disabled={!wallet.is_active}
+                            className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title={wallet.is_active ? "Depositar" : "Carteira bloqueada"}
                           >
                             <ArrowUpCircle className="h-4 w-4" />
                           </Button>
@@ -294,11 +299,16 @@ export function Wallets() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
+                              if (!wallet.is_active) {
+                                toast.error('Carteira bloqueada! Entre em contato com o suporte.')
+                                return
+                              }
                               setSelectedWallet(wallet)
                               setIsSendModalOpen(true)
                             }}
-                            className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-500"
-                            title="Enviar"
+                            disabled={!wallet.is_active}
+                            className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title={wallet.is_active ? "Enviar" : "Carteira bloqueada"}
                           >
                             <Send className="h-4 w-4" />
                           </Button>
@@ -383,9 +393,14 @@ export function Wallets() {
                     size="sm" 
                     className="flex-1"
                     onClick={() => {
+                      if (!wallet.is_active) {
+                        toast.error('Carteira bloqueada! Entre em contato com o suporte.')
+                        return
+                      }
                       setSelectedWallet(wallet)
                       setIsDepositModalOpen(true)
                     }}
+                    disabled={!wallet.is_active}
                   >
                     <ArrowUpCircle className="h-4 w-4 mr-2" />
                     Depositar
@@ -395,9 +410,14 @@ export function Wallets() {
                     size="sm" 
                     className="flex-1"
                     onClick={() => {
+                      if (!wallet.is_active) {
+                        toast.error('Carteira bloqueada! Entre em contato com o suporte.')
+                        return
+                      }
                       setSelectedWallet(wallet)
                       setIsSendModalOpen(true)
                     }}
+                    disabled={!wallet.is_active}
                   >
                     <Send className="h-4 w-4 mr-2" />
                     Enviar

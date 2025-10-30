@@ -44,7 +44,7 @@ export function AdminWallets() {
     try {
       console.log('🔍 Carregando carteiras no admin...')
       
-      // Tentar carregar com join primeiro
+      // Tentar carregar com join primeiro (TODAS as carteiras, ativas e bloqueadas)
       const { data: walletsData, error: walletsError } = await supabase
         .from('wallets')
         .select(`
@@ -54,18 +54,16 @@ export function AdminWallets() {
             email
           )
         `)
-        .eq('is_active', true)
         .order('created_at', { ascending: false })
 
       // Se o join falhar (sem foreign key), carregar separadamente
       if (walletsError && walletsError.code === 'PGRST200') {
         console.log('⚠️ Foreign key não encontrada, carregando dados separadamente...')
         
-        // Carregar carteiras
+        // Carregar carteiras (TODAS, ativas e bloqueadas)
         const { data: wallets, error: walletsFetchError } = await supabase
           .from('wallets')
           .select('*')
-          .eq('is_active', true)
           .order('created_at', { ascending: false })
 
         if (walletsFetchError) throw walletsFetchError
@@ -365,7 +363,7 @@ export function AdminWallets() {
                   </tr>
                 ) : (
                   filteredWallets.map((wallet) => (
-                    <tr key={wallet.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <tr key={wallet.id} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${!wallet.is_active ? 'opacity-60 bg-red-50 dark:bg-red-950/20' : ''}`}>
                       <td className="p-3">
                         <div>
                           <p className="font-semibold">{wallet.user_name}</p>
@@ -376,6 +374,11 @@ export function AdminWallets() {
                         <div className="flex items-center gap-2">
                           <Wallet className="h-4 w-4 text-primary" />
                           <span className="font-medium">{wallet.wallet_name || 'Sem nome'}</span>
+                          {!wallet.is_active && (
+                            <span className="text-xs bg-red-500/10 text-red-500 px-2 py-0.5 rounded border border-red-500/20">
+                              🔒 Bloqueada
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="p-3">
