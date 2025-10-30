@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste CoinGecko API</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        button {
+            background: #0BA5EC;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background: #0284C7;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #DC2626;
+            padding: 15px;
+            background: #FEE2E2;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .success {
+            color: #059669;
+            padding: 15px;
+            background: #D1FAE5;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .price-card {
+            border: 1px solid #e5e5e5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .price-card:hover {
+            border-color: #0BA5EC;
+            background: #f0f9ff;
+        }
+        .coin-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .coin-symbol {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .coin-name {
+            color: #666;
+            font-size: 14px;
+        }
+        .price-info {
+            text-align: right;
+        }
+        .price {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        .change {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .change.positive {
+            color: #059669;
+        }
+        .change.negative {
+            color: #DC2626;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🪙 Teste CoinGecko API</h1>
+        <p class="subtitle">Teste rápido da integração com preços em tempo real</p>
+
+        <button id="fetchBtn" onclick="fetchPrices()">
+            🔄 Buscar Preços da API
+        </button>
+
+        <div id="status"></div>
+        
+        <div class="stats" id="stats" style="display:none;">
+            <div class="stat-card">
+                <div class="stat-label">Total de Moedas</div>
+                <div class="stat-value" id="totalCoins">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Maior Alta 24h</div>
+                <div class="stat-value" id="biggestGainer">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Maior Baixa 24h</div>
+                <div class="stat-value" id="biggestLoser">-</div>
+            </div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const COIN_IDS = ['bitcoin', 'ethereum', 'tether', 'binancecoin', 'solana', 'cardano', 'polkadot', 'matic-network'];
+        
+        async function fetchPrices() {
+            const btn = document.getElementById('fetchBtn');
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+            const stats = document.getElementById('stats');
+            
+            btn.disabled = true;
+            status.innerHTML = '<div class="loading">⏳ Buscando preços da CoinGecko...</div>';
+            results.innerHTML = '';
+            stats.style.display = 'none';
+            
+            try {
+                const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=brl&ids=${COIN_IDS.join(',')}&order=market_cap_desc&sparkline=false&price_change_percentage=24h`;
+                
+                console.log('Fetching:', url);
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                console.log('Data received:', data);
+                
+                if (data.length === 0) {
+                    status.innerHTML = '<div class="error">❌ Nenhum dado retornado</div>';
+                    return;
+                }
+                
+                status.innerHTML = `<div class="success">✅ ${data.length} preços obtidos com sucesso!</div>`;
+                
+                // Estatísticas
+                let maxGain = -Infinity;
+                let maxLoss = Infinity;
+                let maxGainCoin = '';
+                let maxLossCoin = '';
+                
+                // Renderizar preços
+                let html = '';
+                data.forEach(coin => {
+                    // Verificar se preço existe
+                    if (!coin.current_price || coin.current_price === null) {
+                        console.warn(`Preço null para ${coin.symbol}`);
+                        return; // Pular esta moeda
+                    }
+                    
+                    const change = coin.price_change_percentage_24h || 0;
+                    const changeClass = change >= 0 ? 'positive' : 'negative';
+                    const changeSymbol = change >= 0 ? '↑' : '↓';
+                    
+                    if (change > maxGain) {
+                        maxGain = change;
+                        maxGainCoin = coin.symbol.toUpperCase();
+                    }
+                    if (change < maxLoss) {
+                        maxLoss = change;
+                        maxLossCoin = coin.symbol.toUpperCase();
+                    }
+                    
+                    const formattedPrice = coin.current_price.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 8
+                    });
+                    
+                    html += `
+                        <div class="price-card">
+                            <div class="coin-info">
+                                <div>
+                                    <div class="coin-symbol">${coin.symbol.toUpperCase()}/BRL</div>
+                                    <div class="coin-name">${coin.name}</div>
+                                </div>
+                            </div>
+                            <div class="price-info">
+                                <div class="price">R$ ${formattedPrice}</div>
+                                <div class="change ${changeClass}">${changeSymbol} ${Math.abs(change).toFixed(2)}%</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                results.innerHTML = html;
+                
+                // Atualizar stats
+                document.getElementById('totalCoins').textContent = data.length;
+                document.getElementById('biggestGainer').textContent = `${maxGainCoin} +${maxGain.toFixed(2)}%`;
+                document.getElementById('biggestLoser').textContent = `${maxLossCoin} ${maxLoss.toFixed(2)}%`;
+                stats.style.display = 'grid';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                status.innerHTML = `<div class="error">❌ Erro: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        
+        // Buscar automaticamente ao carregar
+        window.addEventListener('load', () => {
+            fetchPrices();
+        });
+    </script>
+</body>
+</html>

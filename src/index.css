@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tema Claro Moderno e Suave */
+    --background: 210 20% 98%;           /* Fundo suave cinza-azulado */
+    --foreground: 222 47% 11%;           /* Texto escuro mas não preto */
+    
+    --card: 0 0% 100%;                   /* Cards brancos */
+    --card-foreground: 222 47% 11%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    
+    --primary: 208 91% 48%;              /* Azul vibrante */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 210 30% 93%;            /* Cinza azulado claro */
+    --secondary-foreground: 222 47% 11%;
+    
+    --muted: 210 30% 96%;                /* Cinza muito claro */
+    --muted-foreground: 215 16% 47%;     /* Texto secundário */
+    
+    --accent: 210 35% 95%;               /* Destaque suave */
+    --accent-foreground: 222 47% 11%;
+    
+    --destructive: 0 84% 60%;            /* Vermelho */
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 214 20% 88%;               /* Bordas sutis */
+    --input: 214 20% 92%;                /* Inputs suaves */
+    --ring: 208 91% 48%;
+    --radius: 0.5rem;
+    
+    /* Sombras sutis para profundidade */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  .dark {
+    /* Tema Escuro Refinado */
+    --background: 222 47% 5%;            /* Fundo escuro profundo */
+    --foreground: 210 40% 98%;           /* Texto claro */
+    
+    --card: 222 47% 8%;                  /* Cards levemente mais claros */
+    --card-foreground: 210 40% 98%;
+    
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+    
+    --primary: 208 91% 52%;              /* Azul mais vibrante no escuro */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 217 33% 15%;            /* Cinza escuro */
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 217 33% 18%;                /* Cinza médio */
+    --muted-foreground: 215 20% 65%;     /* Texto secundário */
+    
+    --accent: 217 33% 15%;               /* Destaque */
+    --accent-foreground: 210 40% 98%;
+    
+    --destructive: 0 63% 45%;            /* Vermelho escuro */
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 217 33% 20%;               /* Bordas sutis */
+    --input: 217 33% 18%;                /* Inputs */
+    --ring: 208 91% 52%;
+    
+    /* Sombras para profundidade no escuro */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.8), 0 1px 2px -1px rgb(0 0 0 / 0.8);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.8), 0 2px 4px -2px rgb(0 0 0 / 0.8);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Tipografia minimalista e hierarquia clara */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+  }
+  
+  p {
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+  }
+  
+  /* Melhor legibilidade para textos pequenos */
+  small, .text-sm {
+    letter-spacing: 0.02em;
+  }
+  
+  /* Inputs e formulários mais legíveis */
+  input, textarea, select {
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+  }
+  
+  /* Botões com tipografia clara */
+  button {
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+}
+
+/* Custom scrollbar adaptável */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* Tema Claro */
+:root ::-webkit-scrollbar-track {
+  background: hsl(210 20% 95%);
+}
+
+:root ::-webkit-scrollbar-thumb {
+  background: hsl(214 20% 80%);
+  border-radius: 5px;
+  border: 2px solid hsl(210 20% 95%);
+}
+
+:root ::-webkit-scrollbar-thumb:hover {
+  background: hsl(208 91% 48%);
+}
+
+/* Tema Escuro */
+.dark ::-webkit-scrollbar-track {
+  background: hsl(222 47% 8%);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(217 33% 25%);
+  border-radius: 5px;
+  border: 2px solid hsl(222 47% 8%);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(208 91% 52%);
+}
