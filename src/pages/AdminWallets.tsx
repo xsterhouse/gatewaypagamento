@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase'
 import { Search, Wallet, TrendingUp, Users, RefreshCw, Eye, Lock, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ViewWalletModal } from '@/components/ViewWalletModal'
 
 interface WalletWithUser {
   id: string
@@ -26,6 +27,8 @@ export function AdminWallets() {
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedWallet, setSelectedWallet] = useState<WalletWithUser | null>(null)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [stats, setStats] = useState({
     total_wallets: 0,
     total_balance_brl: 0,
@@ -116,22 +119,38 @@ export function AdminWallets() {
   }
 
   const handleViewWallet = (wallet: WalletWithUser) => {
-    // Mostrar detalhes da carteira
-    toast.info(`Visualizando: ${wallet.wallet_name} - ${wallet.currency_code}`)
-    console.log('Detalhes da carteira:', wallet)
-    // TODO: Abrir modal com detalhes completos
+    setSelectedWallet(wallet)
+    setIsViewModalOpen(true)
   }
 
   const handleBlockWallet = async (wallet: WalletWithUser) => {
+    const action = wallet.is_active ? 'bloquear' : 'desbloquear'
+    
+    if (!confirm(`Tem certeza que deseja ${action} a carteira "${wallet.wallet_name}"?`)) {
+      return
+    }
+
     try {
       const newStatus = !wallet.is_active
+      
+      console.log('🔒 Bloqueando/Desbloqueando carteira:', {
+        id: wallet.id,
+        wallet_name: wallet.wallet_name,
+        current_status: wallet.is_active,
+        new_status: newStatus
+      })
       
       const { error } = await supabase
         .from('wallets')
         .update({ is_active: newStatus })
         .eq('id', wallet.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erro ao atualizar:', error)
+        throw error
+      }
+
+      console.log('✅ Carteira atualizada com sucesso')
 
       toast.success(
         `${wallet.wallet_name} foi ${newStatus ? 'desbloqueada' : 'bloqueada'} com sucesso`
@@ -140,7 +159,7 @@ export function AdminWallets() {
       await loadWallets()
       await loadStats()
     } catch (error: any) {
-      console.error('Erro ao bloquear/desbloquear carteira:', error)
+      console.error('❌ Erro ao bloquear/desbloquear carteira:', error)
       toast.error(`Erro ao atualizar carteira: ${error.message}`)
     }
   }
@@ -420,6 +439,13 @@ export function AdminWallets() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Visualização */}
+      <ViewWalletModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        wallet={selectedWallet}
+      />
     </div>
   )
 }
