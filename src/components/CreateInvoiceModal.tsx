@@ -55,12 +55,16 @@ export function CreateInvoiceModal({ isOpen, onClose, onSuccess }: CreateInvoice
     setLoading(true)
 
     try {
+      // Converter data para formato correto (mantém o dia selecionado)
+      // Adiciona horário meio-dia para evitar problemas de timezone
+      const dueDate = new Date(formData.due_date + 'T12:00:00')
+      
       const { error } = await supabase
         .from('invoices')
         .insert({
           user_id: formData.user_id,
           amount: parseFloat(formData.amount),
-          due_date: formData.due_date,
+          due_date: dueDate.toISOString(),
           description: formData.description,
           status: 'pending'
         })

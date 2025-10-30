@@ -24,9 +24,16 @@ export function EditInvoiceModal({ isOpen, invoice, onClose, onSuccess }: EditIn
 
   useEffect(() => {
     if (invoice) {
+      // Converter data ISO para formato YYYY-MM-DD para o input type="date"
+      let dueDateFormatted = ''
+      if (invoice.due_date) {
+        const date = new Date(invoice.due_date)
+        dueDateFormatted = date.toISOString().split('T')[0]
+      }
+      
       setFormData({
         amount: invoice.amount?.toString() || '',
-        due_date: invoice.due_date || '',
+        due_date: dueDateFormatted,
         status: invoice.status || 'pending',
         description: invoice.description || ''
       })
@@ -40,11 +47,15 @@ export function EditInvoiceModal({ isOpen, invoice, onClose, onSuccess }: EditIn
     setLoading(true)
 
     try {
+      // Converter data para formato correto (mantém o dia selecionado)
+      // Adiciona horário meio-dia para evitar problemas de timezone
+      const dueDate = new Date(formData.due_date + 'T12:00:00')
+      
       const { error } = await supabase
         .from('invoices')
         .update({
           amount: parseFloat(formData.amount),
-          due_date: formData.due_date,
+          due_date: dueDate.toISOString(),
           status: formData.status,
           description: formData.description,
           paid_date: formData.status === 'paid' ? new Date().toISOString() : null
