@@ -39,7 +39,8 @@ export function AdminWallets() {
     try {
       console.log('🔍 Carregando carteiras no admin...')
       
-      const { data, error } = await supabase
+      // Tentar carregar com join primeiro
+      const { data: walletsData, error: walletsError } = await supabase
         .from('wallets')
         .select(`
           *,
@@ -51,14 +52,47 @@ export function AdminWallets() {
         .eq('is_active', true)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      // Se o join falhar (sem foreign key), carregar separadamente
+      if (walletsError && walletsError.code === 'PGRST200') {
+        console.log('⚠️ Foreign key não encontrada, carregando dados separadamente...')
+        
+        // Carregar carteiras
+        const { data: wallets, error: walletsFetchError } = await supabase
+          .from('wallets')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
 
-      console.log('✅ Carteiras carregadas:', data?.length || 0)
-      if (data && data.length > 0) {
-        console.log('📋 Primeira carteira:', data[0])
+        if (walletsFetchError) throw walletsFetchError
+
+        // Carregar usuários
+        const userIds = [...new Set(wallets?.map(w => w.user_id) || [])]
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, name, email')
+          .in('id', userIds)
+
+        const usersMap = new Map(users?.map(u => [u.id, u]) || [])
+
+        const walletsWithUser = wallets?.map(wallet => ({
+          ...wallet,
+          user_name: usersMap.get(wallet.user_id)?.name || 'N/A',
+          user_email: usersMap.get(wallet.user_id)?.email || 'N/A'
+        })) || []
+
+        console.log('✅ Carteiras carregadas (sem join):', walletsWithUser.length)
+        setWallets(walletsWithUser)
+        return
       }
 
-      const walletsWithUser = data?.map(wallet => ({
+      if (walletsError) throw walletsError
+
+      console.log('✅ Carteiras carregadas (com join):', walletsData?.length || 0)
+      if (walletsData && walletsData.length > 0) {
+        console.log('📋 Primeira carteira:', walletsData[0])
+      }
+
+      const walletsWithUser = walletsData?.map(wallet => ({
         ...wallet,
         user_name: wallet.users?.name || 'N/A',
         user_email: wallet.users?.email || 'N/A'
