@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
-import { Wallet, TrendingUp, TrendingDown, Plus, Send, Download, RefreshCw, AlertCircle, Trash2 } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, Plus, Send, RefreshCw, AlertCircle, Trash2, Grid, List, ArrowUpCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { CreateWalletModal } from '@/components/CreateWalletModal'
@@ -15,6 +15,7 @@ interface WalletData {
   user_id: string
   currency_code: string
   currency_type: string
+  wallet_name?: string
   balance: number
   available_balance: number
   blocked_balance: number
@@ -34,6 +35,7 @@ export function Wallets() {
   const [isSendModalOpen, setIsSendModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedWallet, setSelectedWallet] = useState<WalletData | null>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
 
   useEffect(() => {
     if (effectiveUserId) {
@@ -128,6 +130,26 @@ export function Wallets() {
           <p className="text-gray-500 mt-1">Gerencie suas carteiras de criptomoedas e reais</p>
         </div>
         <div className="flex gap-2">
+          {/* Botões de visualização */}
+          <div className="flex border border-border rounded-md">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="rounded-r-none"
+            >
+              <Grid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="rounded-l-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+
           <Button 
             variant="outline" 
             onClick={handleRefresh}
@@ -198,19 +220,115 @@ export function Wallets() {
       </div>
 
       {/* Lista de Carteiras */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {wallets.length === 0 ? (
-          <Card className="col-span-2">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Wallet className="h-12 w-12 text-gray-300 mb-4" />
-              <p className="text-gray-500 text-center">
-                Você ainda não possui carteiras criadas.<br />
-                Clique em "Criar Carteira" para começar.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          wallets.map((wallet) => (
+      {wallets.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Wallet className="h-12 w-12 text-gray-300 mb-4" />
+            <p className="text-gray-500 text-center">
+              Você ainda não possui carteiras criadas.<br />
+              Clique em "Criar Carteira" para começar.
+            </p>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'list' ? (
+        /* Visualização em Tabela/Lista */
+        <Card>
+          <CardHeader>
+            <CardTitle>Minhas Carteiras ({wallets.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nome</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Moeda</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Saldo Total</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Disponível</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Bloqueado</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {wallets.map((wallet) => (
+                    <tr key={wallet.id} className="border-b border-border hover:bg-accent/50 transition-all">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="h-4 w-4 text-primary" />
+                          <span className="font-medium">{wallet.wallet_name || wallet.currency_code}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{getCurrencyIcon(wallet.currency_type)}</span>
+                          <span className="font-semibold">{wallet.currency_code}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right font-semibold">
+                        {formatCurrency(Number(wallet.balance), wallet.currency_code)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-green-600 font-medium">
+                        {formatCurrency(Number(wallet.available_balance), wallet.currency_code)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-red-600 font-medium">
+                        {formatCurrency(Number(wallet.blocked_balance), wallet.currency_code)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* Botão Depositar */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedWallet(wallet)
+                              setIsDepositModalOpen(true)
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-500"
+                            title="Depositar"
+                          >
+                            <ArrowUpCircle className="h-4 w-4" />
+                          </Button>
+
+                          {/* Botão Enviar */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedWallet(wallet)
+                              setIsSendModalOpen(true)
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-500"
+                            title="Enviar"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+
+                          {/* Botão Excluir */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedWallet(wallet)
+                              setIsDeleteModalOpen(true)
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-500"
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        /* Visualização em Grid/Cards */
+        <div className="grid gap-6 md:grid-cols-2">
+          {wallets.map((wallet) => (
             <Card key={wallet.id} className="transition-all hover:shadow-xl hover:scale-105 hover:border-primary/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -269,7 +387,7 @@ export function Wallets() {
                       setIsDepositModalOpen(true)
                     }}
                   >
-                    <Download className="h-4 w-4 mr-2" />
+                    <ArrowUpCircle className="h-4 w-4 mr-2" />
                     Depositar
                   </Button>
                   <Button 
@@ -287,9 +405,9 @@ export function Wallets() {
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal de Criar Carteira */}
       <CreateWalletModal 
