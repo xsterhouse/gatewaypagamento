@@ -145,7 +145,7 @@ export function Login() {
           <div className="mb-12">
             <div className="flex items-center gap-3 mb-2">
               <img 
-                src="/src/assets/logo-dimpay.png" 
+                src="/logo-dimpay.png" 
                 alt="DiMPay" 
                 className="h-12 w-auto"
               />

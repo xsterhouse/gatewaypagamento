@@ -151,7 +151,7 @@ export function Sidebar() {
           {isOpen && (
             <div className="flex items-center gap-2">
               <img 
-                src="/src/assets/logo-dimpay.png" 
+                src="/logo-dimpay.png" 
                 alt="DiMPay" 
                 className="h-8 w-auto"
               />
@@ -160,7 +160,7 @@ export function Sidebar() {
           {!isOpen && (
             <div className="flex justify-center mx-auto">
               <img 
-                src="/src/assets/logo-dimpay.png" 
+                src="/logo-dimpay.png" 
                 alt="DiMPay" 
                 className="h-8 w-auto"
               />

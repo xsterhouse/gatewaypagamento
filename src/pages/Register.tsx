@@ -267,7 +267,7 @@ export function Register() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="/src/assets/logo-dimpay.png" 
+              src="/logo-dimpay.png" 
               alt="DiMPay" 
               className="h-16 w-auto"
             />
