@@ -154,10 +154,23 @@ export function ConfiguracoesAvancadas() {
     }
 
     try {
-      // Criar usuário no Auth
+      // Criar usuário no Auth usando Admin API
+      // Primeiro, criar o usuário diretamente na tabela users com um ID temporário
+      const tempUserId = crypto.randomUUID()
+      
+      console.log('Criando gerente com ID:', tempUserId)
+
+      // Criar usuário no Auth com metadata
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newManager.email,
-        password: newManager.password
+        password: newManager.password,
+        options: {
+          data: {
+            name: newManager.name,
+            role: 'manager',
+            skip_auto_insert: true // Flag para o trigger não tentar inserir
+          }
+        }
       })
 
       if (authError) {
