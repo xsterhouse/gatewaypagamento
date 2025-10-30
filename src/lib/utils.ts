@@ -13,14 +13,25 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(date: string | Date): string {
-  // Se for string ISO, extrair apenas a parte da data (YYYY-MM-DD)
-  // para evitar problemas de timezone
-  if (typeof date === 'string' && date.includes('T')) {
-    const [datePart] = date.split('T')
-    const [year, month, day] = datePart.split('-')
-    return `${day}/${month}/${year}`
+  // ✅ SOLUÇÃO: Nunca usar new Date() com strings de data
+  // Manipular a string diretamente para evitar problemas de timezone
+  
+  if (typeof date === 'string') {
+    // Se tiver horário (ISO completo), extrair apenas a data
+    let datePart = date
+    if (date.includes('T')) {
+      datePart = date.split('T')[0]
+    }
+    
+    // Validar formato YYYY-MM-DD
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (dateRegex.test(datePart)) {
+      const [year, month, day] = datePart.split('-')
+      return `${day}/${month}/${year}`
+    }
   }
   
+  // Fallback para Date objects (não recomendado para datas do banco)
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
