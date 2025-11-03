@@ -1,8 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HelpCircle, Book, MessageCircle, Mail, Phone, FileQuestion } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useNavigate } from 'react-router-dom'
 
 export function Ajuda() {
+  const navigate = useNavigate()
+  
   const faqs = [
     {
       question: 'Como criar um link de pagamento?',
@@ -34,20 +37,23 @@ export function Ajuda() {
     {
       icon: Mail,
       title: 'Email',
-      value: 'suporte@gateway.com',
-      action: 'Enviar email'
+      value: 'gerencia@dimpay.com.br',
+      action: 'Enviar email',
+      onClick: () => window.location.href = 'mailto:gerencia@dimpay.com.br'
     },
     {
       icon: Phone,
-      title: 'Telefone',
-      value: '(11) 9999-9999',
-      action: 'Ligar agora'
+      title: 'Telefone Suporte',
+      value: '(63) 99294-0044',
+      action: 'Ligar agora',
+      onClick: () => window.location.href = 'tel:+5563992940044'
     },
     {
       icon: MessageCircle,
       title: 'Chat',
-      value: 'Disponível 24/7',
-      action: 'Iniciar chat'
+      value: 'Fale com seu Gerente',
+      action: 'Iniciar chat',
+      onClick: () => navigate('/gerente')
     }
   ]
 
@@ -63,7 +69,7 @@ export function Ajuda() {
         {contacts.map((contact, index) => {
           const Icon = contact.icon
           return (
-            <Card key={index} className="bg-card border-border">
+            <Card key={index} className="bg-card border-border hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
@@ -71,7 +77,12 @@ export function Ajuda() {
                   </div>
                   <h3 className="text-foreground font-semibold mb-1">{contact.title}</h3>
                   <p className="text-muted-foreground text-sm mb-3">{contact.value}</p>
-                  <Button size="sm" variant="outline" className="w-full">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={contact.onClick}
+                  >
                     {contact.action}
                   </Button>
                 </div>
@@ -104,39 +115,25 @@ export function Ajuda() {
         </CardContent>
       </Card>
 
-      {/* Documentação */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center gap-2">
-            <Book size={20} />
-            Documentação
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" className="justify-start h-auto py-4">
-              <div className="text-left">
-                <p className="font-semibold mb-1">Guia de Início Rápido</p>
-                <p className="text-xs text-muted-foreground">Aprenda a usar a plataforma</p>
+      {/* Link para Documentação */}
+      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Book className="text-white" size={24} />
               </div>
-            </Button>
-            <Button variant="outline" className="justify-start h-auto py-4">
-              <div className="text-left">
-                <p className="font-semibold mb-1">API de Integração</p>
-                <p className="text-xs text-muted-foreground">Documentação técnica completa</p>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  Documentação Completa
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Guias, API, termos e muito mais
+                </p>
               </div>
-            </Button>
-            <Button variant="outline" className="justify-start h-auto py-4">
-              <div className="text-left">
-                <p className="font-semibold mb-1">Políticas e Termos</p>
-                <p className="text-xs text-muted-foreground">Leia nossos termos de uso</p>
-              </div>
-            </Button>
-            <Button variant="outline" className="justify-start h-auto py-4">
-              <div className="text-left">
-                <p className="font-semibold mb-1">Segurança</p>
-                <p className="text-xs text-muted-foreground">Saiba como protegemos seus dados</p>
-              </div>
+            </div>
+            <Button onClick={() => navigate('/documentacao')}>
+              Acessar Documentação
             </Button>
           </div>
         </CardContent>

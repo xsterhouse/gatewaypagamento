@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [shouldRedirect, setShouldRedirect] = useState(false)
   const location = useLocation()
 
   useEffect(() => {
@@ -30,14 +29,21 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         console.log('✅ Sessão encontrada:', session.user.email)
         setIsAuthenticated(true)
 
-        // Verificar se é admin ou manager
+        // Verificar se é admin ou manager e se está bloqueado
         const { data: userData } = await supabase
           .from('users')
-          .select('role')
+          .select('role, is_blocked')
           .eq('id', session.user.id)
           .single()
 
         if (!mounted) return
+
+        // Verificar se o usuário está bloqueado
+        if (userData?.is_blocked && location.pathname !== '/account-blocked') {
+          console.log('🔒 Usuário bloqueado, redirecionando...')
+          window.location.href = '/account-blocked'
+          return
+        }
 
         const userIsAdmin = userData?.role === 'admin'
         const userIsManager = userData?.role === 'manager'
@@ -56,7 +62,9 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         // Se é admin/manager, não está impersonando e está tentando acessar rota de cliente
         if (isAdminOrManager && !isImpersonating && isClientRoute) {
           console.log('🔀 Admin/Gerente acessando rota cliente, redirecionando...')
-          setShouldRedirect(true)
+          // Redirecionar imediatamente sem esperar o estado
+          window.location.href = '/admin/dashboard'
+          return
         }
 
         console.log('✅ ProtectedRoute: Autenticação completa')
@@ -72,10 +80,23 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     checkAuth()
 
     // Escutar mudanças na autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('🔄 Auth state changed:', !!session)
-      if (mounted) {
-        setIsAuthenticated(!!session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 Auth state changed:', event, !!session)
+      if (!mounted) return
+      
+      // Só atualizar se realmente mudou
+      const newAuthState = !!session
+      setIsAuthenticated(prev => {
+        if (prev !== newAuthState) {
+          console.log('🔄 Atualizando estado de autenticação:', prev, '->', newAuthState)
+          return newAuthState
+        }
+        return prev
+      })
+      
+      // Se fez logout, marcar para não carregar
+      if (event === 'SIGNED_OUT') {
+        setLoading(false)
       }
     })
 
@@ -98,11 +119,6 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
-  }
-
-  // Redirecionar admin para dashboard admin se tentar acessar rota de cliente
-  if (shouldRedirect) {
-    return <Navigate to="/admin/dashboard" replace />
   }
 
   return <>{children}</>

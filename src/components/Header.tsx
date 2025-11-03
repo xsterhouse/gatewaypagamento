@@ -36,7 +36,9 @@ export function Header() {
         .eq('user_id', effectiveUserId)
         .eq('currency_code', 'BRL')
         .eq('is_active', true)
-        .single()
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
       if (error) {
         console.error('Erro ao carregar saldo:', error)
@@ -80,11 +82,23 @@ export function Header() {
     }).format(value)
   }
 
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    
+    if (hour >= 5 && hour < 12) {
+      return 'Bom dia'
+    } else if (hour >= 12 && hour < 18) {
+      return 'Boa tarde'
+    } else {
+      return 'Boa noite'
+    }
+  }
+
   return (
     <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 md:px-6 shadow-sm">
       <div className="flex items-center gap-2 md:gap-4">
         <h1 className="text-base md:text-xl text-foreground font-semibold truncate">
-          Boas vindas, {userData?.name || user?.email?.split('@')[0] || 'Usuário'}
+          {getGreeting()}, {userData?.name || user?.email?.split('@')[0] || 'Usuário'}
         </h1>
       </div>
 

@@ -11,7 +11,9 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
-  Ban
+  Ban,
+  RefreshCw,
+  ArrowRight
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -64,6 +66,8 @@ export function AdminDashboard() {
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [pendingMEDs, setPendingMEDs] = useState(0)
+  const [totalMEDAmount, setTotalMEDAmount] = useState(0)
 
   useEffect(() => {
     console.log('🔵 AdminDashboard montado')
@@ -97,10 +101,11 @@ export function AdminDashboard() {
     try {
       const today = new Date().toISOString().split('T')[0]
 
-      // Carregar estatísticas de usuários
+      // Carregar estatísticas de usuários (sem cache)
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('id, status, kyc_status, created_at')
+        .select('id, status, kyc_status, created_at, name, email, role')
+        .order('created_at', { ascending: false })
 
       if (usersError) {
         console.error('Erro ao carregar usuários:', usersError)
@@ -137,6 +142,24 @@ export function AdminDashboard() {
         console.error('Erro ao carregar transações recentes:', transError)
       }
 
+      // Carregar MEDs pendentes
+      const { data: medRequests, error: medError } = await supabase
+        .from('med_requests')
+        .select('id, amount, status')
+        .eq('status', 'pending')
+
+      if (medError && !medError.message.includes('does not exist')) {
+        console.error('Erro ao carregar MEDs:', medError)
+      }
+
+      const pendingMEDsCount = medRequests?.length || 0
+      const totalMED = medRequests?.reduce((sum, med) => sum + Number(med.amount || 0), 0) || 0
+      
+      setPendingMEDs(pendingMEDsCount)
+      setTotalMEDAmount(totalMED)
+      
+      console.log('🔄 MEDs Pendentes:', pendingMEDsCount, 'Valor total:', totalMED)
+
       // Carregar tickets abertos (se a tabela existir)
       const { data: tickets, error: ticketsError } = await supabase
         .from('support_tickets')
@@ -164,11 +187,33 @@ export function AdminDashboard() {
       })
 
       if (users) {
-        // Contar usuários por status (excluindo admins)
-        const nonAdminUsers = users.filter(u => u.id)
-        const activeUsers = users.filter(u => u.status === 'active').length
-        const suspendedUsers = users.filter(u => u.status === 'suspended').length
-        const pendingKYC = users.filter(u => u.kyc_status === 'pending').length
+        // Filtrar apenas clientes (excluir admin e manager)
+        const clientUsers = users.filter(u => u.role === 'user')
+        
+        // Debug: Mostrar status KYC de todos os clientes
+        console.log('📋 Total de clientes:', clientUsers.length)
+        console.log('📋 Status KYC dos clientes:', clientUsers.map(u => ({
+          name: u.name,
+          email: u.email,
+          kyc_status: u.kyc_status
+        })))
+        
+        // Filtrar clientes com KYC pendente (apenas role = 'user')
+        const usersWithPendingKYC = clientUsers.filter(u => u.kyc_status === 'pending')
+        console.log('⚠️ Clientes com KYC PENDENTE:', usersWithPendingKYC.map(u => ({
+          name: u.name,
+          email: u.email,
+          kyc_status: u.kyc_status
+        })))
+        
+        // Contar usuários por status (excluindo admins e managers)
+        const nonAdminUsers = clientUsers.filter(u => u.id)
+        const activeUsers = clientUsers.filter(u => u.status === 'active').length
+        const suspendedUsers = clientUsers.filter(u => u.status === 'suspended').length
+        const pendingKYC = usersWithPendingKYC.length
+        
+        console.log('🔢 Total KYC Pendentes (apenas clientes):', pendingKYC)
+        
         const newUsersToday = users.filter(u => 
           u.created_at && u.created_at.startsWith(today)
         ).length
@@ -340,14 +385,23 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6 bg-background min-h-screen p-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard Administrativo</h1>
-        <p className="text-muted-foreground">Visão geral do sistema e métricas principais</p>
+    <div className="space-y-8 bg-gradient-to-br from-background via-background to-primary/5 min-h-screen p-6">
+      {/* Header Moderno */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
+            Dashboard Administrativo
+          </h1>
+          <p className="text-muted-foreground text-lg">Visão geral do sistema em tempo real</p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg border border-primary/20">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span className="text-sm font-medium">Sistema Online</span>
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Cards Principais - Grid Responsivo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total de Usuários */}
         <Card 
           className="bg-card border-border cursor-pointer transition-all hover:shadow-lg hover:scale-105 hover:border-primary/50"
@@ -404,28 +458,40 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Tickets Abertos */}
+        {/* MEDs Pendentes - NOVO */}
         <Card 
-          className="bg-card border-border cursor-pointer transition-all hover:shadow-lg hover:scale-105 hover:border-orange-500/50"
-          onClick={() => navigate('/admin/tickets')}
+          className={`bg-card border-border cursor-pointer transition-all hover:shadow-lg hover:scale-105 ${
+            pendingMEDs > 0 ? 'border-orange-500 border-2 animate-pulse' : 'hover:border-orange-500/50'
+          }`}
+          onClick={() => navigate('/admin/med')}
         >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-sm">Tickets Abertos</p>
-                <p className="text-2xl font-bold text-orange-500">{stats.openTickets}</p>
+              <div className="flex-1">
+                <p className="text-muted-foreground text-sm">MEDs Pendentes</p>
+                <p className="text-2xl font-bold text-orange-500">{pendingMEDs}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Requer atenção
+                  {totalMEDAmount > 0 
+                    ? `R$ ${totalMEDAmount.toFixed(2)} em disputa`
+                    : 'Nenhum MED pendente'
+                  }
                 </p>
+                {pendingMEDs > 0 && (
+                  <div className="mt-2 flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Requer atenção</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </div>
+                )}
               </div>
-              <AlertCircle className="text-orange-500" size={32} />
+              <RefreshCw className={`text-orange-500 ${pendingMEDs > 0 ? 'animate-spin' : ''}`} size={32} />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Estatísticas PIX */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Estatísticas PIX - Grid Compacto */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -487,8 +553,8 @@ export function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Alertas e Métricas Secundárias */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Métricas Secundárias */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -523,6 +589,28 @@ export function AdminDashboard() {
                   {formatCurrency(stats.lockedBalance)}
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alertas e Ações Rápidas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Tickets Abertos */}
+        <Card 
+          className="bg-card border-border cursor-pointer transition-all hover:shadow-lg hover:scale-105 hover:border-orange-500/50"
+          onClick={() => navigate('/admin/tickets')}
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-sm">Tickets Abertos</p>
+                <p className="text-2xl font-bold text-orange-500">{stats.openTickets}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Requer atenção
+                </p>
+              </div>
+              <AlertCircle className="text-orange-500" size={32} />
             </div>
           </CardContent>
         </Card>

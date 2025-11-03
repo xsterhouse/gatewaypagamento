@@ -16,7 +16,9 @@ import {
   Ticket,
   ArrowRight,
   AlertCircle,
-  Upload
+  Upload,
+  RefreshCw,
+  CheckCircle
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
@@ -52,12 +54,15 @@ export function Dashboard() {
   const [chartData, setChartData] = useState<any[]>([])
   const [isPixModalOpen, setIsPixModalOpen] = useState(false)
   const [isSaqueModalOpen, setIsSaqueModalOpen] = useState(false)
+  const [hasPendingMED, setHasPendingMED] = useState(false)
+  const [medCount, setMedCount] = useState(0)
 
   useEffect(() => {
     if (effectiveUserId) {
       loadMetrics()
       loadChartData()
       calculateConversionRates()
+      checkPendingMED()
     }
   }, [effectiveUserId])
 
@@ -66,17 +71,20 @@ export function Dashboard() {
     
     try {
       // Buscar saldo da carteira BRL
-      const { data: wallet, error: walletError } = await supabase
+      const { data: wallets, error: walletError } = await supabase
         .from('wallets')
         .select('balance, available_balance, blocked_balance')
         .eq('user_id', effectiveUserId)
         .eq('currency_code', 'BRL')
         .eq('is_active', true)
-        .single()
+        .limit(1)
 
       if (walletError) {
         console.error('Erro ao buscar carteira:', walletError)
       }
+      
+      // Pegar a primeira carteira (ou null se não houver)
+      const wallet = wallets?.[0] || null
 
       // Buscar transações
       const { data: transactions, error: transError } = await supabase
@@ -124,16 +132,17 @@ export function Dashboard() {
         ? total / approvedTransactions.length 
         : 0
 
-      setMetrics({
+      setMetrics(prev => ({
+        ...prev,
         availableBalance: wallet?.available_balance || 0,
         receivedToday: todayTotal,
-        blockedBalance: wallet?.blocked_balance || 0,
+        // blockedBalance será atualizado por checkPendingMED()
         totalInvoicing: total,
         averageTicket: averageTicket,
         dailyAverage: dailyAverage,
         transactionsCount: approvedTransactions.length,
         pendingAmount: pendingAmount,
-      })
+      }))
 
       console.log('📊 Métricas carregadas:', {
         wallet,
@@ -146,6 +155,47 @@ export function Dashboard() {
       })
     } catch (error) {
       console.error('Erro ao carregar métricas:', error)
+    }
+  }
+
+  const checkPendingMED = async () => {
+    if (!effectiveUserId) return
+
+    try {
+      const { data, error } = await supabase
+        .from('med_requests')
+        .select('id, status, amount')
+        .eq('user_id', effectiveUserId)
+        .in('status', ['pending', 'approved'])
+
+      if (error) {
+        console.error('Erro ao verificar MED:', error)
+        return
+      }
+
+      const count = data?.length || 0
+      const hasMED = count > 0
+      
+      setMedCount(count)
+      setHasPendingMED(hasMED)
+      
+      // Calcular valor total em disputa (MEDs pendentes e aprovados)
+      const totalMEDAmount = data?.reduce((sum, med) => sum + Number(med.amount || 0), 0) || 0
+      
+      // Atualizar o blockedBalance com o valor dos MEDs
+      setMetrics(prev => ({
+        ...prev,
+        blockedBalance: totalMEDAmount
+      }))
+      
+      console.log('🔄 MED Status:', {
+        count,
+        hasMED,
+        totalAmount: totalMEDAmount,
+        data
+      })
+    } catch (error) {
+      console.error('Erro ao verificar MED:', error)
     }
   }
 
@@ -381,16 +431,48 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
+        <Card 
+          className={cn(
+            "bg-card border-border transition-all hover:shadow-lg cursor-pointer",
+            hasPendingMED && "border-orange-500 border-2"
+          )}
+          onClick={() => navigate('/med')}
+        >
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
-              <div>
+              <div className="flex-1">
                 <p className="text-muted-foreground text-sm mb-1">Bloqueio Cautelar (MED)</p>
                 <h3 className="text-2xl font-bold text-foreground">{formatCurrency(metrics.blockedBalance)}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Valor em disputa</p>
+                
+                <div className="mt-3">
+                  {hasPendingMED ? (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-md">
+                        <RefreshCw className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                        <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
+                          {medCount} MED {medCount === 1 ? 'aberto' : 'abertos'}
+                        </span>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                      <CheckCircle className="w-3 h-3" />
+                      <span>Nenhum MED aberto</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center">
-                <Lock className="text-yellow-400" size={20} />
+              <div className={cn(
+                "w-10 h-10 rounded-lg flex items-center justify-center",
+                hasPendingMED ? "bg-orange-500/10" : "bg-yellow-500/10"
+              )}>
+                {hasPendingMED ? (
+                  <RefreshCw className="text-orange-400" size={20} />
+                ) : (
+                  <Lock className="text-yellow-400" size={20} />
+                )}
               </div>
             </div>
           </CardContent>

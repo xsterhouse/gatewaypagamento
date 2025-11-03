@@ -19,7 +19,10 @@ import {
   TrendingUp,
   CreditCard,
   LogOut,
-  Receipt
+  Receipt,
+  Building2,
+  Book,
+  RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -36,6 +39,7 @@ const menuItems = [
   { icon: FileText, label: 'Relatórios', path: '/relatorios' },
   { icon: Gift, label: 'Premiações', path: '/premiacoes' },
   { icon: ShoppingCart, label: 'Acessar Checkout', path: '/checkout' },
+  { icon: RefreshCw, label: 'MED', path: '/med' },
 ]
 
 const adminMenuItems = [
@@ -44,8 +48,10 @@ const adminMenuItems = [
   { icon: TrendingUp, label: 'Exchange & Ordens', path: '/admin/exchange' },
   { icon: CreditCard, label: 'Depósitos & Saques', path: '/admin/deposits' },
   { icon: Receipt, label: 'Gerenciar Faturas', path: '/admin/invoices' },
+  { icon: Building2, label: 'Adquirentes Bancários', path: '/admin/acquirers' },
   { icon: UserCog, label: 'Gerenciar Usuários', path: '/admin' },
   { icon: Shield, label: 'Gerenciar KYC', path: '/kyc' },
+  { icon: RefreshCw, label: 'Gerenciar MED', path: '/admin/med' },
   { icon: MessageSquare, label: 'Tickets de Suporte', path: '/admin/tickets' },
   { icon: Wallet, label: 'Transações', path: '/admin/transactions' },
   { icon: FileText, label: 'Logs de Atividades', path: '/admin/logs' },
@@ -54,6 +60,7 @@ const adminMenuItems = [
 
 const bottomMenuItems = [
   { icon: HelpCircle, label: 'Central de Ajuda', path: '/ajuda' },
+  { icon: Book, label: 'Documentação', path: '/documentacao' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ]
 

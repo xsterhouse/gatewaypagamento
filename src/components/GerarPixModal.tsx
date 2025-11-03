@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { bankAcquirerService } from '@/services/bankAcquirerService'
 
 interface GerarPixModalProps {
   open: boolean
@@ -107,12 +108,23 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
     }
 
     try {
-      // Gerar código PIX
-      const code = generatePixCode()
       const amount = Number(valor.replace(/\./g, '').replace(',', '.'))
-      const tax = calculateTax()
+      
+      // Usar o serviço de adquirentes para criar o pagamento PIX
+      const result = await bankAcquirerService.createPixPayment({
+        amount,
+        description: descricao,
+        user_id: effectiveUserId,
+        expires_in_minutes: 30
+      })
 
-      // Criar registro de depósito no banco
+      if (!result.success) {
+        toast.error(result.error || 'Erro ao gerar PIX')
+        return
+      }
+
+      // Criar também o registro de depósito para compatibilidade
+      const tax = calculateTax()
       const { data, error } = await supabase
         .from('deposits')
         .insert({
@@ -122,23 +134,21 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
           status: 'pending',
           description: descricao,
           tax: tax,
-          pix_code: code,
-          pix_qr_code: code,
+          pix_code: result.pix_code,
+          pix_qr_code: result.pix_qr_code,
         })
         .select()
         .single()
 
       if (error) {
         console.error('Erro ao criar depósito:', error)
-        toast.error('Erro ao gerar PIX. Tente novamente.')
-        return
       }
 
-      setDepositId(data.id)
-      setPixCode(code)
+      setDepositId(data?.id || result.transaction_id || null)
+      setPixCode(result.pix_code || '')
       setShowQRCode(true)
       toast.success('QR Code gerado com sucesso!')
-      console.log('💵 Depósito PIX criado:', data.id, 'Deposit ID:', depositId || data.id)
+      console.log('💵 Pagamento PIX criado via adquirente:', result.transaction_id)
     } catch (error) {
       console.error('Erro ao gerar PIX:', error)
       toast.error('Erro ao processar solicitação')

@@ -40,6 +40,12 @@ import { Documents } from './pages/Documents'
 import { FullCalendar } from './pages/FullCalendar'
 import { ConfiguracoesAvancadas } from './pages/ConfiguracoesAvancadas'
 import { AdminInvoices } from './pages/AdminInvoices'
+import { BankAcquirers } from './pages/BankAcquirers'
+import { Documentacao } from './pages/Documentacao'
+import { PaymentPage } from './pages/PaymentPage'
+import { AccountBlocked } from './pages/AccountBlocked'
+import { MEDRequests } from './pages/MEDRequests'
+import { AdminMED } from './pages/AdminMED'
 
 function App() {
   return (
@@ -53,6 +59,8 @@ function App() {
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
           <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+          <Route path="/pay/:slug" element={<PaymentPage />} />
+          <Route path="/account-blocked" element={<AccountBlocked />} />
           <Route path="/migrate" element={<MigrateUsers />} />
           <Route path="/create-admin" element={<CreateAdmin />} />
           
@@ -71,7 +79,9 @@ function App() {
             <Route path="premiacoes" element={<Premiacoes />} />
             <Route path="checkout" element={<Checkout />} />
             <Route path="ajuda" element={<Ajuda />} />
-            <Route path="configuracoes" element={<Configuracoes />} />
+            <Route path="documentacao" element={<Documentacao />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/med" element={<MEDRequests />} />
             <Route path="extrato" element={<Extrato />} />
             <Route path="kyc" element={<KYCManagement />} />
             <Route path="admin" element={<AdminPanel />} />
@@ -85,6 +95,8 @@ function App() {
             <Route path="admin/exchange" element={<AdminExchange />} />
             <Route path="admin/deposits" element={<AdminDeposits />} />
             <Route path="admin/invoices" element={<AdminInvoices />} />
+            <Route path="/admin/bank-acquirers" element={<BankAcquirers />} />
+            <Route path="/admin/med" element={<AdminMED />} />
             <Route path="wallets" element={<Wallets />} />
             <Route path="exchange" element={<Exchange />} />
             <Route path="deposits" element={<Deposits />} />

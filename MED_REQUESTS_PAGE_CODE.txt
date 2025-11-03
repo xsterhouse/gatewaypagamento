@@ -1,0 +1,387 @@
+// ============================================
+// MEDRequests.tsx - Página de Solicitação MED para Cliente
+// ============================================
+// Salve em: src/pages/MEDRequests.tsx
+
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { toast } from 'sonner'
+import {
+  Plus,
+  Clock,
+  CheckCircle,
+  XCircle,
+  FileText,
+  DollarSign,
+  Calendar,
+  AlertCircle
+} from 'lucide-react'
+
+interface MEDRequest {
+  id: string
+  amount: number
+  reason: string
+  description: string
+  status: 'pending' | 'approved' | 'rejected' | 'completed'
+  admin_notes: string | null
+  rejected_reason: string | null
+  created_at: string
+  approved_at: string | null
+  completed_at: string | null
+  pix_key: string | null
+  pix_key_type: string | null
+}
+
+export function MEDRequests() {
+  const { effectiveUserId } = useAuth()
+  const [requests, setRequests] = useState<MEDRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  // Form data
+  const [formData, setFormData] = useState({
+    amount: '',
+    reason: '',
+    description: '',
+    pix_key: '',
+    pix_key_type: 'cpf' as 'cpf' | 'cnpj' | 'email' | 'phone' | 'random'
+  })
+
+  useEffect(() => {
+    if (effectiveUserId) {
+      loadRequests()
+    }
+  }, [effectiveUserId])
+
+  const loadRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('med_requests')
+        .select('*')
+        .eq('user_id', effectiveUserId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setRequests(data || [])
+    } catch (error: any) {
+      console.error('Erro ao carregar solicitações:', error)
+      toast.error('Erro ao carregar solicitações MED')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!formData.amount || !formData.reason || !formData.pix_key) {
+      toast.error('Preencha todos os campos obrigatórios')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+
+      const { error } = await supabase
+        .from('med_requests')
+        .insert({
+          user_id: effectiveUserId,
+          amount: parseFloat(formData.amount),
+          reason: formData.reason,
+          description: formData.description,
+          pix_key: formData.pix_key,
+          pix_key_type: formData.pix_key_type,
+          status: 'pending'
+        })
+
+      if (error) throw error
+
+      toast.success('Solicitação MED enviada com sucesso!')
+      setModalOpen(false)
+      setFormData({
+        amount: '',
+        reason: '',
+        description: '',
+        pix_key: '',
+        pix_key_type: 'cpf'
+      })
+      loadRequests()
+    } catch (error: any) {
+      console.error('Erro ao enviar solicitação:', error)
+      toast.error('Erro ao enviar solicitação MED')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      pending: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', icon: Clock },
+      approved: { label: 'Aprovado', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', icon: CheckCircle },
+      rejected: { label: 'Rejeitado', className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', icon: XCircle },
+      completed: { label: 'Concluído', className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', icon: CheckCircle }
+    }
+    const variant = variants[status as keyof typeof variants] || variants.pending
+    const Icon = variant.icon
+    return (
+      <Badge className={`${variant.className} gap-1`}>
+        <Icon className="w-3 h-3" />
+        {variant.label}
+      </Badge>
+    )
+  }
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value)
+  }
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Solicitações MED</h1>
+          <p className="text-muted-foreground mt-1">
+            Mecanismo Especial de Devolução
+          </p>
+        </div>
+        <Button onClick={() => setModalOpen(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Nova Solicitação
+        </Button>
+      </div>
+
+      {/* Info Card */}
+      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                O que é MED?
+              </h3>
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                O MED (Mecanismo Especial de Devolução) permite solicitar a devolução de valores em casos específicos.
+                Todas as solicitações passam por análise da equipe administrativa.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lista de Solicitações */}
+      <div className="space-y-4">
+        {requests.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Nenhuma solicitação MED encontrada</p>
+              <Button
+                onClick={() => setModalOpen(true)}
+                variant="outline"
+                className="mt-4 gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Criar Primeira Solicitação
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          requests.map((request) => (
+            <Card key={request.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5" />
+                      {formatCurrency(request.amount)}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {request.reason}
+                    </p>
+                  </div>
+                  {getStatusBadge(request.status)}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {request.description && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Descrição</Label>
+                    <p className="text-sm mt-1">{request.description}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Data da Solicitação</Label>
+                    <p className="text-sm flex items-center gap-1 mt-1">
+                      <Calendar className="w-4 h-4" />
+                      {formatDate(request.created_at)}
+                    </p>
+                  </div>
+
+                  {request.pix_key && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Chave PIX</Label>
+                      <p className="text-sm font-mono mt-1">{request.pix_key}</p>
+                    </div>
+                  )}
+                </div>
+
+                {request.status === 'approved' && request.admin_notes && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                    <Label className="text-xs text-blue-800 dark:text-blue-300">Observações do Admin</Label>
+                    <p className="text-sm text-blue-900 dark:text-blue-200 mt-1">
+                      {request.admin_notes}
+                    </p>
+                  </div>
+                )}
+
+                {request.status === 'rejected' && request.rejected_reason && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <Label className="text-xs text-red-800 dark:text-red-300">Motivo da Rejeição</Label>
+                    <p className="text-sm text-red-900 dark:text-red-200 mt-1">
+                      {request.rejected_reason}
+                    </p>
+                  </div>
+                )}
+
+                {request.status === 'completed' && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                    <Label className="text-xs text-green-800 dark:text-green-300">Devolução Concluída</Label>
+                    <p className="text-sm text-green-900 dark:text-green-200 mt-1">
+                      Concluído em: {request.completed_at ? formatDate(request.completed_at) : 'N/A'}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Modal de Nova Solicitação */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nova Solicitação MED</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Valor *</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pix_key_type">Tipo de Chave PIX *</Label>
+                <select
+                  id="pix_key_type"
+                  value={formData.pix_key_type}
+                  onChange={(e) => setFormData({ ...formData, pix_key_type: e.target.value as any })}
+                  className="w-full p-2 border rounded-md bg-background"
+                  required
+                >
+                  <option value="cpf">CPF</option>
+                  <option value="cnpj">CNPJ</option>
+                  <option value="email">Email</option>
+                  <option value="phone">Telefone</option>
+                  <option value="random">Chave Aleatória</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pix_key">Chave PIX *</Label>
+              <Input
+                id="pix_key"
+                value={formData.pix_key}
+                onChange={(e) => setFormData({ ...formData, pix_key: e.target.value })}
+                placeholder="Digite sua chave PIX"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reason">Motivo *</Label>
+              <Input
+                id="reason"
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                placeholder="Ex: Erro na transação, cobrança indevida..."
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição Detalhada</Label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descreva detalhadamente o motivo da solicitação..."
+                rows={4}
+                className="w-full p-3 border rounded-md bg-background resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setModalOpen(false)}
+                disabled={submitting}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Enviando...' : 'Enviar Solicitação'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

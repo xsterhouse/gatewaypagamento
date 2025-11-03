@@ -3,7 +3,11 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { useAuth } from '@/contexts/AuthContext'
+import { ViewClientModal } from '@/components/ViewClientModal'
 import { 
   CheckCircle, 
   XCircle, 
@@ -13,7 +17,12 @@ import {
   CreditCard,
   Mail,
   Calendar,
-  Search
+  Search,
+  Eye,
+  Lock,
+  Unlock,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react'
 
 interface KYCUser {
@@ -27,15 +36,29 @@ interface KYCUser {
   kyc_submitted_at: string
   kyc_rejection_reason: string | null
   created_at: string
+  is_blocked?: boolean
+  blocked_reason?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
 }
 
 export function KYCManagement() {
+  const { effectiveUserId } = useAuth()
   const [users, setUsers] = useState<KYCUser[]>([])
   const [filteredUsers, setFilteredUsers] = useState<KYCUser[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
   const [searchTerm, setSearchTerm] = useState('')
   const [rejectionReason, setRejectionReason] = useState<{ [key: string]: string }>({})
+  
+  // Modais
+  const [selectedClient, setSelectedClient] = useState<KYCUser | null>(null)
+  const [viewModalOpen, setViewModalOpen] = useState(false)
+  const [blockModalOpen, setBlockModalOpen] = useState(false)
+  const [blockReason, setBlockReason] = useState('')
 
   useEffect(() => {
     loadUsers()
@@ -124,6 +147,69 @@ export function KYCManagement() {
       loadUsers()
     } catch (error) {
       toast.error('Erro ao rejeitar KYC')
+    }
+  }
+
+  // Visualizar Cliente
+  const handleViewClient = (client: KYCUser) => {
+    setSelectedClient(client)
+    setViewModalOpen(true)
+  }
+
+  // Bloquear/Desbloquear Cliente
+  const handleToggleBlock = async () => {
+    if (!selectedClient) return
+    
+    const isBlocking = !selectedClient.is_blocked
+    
+    if (isBlocking && !blockReason.trim()) {
+      toast.error('Informe o motivo do bloqueio')
+      return
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          is_blocked: isBlocking,
+          blocked_at: isBlocking ? new Date().toISOString() : null,
+          blocked_reason: isBlocking ? blockReason : null,
+          blocked_by: isBlocking ? effectiveUserId : null
+        })
+        .eq('id', selectedClient.id)
+      
+      if (error) throw error
+      
+      toast.success(isBlocking ? 'Cliente bloqueado com sucesso!' : 'Cliente desbloqueado com sucesso!')
+      setBlockModalOpen(false)
+      setBlockReason('')
+      setSelectedClient(null)
+      loadUsers()
+    } catch (error) {
+      console.error('Erro ao bloquear/desbloquear:', error)
+      toast.error('Erro ao bloquear/desbloquear cliente')
+    }
+  }
+
+  // Excluir Cliente
+  const handleDeleteClient = async (userId: string, userName: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o cliente "${userName}"?\n\nEsta ação não pode ser desfeita!`)) {
+      return
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId)
+      
+      if (error) throw error
+      
+      toast.success('Cliente excluído com sucesso!')
+      loadUsers()
+    } catch (error) {
+      console.error('Erro ao excluir:', error)
+      toast.error('Erro ao excluir cliente')
     }
   }
 
@@ -310,10 +396,63 @@ export function KYCManagement() {
                       </span>
                     </div>
                   </div>
-                  {getStatusBadge(user.kyc_status)}
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(user.kyc_status)}
+                    {user.is_blocked && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs font-medium">
+                        <Lock size={12} />
+                        Bloqueado
+                      </span>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Botões de Ação */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleViewClient(user)}
+                    className="gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Visualizar
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant={user.is_blocked ? "default" : "outline"}
+                    onClick={() => {
+                      setSelectedClient(user)
+                      setBlockModalOpen(true)
+                    }}
+                    className={user.is_blocked ? "gap-2" : "gap-2 border-orange-500 text-orange-500 hover:bg-orange-500/10"}
+                  >
+                    {user.is_blocked ? (
+                      <>
+                        <Unlock className="w-4 h-4" />
+                        Desbloquear
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4" />
+                        Bloquear
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDeleteClient(user.id, user.name)}
+                    className="gap-2 border-red-500 text-red-500 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir
+                  </Button>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2 text-sm">
                     <CreditCard className="text-muted-foreground" size={16} />
@@ -373,6 +512,119 @@ export function KYCManagement() {
           ))
         )}
       </div>
+
+      {/* Modal de Visualização */}
+      <ViewClientModal 
+        open={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false)
+          setSelectedClient(null)
+        }}
+        client={selectedClient}
+      />
+
+      {/* Modal de Bloqueio */}
+      <Dialog open={blockModalOpen} onOpenChange={setBlockModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedClient?.is_blocked ? (
+                <>
+                  <Unlock className="w-5 h-5" />
+                  Desbloquear Cliente
+                </>
+              ) : (
+                <>
+                  <Lock className="w-5 h-5" />
+                  Bloquear Cliente
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedClient?.is_blocked ? (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-900 dark:text-blue-200">
+                  Tem certeza que deseja desbloquear a conta de <strong>{selectedClient.name}</strong>?
+                </p>
+                {selectedClient.blocked_reason && (
+                  <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                    <p className="text-xs text-blue-800 dark:text-blue-300 mb-1">
+                      <strong>Motivo do bloqueio:</strong>
+                    </p>
+                    <p className="text-sm text-blue-900 dark:text-blue-200">
+                      {selectedClient.blocked_reason}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-red-900 dark:text-red-200 mb-1">
+                        Atenção!
+                      </p>
+                      <p className="text-sm text-red-800 dark:text-red-300">
+                        Ao bloquear, <strong>{selectedClient?.name}</strong> não conseguirá acessar a conta.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="blockReason">Motivo do Bloqueio *</Label>
+                  <textarea
+                    id="blockReason"
+                    value={blockReason}
+                    onChange={(e) => setBlockReason(e.target.value)}
+                    placeholder="Descreva o motivo do bloqueio..."
+                    rows={4}
+                    className="w-full p-3 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                    required
+                  />
+                  <p className="text-xs text-gray-500">
+                    Este motivo será registrado e poderá ser visualizado posteriormente.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setBlockModalOpen(false)
+                setBlockReason('')
+                setSelectedClient(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant={selectedClient?.is_blocked ? "default" : "destructive"}
+              onClick={handleToggleBlock}
+              className="gap-2"
+            >
+              {selectedClient?.is_blocked ? (
+                <>
+                  <Unlock className="w-4 h-4" />
+                  Desbloquear
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  Bloquear Cliente
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

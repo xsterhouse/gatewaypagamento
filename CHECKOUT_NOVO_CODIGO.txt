@@ -125,13 +125,10 @@ export function Checkout() {
   }
 
   const formatDate = (date: string) => {
-    // Adicionar 'Z' se não tiver timezone para forçar UTC
-    const dateStr = date.includes('T') ? date : date + 'T00:00:00Z'
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
+    return new Date(date).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
-      year: 'numeric',
-      timeZone: 'America/Sao_Paulo'
+      year: 'numeric'
     })
   }
 
