@@ -3,24 +3,39 @@
 -- ========================================
 -- Execute este script se estiver tendo erro de permissão
 
--- 1. Remover todas as políticas existentes
+-- 1. Remover todas as políticas existentes (antigas e novas)
 DROP POLICY IF EXISTS "Users can view own med requests" ON med_requests;
 DROP POLICY IF EXISTS "Users can create own med requests" ON med_requests;
 DROP POLICY IF EXISTS "Admins can view all med requests" ON med_requests;
 DROP POLICY IF EXISTS "Admins can update med requests" ON med_requests;
+DROP POLICY IF EXISTS "med_requests_select_own" ON med_requests;
+DROP POLICY IF EXISTS "med_requests_select_admin" ON med_requests;
+DROP POLICY IF EXISTS "med_requests_insert_own" ON med_requests;
+DROP POLICY IF EXISTS "med_requests_update_admin" ON med_requests;
+DROP POLICY IF EXISTS "med_requests_delete_admin" ON med_requests;
 
--- 2. Desabilitar RLS temporariamente para teste (REMOVA ISSO EM PRODUÇÃO!)
--- ALTER TABLE med_requests DISABLE ROW LEVEL SECURITY;
+-- 2. Garantir que RLS está habilitado
+ALTER TABLE med_requests ENABLE ROW LEVEL SECURITY;
 
--- 3. Recriar políticas RLS com verificações mais permissivas
+-- 3. Criar políticas RLS SEGURAS e FUNCIONAIS
 
--- Política para CLIENTES verem suas próprias solicitações
-CREATE POLICY "Users can view own med requests"
+-- ============================================
+-- POLÍTICAS PARA SELECT (Visualizar)
+-- ============================================
+
+-- Clientes podem ver APENAS suas próprias solicitações
+CREATE POLICY "med_requests_select_own"
   ON med_requests FOR SELECT
   TO authenticated
   USING (
-    auth.uid() = user_id
-    OR
+    user_id = auth.uid()
+  );
+
+-- Admins e Managers podem ver TODAS as solicitações
+CREATE POLICY "med_requests_select_admin"
+  ON med_requests FOR SELECT
+  TO authenticated
+  USING (
     EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
@@ -28,34 +43,30 @@ CREATE POLICY "Users can view own med requests"
     )
   );
 
--- Política para CLIENTES criarem suas próprias solicitações
-CREATE POLICY "Users can create own med requests"
+-- ============================================
+-- POLÍTICAS PARA INSERT (Criar)
+-- ============================================
+
+-- Clientes podem criar solicitações para si mesmos
+CREATE POLICY "med_requests_insert_own"
   ON med_requests FOR INSERT
   TO authenticated
   WITH CHECK (
-    auth.uid() = user_id
+    user_id = auth.uid()
     AND
     EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
-      AND users.role = 'client'
+      AND users.role IN ('client', 'admin', 'manager')
     )
   );
 
--- Política para ADMINS verem todas as solicitações
-CREATE POLICY "Admins can view all med requests"
-  ON med_requests FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid()
-      AND users.role IN ('admin', 'manager')
-    )
-  );
+-- ============================================
+-- POLÍTICAS PARA UPDATE (Atualizar)
+-- ============================================
 
--- Política para ADMINS atualizarem solicitações
-CREATE POLICY "Admins can update med requests"
+-- Apenas Admins e Managers podem atualizar
+CREATE POLICY "med_requests_update_admin"
   ON med_requests FOR UPDATE
   TO authenticated
   USING (
@@ -70,6 +81,22 @@ CREATE POLICY "Admins can update med requests"
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role IN ('admin', 'manager')
+    )
+  );
+
+-- ============================================
+-- POLÍTICAS PARA DELETE (Deletar)
+-- ============================================
+
+-- Apenas Admins podem deletar (segurança extra)
+CREATE POLICY "med_requests_delete_admin"
+  ON med_requests FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role = 'admin'
     )
   );
 

@@ -81,20 +81,24 @@ CREATE TRIGGER trigger_update_med_requests_updated_at
 -- 7. Habilitar RLS (Row Level Security)
 ALTER TABLE med_requests ENABLE ROW LEVEL SECURITY;
 
--- 8. Políticas RLS
--- Usuários podem ver apenas suas próprias solicitações
-CREATE POLICY "Users can view own med requests"
-  ON med_requests FOR SELECT
-  USING (auth.uid() = user_id);
+-- 8. Políticas RLS SEGURAS
 
--- Usuários podem criar suas próprias solicitações
-CREATE POLICY "Users can create own med requests"
-  ON med_requests FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+-- ============================================
+-- POLÍTICAS PARA SELECT (Visualizar)
+-- ============================================
 
--- Admins podem ver todas as solicitações
-CREATE POLICY "Admins can view all med requests"
+-- Clientes podem ver APENAS suas próprias solicitações
+CREATE POLICY "med_requests_select_own"
   ON med_requests FOR SELECT
+  TO authenticated
+  USING (
+    user_id = auth.uid()
+  );
+
+-- Admins e Managers podem ver TODAS as solicitações
+CREATE POLICY "med_requests_select_admin"
+  ON med_requests FOR SELECT
+  TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM users
@@ -103,14 +107,60 @@ CREATE POLICY "Admins can view all med requests"
     )
   );
 
--- Admins podem atualizar solicitações
-CREATE POLICY "Admins can update med requests"
+-- ============================================
+-- POLÍTICAS PARA INSERT (Criar)
+-- ============================================
+
+-- Clientes podem criar solicitações para si mesmos
+CREATE POLICY "med_requests_insert_own"
+  ON med_requests FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    user_id = auth.uid()
+    AND
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role IN ('client', 'admin', 'manager')
+    )
+  );
+
+-- ============================================
+-- POLÍTICAS PARA UPDATE (Atualizar)
+-- ============================================
+
+-- Apenas Admins e Managers podem atualizar
+CREATE POLICY "med_requests_update_admin"
   ON med_requests FOR UPDATE
+  TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role IN ('admin', 'manager')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role IN ('admin', 'manager')
+    )
+  );
+
+-- ============================================
+-- POLÍTICAS PARA DELETE (Deletar)
+-- ============================================
+
+-- Apenas Admins podem deletar (segurança extra)
+CREATE POLICY "med_requests_delete_admin"
+  ON med_requests FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role = 'admin'
     )
   );
 
