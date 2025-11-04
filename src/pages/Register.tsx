@@ -520,6 +520,16 @@ export function Register() {
             <a href="#" className="text-primary hover:underline">Política de Privacidade</a>
           </p>
         </div>
+
+        <div className="mt-4 text-center">
+          <Link 
+            to="/login" 
+            className="text-sm text-gray-400 hover:text-primary transition-colors inline-flex items-center gap-2"
+          >
+            <ArrowLeft size={16} />
+            Voltar para a página de login
+          </Link>
+        </div>
       </div>
     </div>
   )
