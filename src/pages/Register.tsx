@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 import { UserPlus, Mail, Lock, User, Building2, CreditCard, ArrowLeft, ArrowRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { sendOTPEmail } from '@/lib/email'
+import { TermsOfService } from '@/components/TermsOfService'
+import { PrivacyPolicy } from '@/components/PrivacyPolicy'
 
 export function Register() {
   const [step, setStep] = useState(1) // 1: Dados básicos, 2: Verificação OTP
@@ -22,6 +24,8 @@ export function Register() {
   const [sentOTP, setSentOTP] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<any>({})
+  const [showTerms, setShowTerms] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const navigate = useNavigate()
 
   // Validar CPF
@@ -515,9 +519,19 @@ export function Register() {
         <div className="mt-6 text-center text-xs text-gray-500">
           <p>Ao criar uma conta, você concorda com nossos</p>
           <p>
-            <a href="#" className="text-primary hover:underline">Termos de Serviço</a>
+            <button 
+              onClick={() => setShowTerms(true)}
+              className="text-primary hover:underline cursor-pointer"
+            >
+              Termos de Serviço
+            </button>
             {' e '}
-            <a href="#" className="text-primary hover:underline">Política de Privacidade</a>
+            <button 
+              onClick={() => setShowPrivacy(true)}
+              className="text-primary hover:underline cursor-pointer"
+            >
+              Política de Privacidade
+            </button>
           </p>
         </div>
 
@@ -531,6 +545,10 @@ export function Register() {
           </Link>
         </div>
       </div>
+
+      {/* Modais */}
+      <TermsOfService open={showTerms} onOpenChange={setShowTerms} />
+      <PrivacyPolicy open={showPrivacy} onOpenChange={setShowPrivacy} />
     </div>
   )
 }
