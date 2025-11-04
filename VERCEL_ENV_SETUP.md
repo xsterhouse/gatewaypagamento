@@ -21,7 +21,7 @@ Se você está vendo este erro em produção, significa que as variáveis de amb
 #### Variável 1: VITE_SUPABASE_URL
 ```
 Name: VITE_SUPABASE_URL
-Value: https://swokojvoiqowqoyngues.supabase.co
+Value: https://plbcnvnsvytzqrhgybjd.supabase.co
 Environment: Production, Preview, Development (marque todas)
 ```
 
