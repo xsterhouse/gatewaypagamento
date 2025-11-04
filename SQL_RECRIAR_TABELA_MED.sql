@@ -1,11 +1,14 @@
 -- ========================================
--- CRIAR TABELA DE SOLICITAÇÕES MED
+-- RECRIAR TABELA MED COM FOREIGN KEYS NOMEADAS
 -- ========================================
--- MED = Mecanismo Especial de Devolução
--- Sistema para clientes solicitarem devolução de valores
+-- Execute este script se você já criou a tabela antes
+-- e está tendo problemas com ambiguidade de foreign keys
 
--- 1. Criar tabela de solicitações MED
-CREATE TABLE IF NOT EXISTS med_requests (
+-- 1. Dropar a tabela existente (cuidado: isso apaga os dados!)
+DROP TABLE IF EXISTS med_requests CASCADE;
+
+-- 2. Criar tabela de solicitações MED com foreign keys nomeadas
+CREATE TABLE med_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   
@@ -48,19 +51,19 @@ CREATE TABLE IF NOT EXISTS med_requests (
   CONSTRAINT med_requests_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES users(id)
 );
 
--- 2. Criar índices para performance
-CREATE INDEX IF NOT EXISTS idx_med_requests_user_id ON med_requests(user_id);
-CREATE INDEX IF NOT EXISTS idx_med_requests_status ON med_requests(status);
-CREATE INDEX IF NOT EXISTS idx_med_requests_created_at ON med_requests(created_at DESC);
+-- 3. Criar índices para performance
+CREATE INDEX idx_med_requests_user_id ON med_requests(user_id);
+CREATE INDEX idx_med_requests_status ON med_requests(status);
+CREATE INDEX idx_med_requests_created_at ON med_requests(created_at DESC);
 
--- 3. Adicionar comentários
+-- 4. Adicionar comentários
 COMMENT ON TABLE med_requests IS 'Solicitações de MED (Mecanismo Especial de Devolução)';
 COMMENT ON COLUMN med_requests.status IS 'Status: pending, approved, rejected, completed';
 COMMENT ON COLUMN med_requests.amount IS 'Valor solicitado para devolução';
 COMMENT ON COLUMN med_requests.reason IS 'Motivo da solicitação';
 COMMENT ON COLUMN med_requests.pix_key_type IS 'Tipo de chave PIX: cpf, cnpj, email, phone, random';
 
--- 4. Criar função para atualizar updated_at
+-- 5. Criar função para atualizar updated_at
 CREATE OR REPLACE FUNCTION update_med_requests_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -69,31 +72,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 5. Criar trigger para updated_at
-DROP TRIGGER IF EXISTS trigger_update_med_requests_updated_at ON med_requests;
+-- 6. Criar trigger para updated_at
 CREATE TRIGGER trigger_update_med_requests_updated_at
   BEFORE UPDATE ON med_requests
   FOR EACH ROW
   EXECUTE FUNCTION update_med_requests_updated_at();
 
--- 6. Habilitar RLS (Row Level Security)
+-- 7. Habilitar RLS (Row Level Security)
 ALTER TABLE med_requests ENABLE ROW LEVEL SECURITY;
 
--- 7. Políticas RLS
+-- 8. Políticas RLS
 -- Usuários podem ver apenas suas próprias solicitações
-DROP POLICY IF EXISTS "Users can view own med requests" ON med_requests;
 CREATE POLICY "Users can view own med requests"
   ON med_requests FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Usuários podem criar suas próprias solicitações
-DROP POLICY IF EXISTS "Users can create own med requests" ON med_requests;
 CREATE POLICY "Users can create own med requests"
   ON med_requests FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Admins podem ver todas as solicitações
-DROP POLICY IF EXISTS "Admins can view all med requests" ON med_requests;
 CREATE POLICY "Admins can view all med requests"
   ON med_requests FOR SELECT
   USING (
@@ -105,7 +104,6 @@ CREATE POLICY "Admins can view all med requests"
   );
 
 -- Admins podem atualizar solicitações
-DROP POLICY IF EXISTS "Admins can update med requests" ON med_requests;
 CREATE POLICY "Admins can update med requests"
   ON med_requests FOR UPDATE
   USING (
@@ -116,7 +114,7 @@ CREATE POLICY "Admins can update med requests"
     )
   );
 
--- 8. Verificar se a tabela foi criada
+-- 9. Verificar se a tabela foi criada corretamente
 SELECT 
   table_name,
   column_name,
@@ -125,7 +123,20 @@ FROM information_schema.columns
 WHERE table_name = 'med_requests'
 ORDER BY ordinal_position;
 
--- Deve retornar todas as colunas!
+-- 10. Verificar as foreign keys
+SELECT
+  tc.constraint_name,
+  tc.table_name,
+  kcu.column_name,
+  ccu.table_name AS foreign_table_name,
+  ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu
+  ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage AS ccu
+  ON ccu.constraint_name = tc.constraint_name
+WHERE tc.table_name = 'med_requests'
+  AND tc.constraint_type = 'FOREIGN KEY';
 
 -- ========================================
 -- FIM DO SCRIPT
