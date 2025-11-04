@@ -107,7 +107,10 @@ export function MEDRequests() {
           status: 'pending'
         })
 
-      if (error) throw error
+      if (error) {
+        console.error('Erro detalhado ao enviar MED:', error)
+        throw error
+      }
 
       toast.success('Solicitação MED enviada com sucesso!')
       setModalOpen(false)
@@ -121,7 +124,17 @@ export function MEDRequests() {
       loadRequests()
     } catch (error: any) {
       console.error('Erro ao enviar solicitação:', error)
-      toast.error('Erro ao enviar solicitação MED')
+      
+      // Mensagens de erro específicas
+      if (error.message?.includes('permission denied') || error.code === '42501') {
+        toast.error('Sem permissão. Execute o SQL de políticas RLS!')
+      } else if (error.message?.includes('does not exist') || error.code === '42P01') {
+        toast.error('Tabela MED não encontrada. Execute: SQL_RECRIAR_TABELA_MED.sql')
+      } else if (error.message?.includes('violates foreign key')) {
+        toast.error('Erro: Usuário não encontrado no sistema')
+      } else {
+        toast.error(`Erro ao enviar solicitação: ${error.message || 'Erro desconhecido'}`)
+      }
     } finally {
       setSubmitting(false)
     }
