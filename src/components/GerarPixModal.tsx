@@ -64,33 +64,6 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
     return Math.max(tax, 0.60) // Mínimo de R$ 0,60
   }
 
-  const generatePixCode = () => {
-    const amount = Number(valor.replace(/\./g, '').replace(',', '.'))
-    
-    // Gerar chave PIX aleatória (simulada)
-    const randomKey = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-    
-    // Formato EMV do PIX (padrão brasileiro)
-    // Este é um código fictício mas válido para gerar QR Code
-    const pixPayload = [
-      '00020126',  // Payload Format Indicator
-      '580014br.gov.bcb.pix',  // Merchant Account Information
-      `0136${randomKey}`,  // Chave PIX (36 caracteres)
-      '52040000',  // Merchant Category Code
-      '5303986',   // Transaction Currency (986 = BRL)
-      `54${String(amount.toFixed(2)).padStart(2, '0').length}${amount.toFixed(2)}`,  // Transaction Amount
-      '5802BR',    // Country Code
-      '5925Gateway Pagamento Ltda',  // Merchant Name
-      '6009SAO PAULO',  // Merchant City
-      '62070503***',  // Additional Data Field
-      '6304'  // CRC16 placeholder
-    ].join('')
-    
-    // Adicionar CRC16 fictício
-    const crc = Math.random().toString(36).substring(2, 6).toUpperCase()
-    return pixPayload + crc
-  }
-
   const handleGerarQRCode = async () => {
     if (!valor || Number(valor.replace(/\./g, '').replace(',', '.')) === 0) {
       toast.error('Por favor, insira um valor válido')
@@ -144,7 +117,6 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
         console.error('Erro ao criar depósito:', error)
       }
 
-      setDepositId(data?.id || result.transaction_id || null)
       setPixCode(result.pix_code || '')
       setShowQRCode(true)
       toast.success('QR Code gerado com sucesso!')

@@ -11,8 +11,6 @@ import {
   ShoppingCart, 
   Plus, 
   Copy, 
-  ExternalLink, 
-  TrendingUp,
   DollarSign,
   Eye,
   Edit,
