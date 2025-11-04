@@ -21,7 +21,6 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
   const [pixCode, setPixCode] = useState('')
   const [showQRCode, setShowQRCode] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [depositId, setDepositId] = useState<string | null>(null)
 
   const quickValues = [
     { label: '+R$ 10,00', value: 10 },
@@ -98,7 +97,7 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
 
       // Criar também o registro de depósito para compatibilidade
       const tax = calculateTax()
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('deposits')
         .insert({
           user_id: effectiveUserId,
