@@ -123,17 +123,31 @@ export function MEDRequests() {
       })
       loadRequests()
     } catch (error: any) {
-      console.error('Erro ao enviar solicitação:', error)
+      console.error('❌ ERRO COMPLETO AO ENVIAR MED:', error)
+      console.error('📋 Detalhes do erro:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        statusCode: error.statusCode
+      })
       
       // Mensagens de erro específicas
       if (error.message?.includes('permission denied') || error.code === '42501') {
-        toast.error('Sem permissão. Execute o SQL de políticas RLS!')
+        toast.error('❌ Sem permissão RLS! Execute: SQL_DEBUG_MED.sql para diagnosticar')
+        console.error('💡 SOLUÇÃO: Execute SQL_ATIVAR_RLS_SEGURO_V2.sql')
+      } else if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
+        toast.error('❌ Política RLS bloqueando! Execute: SQL_RLS_ULTRA_PERMISSIVO.sql para testar')
+        console.error('💡 SOLUÇÃO: Execute SQL_ATIVAR_RLS_SEGURO_V2.sql depois')
       } else if (error.message?.includes('does not exist') || error.code === '42P01') {
-        toast.error('Tabela MED não encontrada. Execute: SQL_RECRIAR_TABELA_MED.sql')
+        toast.error('❌ Tabela MED não existe! Execute: SQL_RECRIAR_TABELA_MED.sql')
       } else if (error.message?.includes('violates foreign key')) {
-        toast.error('Erro: Usuário não encontrado no sistema')
+        toast.error('❌ Usuário não encontrado! Verifique o cadastro')
+      } else if (error.message?.includes('null value')) {
+        toast.error('❌ Campo obrigatório vazio! Verifique o formulário')
       } else {
-        toast.error(`Erro ao enviar solicitação: ${error.message || 'Erro desconhecido'}`)
+        toast.error(`❌ Erro: ${error.message || 'Erro desconhecido'}`)
+        console.error('💡 Execute SQL_DEBUG_MED.sql para diagnosticar')
       }
     } finally {
       setSubmitting(false)
