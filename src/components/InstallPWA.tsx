@@ -39,10 +39,17 @@ export function InstallPWA() {
       console.log('📱 PWA: Prompt de instalação capturado')
       setDeferredPrompt(e as BeforeInstallPromptEvent)
       
-      // Mostrar modal após 3 segundos
-      setTimeout(() => {
+      // Mostrar modal IMEDIATAMENTE quando acessar app.dimpay.com.br
+      const hostname = window.location.hostname
+      if (hostname === 'app.dimpay.com.br' || hostname === 'localhost') {
+        // Mostrar imediatamente
         setShowInstallModal(true)
-      }, 3000)
+      } else {
+        // Para outros domínios, mostrar após 3 segundos
+        setTimeout(() => {
+          setShowInstallModal(true)
+        }, 3000)
+      }
     }
 
     window.addEventListener('beforeinstallprompt', handler)
@@ -106,10 +113,10 @@ export function InstallPWA() {
             <div className="w-12 h-12 bg-gradient-to-br from-primary to-green-400 rounded-xl flex items-center justify-center">
               <Download className="text-black" size={24} />
             </div>
-            Instalar Dimpay Pagamentos
+            Instalar APP Dimpay
           </DialogTitle>
           <DialogDescription className="text-base">
-            Instale nosso aplicativo para uma experiência melhor e mais rápida!
+            Deseja instalar o APP Dimpay em seu dispositivo? Tenha acesso rápido e trabalhe offline!
           </DialogDescription>
         </DialogHeader>
 
