@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -13,8 +13,10 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 interface ViewClientModalProps {
   open: boolean
@@ -26,6 +28,55 @@ export function ViewClientModal({ open, onClose, client }: ViewClientModalProps)
   if (!client) return null
   
   const [activeTab, setActiveTab] = useState('personal')
+  const [documents, setDocuments] = useState<any[]>([])
+  const [loadingDocuments, setLoadingDocuments] = useState(false)
+
+  // Load user documents when modal opens
+  useEffect(() => {
+    if (open && client?.id) {
+      loadUserDocuments()
+    }
+  }, [open, client?.id])
+
+  const loadUserDocuments = async () => {
+    setLoadingDocuments(true)
+    try {
+      const { data, error } = await supabase
+        .from('kyc_documents')
+        .select('*')
+        .eq('user_id', client.id)
+        .order('uploaded_at', { ascending: false })
+
+      if (error) throw error
+      setDocuments(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar documentos:', error)
+    } finally {
+      setLoadingDocuments(false)
+    }
+  }
+
+  // Generate signed URL for private bucket access
+  const getDocumentUrl = async (fileUrl: string) => {
+    try {
+      const urlParts = fileUrl.split('/')
+      const filePath = urlParts.slice(-2).join('/')
+      
+      const { data, error } = await supabase.storage
+        .from('kyc-documents')
+        .createSignedUrl(filePath, 3600)
+      
+      if (error) {
+        console.error('Error generating signed URL:', error)
+        return fileUrl
+      }
+      
+      return data.signedUrl
+    } catch (error) {
+      console.error('Error getting document URL:', error)
+      return fileUrl
+    }
+  }
 
   const formatDate = (date: string) => {
     if (!date) return 'N/A'
@@ -202,110 +253,82 @@ export function ViewClientModal({ open, onClose, client }: ViewClientModalProps)
               </p>
             </div>
 
-            {/* Lista de Documentos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Documento de Identidade */}
-              <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Documento de Identidade
-                  </h4>
-                  {client.document_front_url && (
-                    <Badge className="bg-green-100 text-green-800">Enviado</Badge>
-                  )}
-                </div>
-                {client.document_front_url ? (
-                  <div className="space-y-2">
-                    <img 
-                      src={client.document_front_url} 
-                      alt="Documento Frente"
-                      className="w-full h-32 object-cover rounded border cursor-pointer hover:opacity-80"
-                      onClick={() => window.open(client.document_front_url, '_blank')}
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full gap-2"
-                      onClick={() => window.open(client.document_front_url, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Visualizar
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">Não enviado</p>
-                )}
+            {loadingDocuments ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="animate-spin mr-2" />
+                <span className="text-muted-foreground">Carregando documentos...</span>
               </div>
+            ) : documents.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="mx-auto text-muted-foreground mb-3" size={48} />
+                <p className="text-muted-foreground">Nenhum documento enviado</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {documents.map((doc) => {
+                  const docLabels: { [key: string]: string } = {
+                    identity_document: 'Documento de Identidade',
+                    address_proof: 'Comprovante de Endereço',
+                    selfie: 'Selfie',
+                    selfie_with_document: 'Selfie com Documento'
+                  }
 
-              {/* Comprovante de Residência */}
-              <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Comprovante de Residência
-                  </h4>
-                  {client.proof_of_address_url && (
-                    <Badge className="bg-green-100 text-green-800">Enviado</Badge>
-                  )}
-                </div>
-                {client.proof_of_address_url ? (
-                  <div className="space-y-2">
-                    <img 
-                      src={client.proof_of_address_url} 
-                      alt="Comprovante"
-                      className="w-full h-32 object-cover rounded border cursor-pointer hover:opacity-80"
-                      onClick={() => window.open(client.proof_of_address_url, '_blank')}
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full gap-2"
-                      onClick={() => window.open(client.proof_of_address_url, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Visualizar
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">Não enviado</p>
-                )}
+                  return (
+                    <div key={doc.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          {docLabels[doc.document_type] || doc.document_type}
+                        </h4>
+                        <Badge className="bg-green-100 text-green-800">Enviado</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {doc.file_url.endsWith('.pdf') ? (
+                          <div className="bg-muted rounded-lg p-4 text-center">
+                            <FileText className="mx-auto text-muted-foreground mb-2" size={32} />
+                            <p className="text-sm text-foreground mb-2">{doc.file_name}</p>
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                const signedUrl = await getDocumentUrl(doc.file_url)
+                                window.open(signedUrl, '_blank')
+                              }}
+                              className="gap-2"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              Abrir PDF
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <img
+                              src={doc.file_url}
+                              alt={docLabels[doc.document_type]}
+                              className="w-full h-32 object-cover rounded border cursor-pointer hover:opacity-80"
+                              onClick={async () => {
+                                const signedUrl = await getDocumentUrl(doc.file_url)
+                                window.open(signedUrl, '_blank')
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                const signedUrl = await getDocumentUrl(doc.file_url)
+                                window.open(signedUrl, '_blank')
+                              }}
+                              className="w-full gap-2"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              Visualizar
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-
-              {/* Selfie */}
-              <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Selfie com Documento
-                  </h4>
-                  {client.selfie_url && (
-                    <Badge className="bg-green-100 text-green-800">Enviado</Badge>
-                  )}
-                </div>
-                {client.selfie_url ? (
-                  <div className="space-y-2">
-                    <img 
-                      src={client.selfie_url} 
-                      alt="Selfie"
-                      className="w-full h-32 object-cover rounded border cursor-pointer hover:opacity-80"
-                      onClick={() => window.open(client.selfie_url, '_blank')}
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full gap-2"
-                      onClick={() => window.open(client.selfie_url, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Visualizar
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">Não enviado</p>
-                )}
-              </div>
-            </div>
+            )}
           </TabsContent>
 
           {/* Aba Histórico */}

@@ -4,8 +4,7 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon.svg'
 ];
 
 // Instalar Service Worker
@@ -89,8 +88,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Dimpay Pagamentos';
   const options = {
     body: data.body || 'Você tem uma nova notificação',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-96x96.png',
+    icon: '/icons/icon.svg',
+    badge: '/icons/icon.svg',
     vibrate: [200, 100, 200],
     data: data.url || '/',
     actions: [

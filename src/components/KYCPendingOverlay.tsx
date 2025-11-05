@@ -1,5 +1,8 @@
-import { AlertCircle, Clock, FileText } from 'lucide-react'
+import { AlertCircle, Clock, FileText, LogOut, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
+import { useState } from 'react'
 
 interface KYCPendingOverlayProps {
   status: 'pending' | 'rejected'
@@ -7,6 +10,20 @@ interface KYCPendingOverlayProps {
 }
 
 export function KYCPendingOverlay({ status, rejectionReason }: KYCPendingOverlayProps) {
+  const { signOut } = useAuth()
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    setLoggingOut(true)
+    
+    // Navigate immediately using window.location
+    window.location.replace('/login')
+    
+    // Sign out in background (non-blocking)
+    signOut().catch(error => {
+      console.error('Logout error:', error)
+    })
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Glassmorphism Blur Background */}
@@ -67,6 +84,25 @@ export function KYCPendingOverlay({ status, rejectionReason }: KYCPendingOverlay
                   estarão limitadas até a aprovação.
                 </p>
               </div>
+
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="w-full border-gray-700 text-gray-300 hover:text-white"
+                disabled={loggingOut}
+              >
+                {loggingOut ? (
+                  <>
+                    <Loader2 className="mr-2 animate-spin" size={16} />
+                    Saindo...
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="mr-2" size={16} />
+                    Sair e Voltar ao Login
+                  </>
+                )}
+              </Button>
             </>
           ) : (
             <>
@@ -88,9 +124,30 @@ export function KYCPendingOverlay({ status, rejectionReason }: KYCPendingOverlay
                 </p>
               </div>
 
-              <button className="w-full bg-primary hover:bg-primary/90 text-black font-medium py-3 rounded-lg transition-colors">
-                Contatar Suporte
-              </button>
+              <div className="space-y-2">
+                <button className="w-full bg-primary hover:bg-primary/90 text-black font-medium py-3 rounded-lg transition-colors">
+                  Contatar Suporte
+                </button>
+                
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  className="w-full border-gray-700 text-gray-300 hover:text-white"
+                  disabled={loggingOut}
+                >
+                  {loggingOut ? (
+                    <>
+                      <Loader2 className="mr-2 animate-spin" size={16} />
+                      Saindo...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="mr-2" size={16} />
+                      Sair e Voltar ao Login
+                    </>
+                  )}
+                </Button>
+              </div>
             </>
           )}
         </CardContent>

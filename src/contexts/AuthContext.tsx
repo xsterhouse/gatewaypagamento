@@ -108,21 +108,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserData = async (userId: string) => {
     try {
+      console.log('🔍 Loading user data for:', userId)
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle() // Use maybeSingle instead of single
       
       if (error) {
-        console.error('Erro ao carregar dados do usuário:', error)
+        console.error('❌ Erro ao carregar dados do usuário:', error)
         setUserData(null)
         return
       }
       
+      if (!data) {
+        console.warn('⚠️ User data not found for ID:', userId)
+        setUserData(null)
+        return
+      }
+      
+      console.log('✅ User data loaded successfully')
       setUserData(data)
     } catch (error) {
-      console.error('Erro ao carregar dados do usuário:', error)
+      console.error('❌ Erro ao carregar dados do usuário:', error)
       setUserData(null)
     }
   }
@@ -155,25 +164,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    console.log('🚪 Iniciando logout...')
-    setLoggingOut(true)
-    try {
-      // Limpar impersonation
-      localStorage.removeItem('impersonation')
-      
-      // Marcar que está fazendo logout no localStorage
-      localStorage.setItem('isLoggingOut', 'true')
-      
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      
-      console.log('✅ Logout realizado')
-    } catch (error) {
-      console.error('❌ Erro no logout:', error)
-      localStorage.removeItem('isLoggingOut')
-      throw error
-    }
-    // Não resetar loggingOut aqui - será resetado no reload
+    // Limpar dados locais imediatamente
+    localStorage.removeItem('impersonation')
+    localStorage.removeItem('isLoggingOut')
+    
+    // Fazer logout em background (não bloqueante)
+    supabase.auth.signOut().catch(error => {
+      console.error('Logout error:', error)
+    })
   }
 
   return (

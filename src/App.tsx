@@ -18,8 +18,10 @@ import { Ajuda } from './pages/Ajuda'
 import { Configuracoes } from './pages/Configuracoes'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
+import { RegisterKYC } from './pages/RegisterKYC'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
+import { KYCDocuments } from './pages/KYCDocuments'
 import { Extrato } from './pages/Extrato'
 import { KYCManagement } from './pages/KYCManagement'
 import { AdminPanel } from './pages/AdminPanel'
@@ -56,7 +58,8 @@ function App() {
           <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><RegisterKYC /></PublicRoute>} />
+          <Route path="/register-old" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
           <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
           <Route path="/pay/:slug" element={<PaymentPage />} />
@@ -101,6 +104,7 @@ function App() {
             <Route path="exchange" element={<Exchange />} />
             <Route path="deposits" element={<Deposits />} />
             <Route path="documents" element={<Documents />} />
+            <Route path="kyc-documents" element={<KYCDocuments />} />
             <Route path="calendar" element={<FullCalendar />} />
           </Route>
         </Routes>

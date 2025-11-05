@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -22,7 +22,8 @@ import {
   Lock,
   Unlock,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  FileText
 } from 'lucide-react'
 
 interface KYCUser {
@@ -32,7 +33,7 @@ interface KYCUser {
   document: string
   document_type: string
   company_name: string | null
-  kyc_status: 'pending' | 'approved' | 'rejected'
+  kyc_status: 'pending' | 'awaiting_verification' | 'approved' | 'rejected'
   kyc_submitted_at: string
   kyc_rejection_reason: string | null
   created_at: string
@@ -43,6 +44,15 @@ interface KYCUser {
   city?: string
   state?: string
   zip_code?: string
+  birth_date?: string
+}
+
+interface KYCDocument {
+  id: string
+  document_type: string
+  file_url: string
+  file_name: string
+  uploaded_at: string
 }
 
 export function KYCManagement() {
@@ -50,7 +60,7 @@ export function KYCManagement() {
   const [users, setUsers] = useState<KYCUser[]>([])
   const [filteredUsers, setFilteredUsers] = useState<KYCUser[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
+  const [filter, setFilter] = useState<'all' | 'pending' | 'awaiting_verification' | 'approved' | 'rejected'>('awaiting_verification')
   const [searchTerm, setSearchTerm] = useState('')
   const [rejectionReason, setRejectionReason] = useState<{ [key: string]: string }>({})
   
@@ -59,6 +69,9 @@ export function KYCManagement() {
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [blockModalOpen, setBlockModalOpen] = useState(false)
   const [blockReason, setBlockReason] = useState('')
+  const [documentsModalOpen, setDocumentsModalOpen] = useState(false)
+  const [userDocuments, setUserDocuments] = useState<KYCDocument[]>([])
+  const [loadingDocuments, setLoadingDocuments] = useState(false)
 
   useEffect(() => {
     loadUsers()
@@ -85,6 +98,63 @@ export function KYCManagement() {
     }
   }
 
+  const loadUserDocuments = async (userId: string) => {
+    console.log('Loading documents for user:', userId)
+    setLoadingDocuments(true)
+    try {
+      const { data, error } = await supabase
+        .from('kyc_documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('uploaded_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading documents:', error)
+        throw error
+      }
+      
+      console.log('Documents loaded:', data)
+      console.log('Number of documents:', data?.length || 0)
+      setUserDocuments(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar documentos:', error)
+      toast.error('Erro ao carregar documentos')
+    } finally {
+      setLoadingDocuments(false)
+    }
+  }
+
+  // Generate signed URL for private bucket access
+  const getDocumentUrl = async (fileUrl: string) => {
+    try {
+      // Extract path from public URL
+      const urlParts = fileUrl.split('/')
+      const filePath = urlParts.slice(-2).join('/') // Get userId/filename
+      
+      // Generate signed URL (valid for 1 hour)
+      const { data, error } = await supabase.storage
+        .from('kyc-documents')
+        .createSignedUrl(filePath, 3600) // 1 hour expiry
+      
+      if (error) {
+        console.error('Error generating signed URL:', error)
+        return fileUrl // Fallback to public URL
+      }
+      
+      return data.signedUrl
+    } catch (error) {
+      console.error('Error getting document URL:', error)
+      return fileUrl
+    }
+  }
+
+  const handleViewDocuments = async (user: KYCUser) => {
+    console.log('Opening documents modal for user:', user.name, user.id)
+    setSelectedClient(user)
+    setDocumentsModalOpen(true)
+    await loadUserDocuments(user.id)
+  }
+
   const filterUsers = () => {
     let filtered = users
 
@@ -107,6 +177,8 @@ export function KYCManagement() {
 
   const approveKYC = async (userId: string) => {
     try {
+      console.log('🔵 Approving KYC for user:', userId)
+      
       const { error } = await supabase
         .from('users')
         .update({
@@ -115,12 +187,17 @@ export function KYCManagement() {
         })
         .eq('id', userId)
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ KYC approval error:', error)
+        throw error
+      }
 
+      console.log('✅ KYC approved successfully')
       toast.success('KYC aprovado com sucesso!')
       loadUsers()
-    } catch (error) {
-      toast.error('Erro ao aprovar KYC')
+    } catch (error: any) {
+      console.error('❌ Fatal error in KYC approval:', error)
+      toast.error(`Erro ao aprovar KYC: ${error.message}`)
     }
   }
 
@@ -230,6 +307,13 @@ export function KYCManagement() {
             Pendente
           </span>
         )
+      case 'awaiting_verification':
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 text-xs font-medium">
+            <Clock size={14} />
+            Aguardando Verificação
+          </span>
+        )
       case 'approved':
         return (
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-xs font-medium">
@@ -250,6 +334,7 @@ export function KYCManagement() {
   const stats = {
     total: users.length,
     pending: users.filter(u => u.kyc_status === 'pending').length,
+    awaiting: users.filter(u => u.kyc_status === 'awaiting_verification').length,
     approved: users.filter(u => u.kyc_status === 'approved').length,
     rejected: users.filter(u => u.kyc_status === 'rejected').length,
   }
@@ -270,7 +355,7 @@ export function KYCManagement() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="bg-card border-border">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -291,6 +376,18 @@ export function KYCManagement() {
                 <p className="text-2xl font-bold text-yellow-500">{stats.pending}</p>
               </div>
               <Clock className="text-yellow-500" size={32} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-sm">Aguardando</p>
+                <p className="text-2xl font-bold text-blue-500">{stats.awaiting}</p>
+              </div>
+              <Clock className="text-blue-500" size={32} />
             </div>
           </CardContent>
         </Card>
@@ -333,7 +430,7 @@ export function KYCManagement() {
                 className="bg-input border-border text-foreground pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant={filter === 'all' ? 'default' : 'outline'}
                 onClick={() => setFilter('all')}
@@ -347,6 +444,13 @@ export function KYCManagement() {
                 className={filter !== 'pending' ? 'border-border' : ''}
               >
                 Pendentes
+              </Button>
+              <Button
+                variant={filter === 'awaiting_verification' ? 'default' : 'outline'}
+                onClick={() => setFilter('awaiting_verification')}
+                className={filter !== 'awaiting_verification' ? 'border-border' : ''}
+              >
+                Aguardando
               </Button>
               <Button
                 variant={filter === 'approved' ? 'default' : 'outline'}
@@ -419,6 +523,16 @@ export function KYCManagement() {
                     <Eye className="w-4 h-4" />
                     Visualizar
                   </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleViewDocuments(user)}
+                    className="gap-2 border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Documentos
+                  </Button>
                   
                   <Button
                     size="sm"
@@ -471,7 +585,7 @@ export function KYCManagement() {
                   )}
                 </div>
 
-                {user.kyc_status === 'pending' && (
+                {(user.kyc_status === 'pending' || user.kyc_status === 'awaiting_verification') && (
                   <div className="flex gap-3 pt-4 border-t border-border">
                     <Input
                       placeholder="Motivo da rejeição (opcional)"
@@ -522,6 +636,106 @@ export function KYCManagement() {
         }}
         client={selectedClient}
       />
+
+      {/* Modal de Documentos */}
+      <Dialog open={documentsModalOpen} onOpenChange={setDocumentsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Documentos KYC - {selectedClient?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {loadingDocuments ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-muted-foreground">Carregando documentos...</div>
+              </div>
+            ) : userDocuments.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="mx-auto text-muted-foreground mb-3" size={48} />
+                <p className="text-muted-foreground">Nenhum documento enviado</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {userDocuments.map((doc) => {
+                  const docLabels: { [key: string]: string } = {
+                    identity_document: 'Documento de Identidade',
+                    address_proof: 'Comprovante de Endereço',
+                    selfie: 'Selfie',
+                    selfie_with_document: 'Selfie com Documento'
+                  }
+
+                  return (
+                    <Card key={doc.id} className="bg-card border-border">
+                      <CardHeader>
+                        <CardTitle className="text-sm text-foreground">
+                          {docLabels[doc.document_type] || doc.document_type}
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                          Enviado em {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {doc.file_url.endsWith('.pdf') ? (
+                          <div className="bg-muted rounded-lg p-8 text-center">
+                            <FileText className="mx-auto text-muted-foreground mb-2" size={48} />
+                            <p className="text-sm text-foreground mb-3">{doc.file_name}</p>
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                const signedUrl = await getDocumentUrl(doc.file_url)
+                                window.open(signedUrl, '_blank')
+                              }}
+                              className="gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Abrir PDF
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <img
+                              src={doc.file_url}
+                              alt={docLabels[doc.document_type]}
+                              className="w-full h-48 object-cover rounded-lg"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                const signedUrl = await getDocumentUrl(doc.file_url)
+                                window.open(signedUrl, '_blank')
+                              }}
+                              className="w-full gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Ver em Tamanho Real
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDocumentsModalOpen(false)
+                setUserDocuments([])
+                setSelectedClient(null)
+              }}
+            >
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Bloqueio */}
       <Dialog open={blockModalOpen} onOpenChange={setBlockModalOpen}>

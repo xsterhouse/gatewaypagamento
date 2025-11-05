@@ -162,25 +162,33 @@ export function Dashboard() {
     if (!effectiveUserId) return
 
     try {
-      const { data, error } = await supabase
+      // Buscar apenas MEDs pendentes para o card
+      const { data: pendingData, error: pendingError } = await supabase
+        .from('med_requests')
+        .select('id, status, amount')
+        .eq('user_id', effectiveUserId)
+        .eq('status', 'pending')
+
+      // Buscar MEDs pendentes e aprovados para calcular blockedBalance
+      const { data: allData, error: allError } = await supabase
         .from('med_requests')
         .select('id, status, amount')
         .eq('user_id', effectiveUserId)
         .in('status', ['pending', 'approved'])
 
-      if (error) {
-        console.error('Erro ao verificar MED:', error)
+      if (pendingError || allError) {
+        console.error('Erro ao verificar MED:', pendingError || allError)
         return
       }
 
-      const count = data?.length || 0
-      const hasMED = count > 0
+      const pendingCount = pendingData?.length || 0
+      const hasPendingMED = pendingCount > 0
       
-      setMedCount(count)
-      setHasPendingMED(hasMED)
+      setMedCount(pendingCount)
+      setHasPendingMED(hasPendingMED)
       
-      // Calcular valor total em disputa (MEDs pendentes e aprovados)
-      const totalMEDAmount = data?.reduce((sum, med) => sum + Number(med.amount || 0), 0) || 0
+      // Calcular valor total em disputa (apenas MEDs pendentes e aprovados)
+      const totalMEDAmount = allData?.reduce((sum, med) => sum + Number(med.amount || 0), 0) || 0
       
       // Atualizar o blockedBalance com o valor dos MEDs
       setMetrics(prev => ({
@@ -189,10 +197,11 @@ export function Dashboard() {
       }))
       
       console.log('🔄 MED Status:', {
-        count,
-        hasMED,
+        pendingCount,
+        hasPendingMED,
         totalAmount: totalMEDAmount,
-        data
+        pendingData,
+        allData
       })
     } catch (error) {
       console.error('Erro ao verificar MED:', error)
@@ -443,7 +452,9 @@ export function Dashboard() {
               <div className="flex-1">
                 <p className="text-muted-foreground text-sm mb-1">Bloqueio Cautelar (MED)</p>
                 <h3 className="text-2xl font-bold text-foreground">{formatCurrency(metrics.blockedBalance)}</h3>
-                <p className="text-xs text-muted-foreground mt-1">Valor em disputa</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {hasPendingMED ? 'Valor em disputa' : 'Nenhum valor bloqueado'}
+                </p>
                 
                 <div className="mt-3">
                   {hasPendingMED ? (

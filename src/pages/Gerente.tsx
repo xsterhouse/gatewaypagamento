@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { MessageSquare, Send, RefreshCw, User, UserCog } from 'lucide-react'
+import { MessageSquare, Send, RefreshCw, User, UserCog, Paperclip, Image, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { formatDateTime } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,6 +14,8 @@ interface Ticket {
   message: string
   status: string
   created_at: string
+  attachment_url?: string
+  attachment_name?: string
 }
 
 interface ChatMessage {
@@ -23,9 +25,13 @@ interface ChatMessage {
   is_admin: boolean
   created_at: string
   sender_name?: string
+  attachment_url?: string
+  attachment_name?: string
 }
 
 export function Gerente() {
+  console.log('🎯 Gerente component mounted - Upload support enabled!')
+  
   const { effectiveUserId } = useAuth()
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
@@ -35,6 +41,10 @@ export function Gerente() {
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [attachment, setAttachment] = useState<File | null>(null)
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -73,6 +83,77 @@ export function Gerente() {
       console.log('💬 Tickets carregados:', data?.length || 0)
     } catch (error) {
       console.error('Erro:', error)
+    }
+  }
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validar tipo e tamanho
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    const maxSize = 5 * 1024 * 1024 // 5MB
+
+    if (!validTypes.includes(file.type)) {
+      toast.error('Apenas imagens JPG, PNG ou WebP são permitidas')
+      return
+    }
+
+    if (file.size > maxSize) {
+      toast.error('Arquivo muito grande. Máximo 5MB')
+      return
+    }
+
+    setAttachment(file)
+    
+    // Criar preview para imagens
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setAttachmentPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const uploadAttachment = async (file: File, ticketId: string): Promise<string | null> => {
+    try {
+      setUploading(true)
+      
+      const fileName = `attachment_${Date.now()}.${file.name.split('.').pop()}`
+      const filePath = `support-attachments/${ticketId}/${fileName}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('support-attachments')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('Erro no upload:', uploadError)
+        return null
+      }
+
+      // Gerar URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('support-attachments')
+        .getPublicUrl(filePath)
+
+      return publicUrl
+    } catch (error) {
+      console.error('Erro no upload:', error)
+      return null
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const clearAttachment = () => {
+    setAttachment(null)
+    setAttachmentPreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -116,60 +197,87 @@ export function Gerente() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!subject.trim() || !message.trim() || !effectiveUserId) return
+
     setLoading(true)
-
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      console.log('🔵 Iniciando criação de ticket...')
+      console.log('📍 effectiveUserId:', effectiveUserId)
       
-      if (!user) {
-        console.error('Usuário não autenticado')
-        setLoading(false)
-        return
+      const { data: user } = await supabase.auth.getUser()
+      console.log('📍 Auth user:', user.user?.id)
+      
+      if (!user.user) throw new Error('Usuário não autenticado')
+
+      // Criar ticket
+      console.log('📝 Criando ticket...')
+      const ticketData = {
+        user_id: effectiveUserId,
+        subject: subject,
+        message: message, // Incluir mensagem no ticket
+        status: 'open',
+        protocol_number: `TKT-${Date.now()}`
       }
+      console.log('📋 Ticket data:', ticketData)
 
-      console.log('Criando ticket para usuário:', user.id)
-
-      const { data: ticket, error } = await supabase
+      const { data: ticket, error: ticketError } = await supabase
         .from('support_tickets')
-        .insert({
-          user_id: user.id,
-          subject: subject,
-          message: message,
-          status: 'open',
-          priority: 'medium'
-        })
+        .insert(ticketData)
         .select()
         .single()
 
-      if (error) {
-        console.error('Erro ao criar ticket:', error)
-        throw error
+      if (ticketError) {
+        console.error('❌ Erro ao criar ticket:', ticketError)
+        throw ticketError
       }
 
-      // Criar primeira mensagem do ticket
-      const { error: msgError } = await supabase
-        .from('ticket_messages')
-        .insert({
-          ticket_id: ticket.id,
-          user_id: user.id,
-          message: message,
-          is_admin: false
-        })
+      console.log('✅ Ticket criado:', ticket)
 
-      if (msgError) {
-        console.error('Erro ao criar mensagem:', msgError)
+      // Upload do anexo se existir
+      let attachmentUrl: string | null = null
+      let attachmentName: string | null = null
+      
+      if (attachment) {
+        console.log('📎 Fazendo upload do anexo...')
+        attachmentUrl = await uploadAttachment(attachment, ticket.id)
+        if (attachmentUrl) {
+          attachmentName = attachment.name
+          console.log('✅ Anexo uploaded:', attachmentUrl)
+          
+          // Atualizar ticket com anexo
+          console.log('🔄 Atualizando ticket com anexo:', {
+            ticketId: ticket.id,
+            attachmentUrl,
+            attachmentName
+          })
+          
+          const { error: updateError } = await supabase
+            .from('support_tickets')
+            .update({
+              attachment_url: attachmentUrl,
+              attachment_name: attachmentName
+            })
+            .eq('id', ticket.id)
+          
+          if (updateError) {
+            console.error('❌ Erro ao atualizar ticket com anexo:', updateError)
+          } else {
+            console.log('✅ Ticket atualizado com anexo!')
+          }
+        }
       }
 
-      console.log('Ticket criado:', ticket)
+      console.log('✅ Ticket criado com sucesso!')
       toast.success('Mensagem enviada com sucesso!')
 
       setSubject('')
       setMessage('')
+      clearAttachment()
       await loadTickets()
       setSelectedTicket(ticket)
-    } catch (error) {
-      console.error('Erro no handleSubmit:', error)
-      toast.error('Erro ao enviar mensagem')
+    } catch (error: any) {
+      console.error('❌ Erro completo no handleSubmit:', error)
+      toast.error(`Erro ao enviar mensagem: ${error.message || 'Erro desconhecido'}`)
     } finally {
       setLoading(false)
     }
@@ -181,18 +289,32 @@ export function Gerente() {
 
     setLoading(true)
     try {
+      // Upload do anexo se existir
+      let attachmentUrl: string | null = null
+      let attachmentName: string | null = null
+      
+      if (attachment) {
+        attachmentUrl = await uploadAttachment(attachment, selectedTicket.id)
+        if (attachmentUrl) {
+          attachmentName = attachment.name
+        }
+      }
+
       const { error } = await supabase
         .from('ticket_messages')
         .insert({
           ticket_id: selectedTicket.id,
           user_id: effectiveUserId,
           message: newMessage,
-          is_admin: false
+          is_admin: false,
+          attachment_url: attachmentUrl,
+          attachment_name: attachmentName
         })
 
       if (error) throw error
 
       setNewMessage('')
+      clearAttachment()
       await loadChatMessages(selectedTicket.id)
       toast.success('Mensagem enviada!')
     } catch (error) {
@@ -315,6 +437,22 @@ export function Gerente() {
                           </span>
                         </div>
                         <p className="text-sm text-foreground">{msg.message}</p>
+                        
+                        {/* Exibir anexo se existir */}
+                        {msg.attachment_url && (
+                          <div className="mt-2">
+                            <img 
+                              src={msg.attachment_url} 
+                              alt={msg.attachment_name || 'Anexo'} 
+                              className="w-full h-40 object-cover rounded-lg border border-border cursor-pointer hover:opacity-80"
+                              onClick={() => window.open(msg.attachment_url, '_blank')}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              📎 {msg.attachment_name}
+                            </p>
+                          </div>
+                        )}
+                        
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatDateTime(msg.created_at)}
                         </p>
@@ -325,17 +463,54 @@ export function Gerente() {
                 </div>
 
                 {/* Enviar nova mensagem no chat */}
-                <form onSubmit={handleSendMessage} className="flex gap-2">
-                  <Input
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Digite sua mensagem..."
-                    className="flex-1"
-                  />
-                  <Button type="submit" disabled={loading || !newMessage.trim()}>
-                    <Send size={16} />
-                  </Button>
-                </form>
+                <div className="space-y-2">
+                  {/* Preview do anexo */}
+                  {attachmentPreview && (
+                    <div className="relative">
+                      <img 
+                        src={attachmentPreview} 
+                        alt="Preview do anexo" 
+                        className="w-full h-32 object-cover rounded-lg border border-border"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className="absolute top-2 right-2"
+                        onClick={clearAttachment}
+                      >
+                        <X size={16} />
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {attachment?.name}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <form onSubmit={handleSendMessage} className="flex gap-2">
+                    <Input
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Digite sua mensagem..."
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      <Paperclip size={16} />
+                    </Button>
+                    <Button type="submit" disabled={loading || uploading || !newMessage.trim()}>
+                      {uploading ? (
+                        <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
+                      ) : (
+                        <Send size={16} />
+                      )}
+                    </Button>
+                  </form>
+                </div>
               </div>
             ) : (
               /* Formulário de Novo Ticket */
@@ -361,9 +536,66 @@ export function Gerente() {
                     className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   />
                 </div>
-                <Button type="submit" disabled={loading} className="w-full">
+                
+                {/* Upload de Anexo */}
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
+                    <Paperclip size={16} />
+                    Anexo (opcional)
+                  </label>
+                  
+                  {attachmentPreview ? (
+                    <div className="relative">
+                      <img 
+                        src={attachmentPreview} 
+                        alt="Preview do anexo" 
+                        className="w-full h-48 object-cover rounded-lg border border-border"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className="absolute top-2 right-2"
+                        onClick={clearAttachment}
+                      >
+                        <X size={16} />
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {attachment?.name}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+                      <Image size={32} className="mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Arraste uma imagem ou clique para selecionar
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        JPG, PNG ou WebP (máx. 5MB)
+                      </p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                      >
+                        <Paperclip size={16} className="mr-2" />
+                        {uploading ? 'Enviando...' : 'Selecionar Imagem'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                <Button type="submit" disabled={loading || uploading} className="w-full">
                   <Send size={16} className="mr-2" />
-                  Criar Ticket
+                  {loading || uploading ? 'Enviando...' : 'Criar Ticket'}
                 </Button>
               </form>
             )}

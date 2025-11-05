@@ -25,6 +25,8 @@ interface Ticket {
   priority: string
   created_at: string
   responses_count: number
+  attachment_url?: string
+  attachment_name?: string
 }
 
 interface TicketResponse {
@@ -33,6 +35,8 @@ interface TicketResponse {
   is_admin: boolean
   user_name: string
   created_at: string
+  attachment_url?: string
+  attachment_name?: string
 }
 
 export function SupportTickets() {
@@ -72,6 +76,8 @@ export function SupportTickets() {
         throw error
       }
 
+      // Processar tickets com contagem de respostas e nomes de usuários
+
       // Buscar nomes de usuários
       const userIds = [...new Set(data?.map(t => t.user_id).filter(Boolean))]
       let usersMap = new Map()
@@ -108,6 +114,8 @@ export function SupportTickets() {
             priority: ticket.priority,
             created_at: ticket.created_at,
             responses_count: count || 0,
+            attachment_url: ticket.attachment_url,
+            attachment_name: ticket.attachment_name,
           }
         })
       )
@@ -354,6 +362,23 @@ export function SupportTickets() {
                     </div>
                     <h3 className="text-foreground font-medium text-sm">{ticket.subject}</h3>
                     <p className="text-muted-foreground text-xs line-clamp-2">{ticket.message}</p>
+                    
+                    {/* Exibir anexo se existir */}
+                  {ticket.attachment_url && (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                        <MessageSquare size={12} />
+                        <span>📎 {ticket.attachment_name || 'Anexo'}</span>
+                      </div>
+                      <img 
+                        src={ticket.attachment_url} 
+                        alt={ticket.attachment_name || 'Anexo'} 
+                        className="w-full h-32 object-cover rounded-lg border border-border cursor-pointer hover:opacity-80"
+                        onClick={() => window.open(ticket.attachment_url, '_blank')}
+                      />
+                    </div>
+                  )}
+                    
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-xs text-muted-foreground">{ticket.user_name}</span>
                       <span className="text-xs text-muted-foreground">
@@ -423,6 +448,22 @@ export function SupportTickets() {
                     </span>
                   </div>
                   <p className="text-gray-300 text-sm">{selectedTicket.message}</p>
+                  
+                  {/* Exibir anexo se existir */}
+                  {selectedTicket.attachment_url && (
+                    <div className="mt-3">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                        <MessageSquare size={12} />
+                        <span>📎 {selectedTicket.attachment_name}</span>
+                      </div>
+                      <img 
+                        src={selectedTicket.attachment_url} 
+                        alt={selectedTicket.attachment_name || 'Anexo'} 
+                        className="w-full h-40 object-cover rounded-lg border border-border cursor-pointer hover:opacity-80"
+                        onClick={() => window.open(selectedTicket.attachment_url, '_blank')}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Respostas */}
@@ -447,6 +488,22 @@ export function SupportTickets() {
                         </span>
                       </div>
                       <p className="text-gray-300 text-sm">{response.message}</p>
+                      
+                      {/* Exibir anexo se existir */}
+                      {response.attachment_url && (
+                        <div className="mt-3">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                            <MessageSquare size={12} />
+                            <span>📎 {response.attachment_name}</span>
+                          </div>
+                          <img 
+                            src={response.attachment_url} 
+                            alt={response.attachment_name || 'Anexo'} 
+                            className="w-full h-32 object-cover rounded-lg border border-border cursor-pointer hover:opacity-80"
+                            onClick={() => window.open(response.attachment_url, '_blank')}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

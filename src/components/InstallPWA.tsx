@@ -12,6 +12,7 @@ export function InstallPWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallModal, setShowInstallModal] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [isIOS, setIsIOS] = useState(false)
 
   useEffect(() => {
     // Verificar se já está instalado
@@ -27,10 +28,26 @@ export function InstallPWA() {
       const now = new Date()
       const daysSinceRejection = (now.getTime() - rejectedDate.getTime()) / (1000 * 60 * 60 * 24)
       
-      // Mostrar novamente após 7 dias
-      if (daysSinceRejection < 7) {
+      // Mostrar novamente após 3 dias (reduzido de 7)
+      if (daysSinceRejection < 3) {
         return
       }
+    }
+
+    // Fallback para iOS e navegadores que não suportam beforeinstallprompt
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isAndroid = /Android/.test(navigator.userAgent)
+    
+    setIsIOS(isIOSDevice)
+    
+    if (isIOSDevice || isAndroid) {
+      // Mostrar manualmente para dispositivos móveis após 3 segundos
+      setTimeout(() => {
+        if (!deferredPrompt && !isInstalled) {
+          console.log('📱 PWA: Mostrando instalação manual para dispositivo móvel')
+          setShowInstallModal(true)
+        }
+      }, 3000)
     }
 
     // Capturar evento beforeinstallprompt
@@ -39,17 +56,11 @@ export function InstallPWA() {
       console.log('📱 PWA: Prompt de instalação capturado')
       setDeferredPrompt(e as BeforeInstallPromptEvent)
       
-      // Mostrar modal IMEDIATAMENTE quando acessar app.dimpay.com.br
-      const hostname = window.location.hostname
-      if (hostname === 'app.dimpay.com.br' || hostname === 'localhost') {
-        // Mostrar imediatamente
+      // Mostrar modal após 2 segundos em qualquer domínio
+      setTimeout(() => {
         setShowInstallModal(true)
-      } else {
-        // Para outros domínios, mostrar após 3 segundos
-        setTimeout(() => {
-          setShowInstallModal(true)
-        }, 3000)
-      }
+        console.log('📱 PWA: Mostrando modal de instalação')
+      }, 2000)
     }
 
     window.addEventListener('beforeinstallprompt', handler)
@@ -116,7 +127,10 @@ export function InstallPWA() {
             Instalar APP Dimpay
           </DialogTitle>
           <DialogDescription className="text-base">
-            Deseja instalar o APP Dimpay em seu dispositivo? Tenha acesso rápido e trabalhe offline!
+            {isIOS 
+              ? "Instale o APP Dimpay no seu iPhone/iPad! Siga as instruções abaixo."
+              : "Deseja instalar o APP Dimpay em seu dispositivo? Tenha acesso rápido e trabalhe offline!"
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -154,6 +168,18 @@ export function InstallPWA() {
             </div>
           </div>
 
+          {/* Instruções iOS */}
+          {isIOS && (
+            <div className="space-y-2 p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+              <p className="font-medium text-orange-400 text-sm">Como instalar no iPhone/iPad:</p>
+              <ol className="text-xs text-muted-foreground space-y-1">
+                <li>1. Toque em <strong>Compartilhar</strong> 📤 (ícone de seta para cima)</li>
+                <li>2. Role para baixo e toque em <strong>Adicionar à Tela de Início</strong> ➕</li>
+                <li>3. Toque em <strong>Adicionar</strong> no canto superior direito</li>
+              </ol>
+            </div>
+          )}
+
           {/* Preview do ícone */}
           <div className="flex justify-center py-4">
             <div className="relative">
@@ -177,11 +203,11 @@ export function InstallPWA() {
               Agora Não
             </Button>
             <Button
-              onClick={handleInstall}
+              onClick={isIOS ? handleDismiss : handleInstall}
               className="flex-1 bg-gradient-to-r from-primary to-green-400 hover:from-primary/90 hover:to-green-400/90 text-black font-semibold"
             >
               <Download size={18} className="mr-2" />
-              Instalar App
+              {isIOS ? 'Entendido' : 'Instalar App'}
             </Button>
           </div>
 
