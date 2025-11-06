@@ -59,6 +59,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_bank_acquirers_updated_at ON public.bank_acquirers;
 CREATE TRIGGER trigger_update_bank_acquirers_updated_at
   BEFORE UPDATE ON public.bank_acquirers
   FOR EACH ROW
@@ -80,6 +81,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_ensure_single_default_acquirer ON public.bank_acquirers;
 CREATE TRIGGER trigger_ensure_single_default_acquirer
   BEFORE INSERT OR UPDATE ON public.bank_acquirers
   FOR EACH ROW
@@ -93,6 +95,7 @@ CREATE TRIGGER trigger_ensure_single_default_acquirer
 ALTER TABLE public.bank_acquirers ENABLE ROW LEVEL SECURITY;
 
 -- Política: Apenas admins podem ver adquirentes
+DROP POLICY IF EXISTS "Admins podem ver adquirentes" ON public.bank_acquirers;
 CREATE POLICY "Admins podem ver adquirentes"
   ON public.bank_acquirers
   FOR SELECT
@@ -105,6 +108,7 @@ CREATE POLICY "Admins podem ver adquirentes"
   );
 
 -- Política: Apenas admins podem inserir adquirentes
+DROP POLICY IF EXISTS "Admins podem inserir adquirentes" ON public.bank_acquirers;
 CREATE POLICY "Admins podem inserir adquirentes"
   ON public.bank_acquirers
   FOR INSERT
@@ -117,6 +121,7 @@ CREATE POLICY "Admins podem inserir adquirentes"
   );
 
 -- Política: Apenas admins podem atualizar adquirentes
+DROP POLICY IF EXISTS "Admins podem atualizar adquirentes" ON public.bank_acquirers;
 CREATE POLICY "Admins podem atualizar adquirentes"
   ON public.bank_acquirers
   FOR UPDATE
@@ -129,6 +134,7 @@ CREATE POLICY "Admins podem atualizar adquirentes"
   );
 
 -- Política: Apenas admins podem deletar adquirentes
+DROP POLICY IF EXISTS "Admins podem deletar adquirentes" ON public.bank_acquirers;
 CREATE POLICY "Admins podem deletar adquirentes"
   ON public.bank_acquirers
   FOR DELETE
