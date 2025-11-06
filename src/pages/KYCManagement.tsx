@@ -374,7 +374,19 @@ export function KYCManagement() {
         .delete()
         .eq('user_id', selectedClient.id)
       
-      // 7. Finalmente, excluir o usuário
+      // 7. Excluir mensagens de tickets do usuário
+      await supabase
+        .from('ticket_messages')
+        .delete()
+        .eq('user_id', selectedClient.id)
+      
+      // 8. Excluir tickets criados pelo usuário
+      await supabase
+        .from('tickets')
+        .delete()
+        .eq('user_id', selectedClient.id)
+      
+      // 9. Finalmente, excluir o usuário
       const { error: deleteError } = await supabase
         .from('users')
         .delete()
@@ -382,7 +394,7 @@ export function KYCManagement() {
       
       if (deleteError) throw deleteError
       
-      // 8. Excluir do Auth (se possível)
+      // 10. Excluir do Auth (se possível)
       // Nota: Isso requer privilégios de admin no Supabase
       try {
         await supabase.auth.admin.deleteUser(selectedClient.id)
