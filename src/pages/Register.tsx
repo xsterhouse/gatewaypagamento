@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,7 +26,17 @@ export function Register() {
   const [errors, setErrors] = useState<any>({})
   const [showTerms, setShowTerms] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
+  const [resendingOTP, setResendingOTP] = useState(false)
+  const [resendTimer, setResendTimer] = useState(0)
   const navigate = useNavigate()
+
+  // Timer de contagem regressiva para reenvio
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [resendTimer])
 
   // Validar CPF
   const validateCPF = (cpf: string) => {
@@ -184,10 +194,39 @@ export function Register() {
 
       toast.success('Código enviado para seu email!')
       setStep(2)
+      setResendTimer(60) // 60 segundos para reenviar
     } catch (error: any) {
       toast.error('Erro ao processar cadastro')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Função para reenviar código OTP
+  const handleResendOTP = async () => {
+    if (resendTimer > 0) return
+    
+    setResendingOTP(true)
+    try {
+      // Gerar novo código OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString()
+      setSentOTP(otp)
+
+      // Enviar email com código
+      const emailResult = await sendOTPEmail(email, otp, 'register')
+      
+      if (!emailResult.success) {
+        console.error('Erro ao enviar email:', emailResult.error)
+        toast.error('Erro ao reenviar código. Tente novamente.')
+        return
+      }
+
+      toast.success('Novo código enviado para seu email!')
+      setResendTimer(60) // Resetar timer
+    } catch (error: any) {
+      toast.error('Erro ao reenviar código')
+    } finally {
+      setResendingOTP(false)
     }
   }
 
@@ -459,24 +498,11 @@ export function Register() {
                   <p className="text-white font-medium">{email}</p>
                 </div>
 
-                {/* Código OTP em Destaque */}
-                <div className="bg-gradient-to-r from-primary/20 to-cyan-500/20 border-2 border-primary rounded-lg p-6">
-                  <div className="text-center space-y-3">
-                    <p className="text-sm text-gray-300">
-                      💡 <strong>MODO DESENVOLVIMENTO</strong>
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Use o código abaixo para continuar:
-                    </p>
-                    <div className="bg-gray-900/50 rounded-lg p-4">
-                      <p className="text-primary font-mono text-3xl font-bold tracking-[0.5em]">
-                        {sentOTP}
-                      </p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      ⚠️ Em produção, o código será enviado por email
-                    </p>
-                  </div>
+                {/* Informação sobre verificação */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                  <p className="text-sm text-blue-300 text-center">
+                    📧 Verifique sua caixa de entrada e spam
+                  </p>
                 </div>
 
                 <FormField>
@@ -491,6 +517,26 @@ export function Register() {
                   />
                   {errors.otpCode && <FormMessage>{errors.otpCode}</FormMessage>}
                 </FormField>
+
+                {/* Botão de Reenviar Código */}
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResendOTP}
+                    disabled={resendTimer > 0 || resendingOTP}
+                    className="text-primary hover:text-primary/80"
+                  >
+                    {resendingOTP ? (
+                      '📧 Reenviando...'
+                    ) : resendTimer > 0 ? (
+                      `⏱️ Reenviar em ${resendTimer}s`
+                    ) : (
+                      '📧 Reenviar Código'
+                    )}
+                  </Button>
+                </div>
 
                 <div className="flex gap-3">
                   <Button
