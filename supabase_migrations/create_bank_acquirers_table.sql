@@ -103,7 +103,7 @@ CREATE POLICY "Admins podem ver adquirentes"
     EXISTS (
       SELECT 1 FROM public.users
       WHERE users.id = auth.uid()
-      AND users.user_type = 'admin'
+      AND users.role = 'admin'
     )
   );
 
@@ -116,7 +116,7 @@ CREATE POLICY "Admins podem inserir adquirentes"
     EXISTS (
       SELECT 1 FROM public.users
       WHERE users.id = auth.uid()
-      AND users.user_type = 'admin'
+      AND users.role = 'admin'
     )
   );
 
@@ -129,7 +129,7 @@ CREATE POLICY "Admins podem atualizar adquirentes"
     EXISTS (
       SELECT 1 FROM public.users
       WHERE users.id = auth.uid()
-      AND users.user_type = 'admin'
+      AND users.role = 'admin'
     )
   );
 
@@ -142,7 +142,7 @@ CREATE POLICY "Admins podem deletar adquirentes"
     EXISTS (
       SELECT 1 FROM public.users
       WHERE users.id = auth.uid()
-      AND users.user_type = 'admin'
+      AND users.role = 'admin'
     )
   );
 
