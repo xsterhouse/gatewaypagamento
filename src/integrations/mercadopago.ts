@@ -134,9 +134,9 @@ class MercadoPagoIntegration {
    * Validar assinatura de webhook
    */
   validateWebhookSignature(
-    signature: string,
-    body: any,
-    secret: string
+    _signature: string,
+    _body: any,
+    _secret: string
   ): boolean {
     try {
       // Mercado Pago usa x-signature header
@@ -146,14 +146,16 @@ class MercadoPagoIntegration {
         return true
       }
       
-      // TODO: Implementar validação real
+      // TODO: Implementar validação real quando for para produção
+      // const crypto = require('crypto')
       // const expectedSignature = crypto
-      //   .createHmac('sha256', secret)
-      //   .update(JSON.stringify(body))
+      //   .createHmac('sha256', _secret)
+      //   .update(JSON.stringify(_body))
       //   .digest('hex')
       
-      // return signature === expectedSignature
+      // return _signature === expectedSignature
       
+      console.warn('⚠️ Validação de webhook desabilitada - implementar antes de produção!')
       return true
     } catch (error) {
       console.error('❌ Erro ao validar assinatura:', error)
