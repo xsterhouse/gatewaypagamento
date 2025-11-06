@@ -63,8 +63,10 @@ export function BankAcquirers() {
 
   const loadAcquirers = async () => {
     try {
+      console.log('🏦 Carregando adquirentes...')
       setLoading(true)
       const data = await bankAcquirerService.getAllAcquirers()
+      console.log('📊 Adquirentes carregados:', data)
       setAcquirers(data)
       
       // Carregar estatísticas para cada adquirente
@@ -74,8 +76,16 @@ export function BankAcquirers() {
         if (stat) stats[acquirer.id] = stat
       }
       setStatistics(stats)
+      console.log('✅ Adquirentes carregados com sucesso!')
     } catch (error: any) {
-      toast.error('Erro ao carregar adquirentes: ' + error.message)
+      console.error('❌ Erro ao carregar adquirentes:', error)
+      
+      // Verificar se é erro de tabela não existente
+      if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+        toast.error('⚠️ Tabela bank_acquirers não encontrada! Execute a migration SQL primeiro.')
+      } else {
+        toast.error('Erro ao carregar adquirentes: ' + error.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -354,6 +364,38 @@ export function BankAcquirers() {
 
       {/* Lista de Adquirentes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {acquirers.length === 0 && !loading && (
+          <div className="col-span-full">
+            <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-2 border-dashed">
+              <CardContent className="pt-12 pb-12 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <Building2 className="w-10 h-10 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                      Nenhum Adquirente Cadastrado
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                      Comece criando seu primeiro adquirente bancário para processar transações PIX via Gateway.
+                    </p>
+                    <Button onClick={() => handleOpenModal()} size="lg" className="gap-2">
+                      <Plus className="w-5 h-5" />
+                      Criar Primeiro Adquirente
+                    </Button>
+                  </div>
+                  <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg max-w-2xl">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      <strong>⚠️ Importante:</strong> Se você está vendo esta mensagem e a tabela não existe no banco de dados, 
+                      execute a migration SQL localizada em <code className="bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">supabase_migrations/create_bank_acquirers_table.sql</code>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        
         {acquirers.map((acquirer) => {
           const stat = statistics[acquirer.id]
           
