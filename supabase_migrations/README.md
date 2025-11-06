@@ -1,5 +1,15 @@
 # 🗄️ Migrações do Banco de Dados
 
+## ⚠️ IMPORTANTE: Ordem de Execução
+
+### **Se a tabela `bank_acquirers` JÁ EXISTE:**
+Execute apenas: `add_webhook_columns.sql`
+
+### **Se a tabela `bank_acquirers` NÃO EXISTE:**
+Execute: `create_bank_acquirers_table.sql`
+
+---
+
 ## 📋 Como Executar as Migrações
 
 ### **Opção 1: Via Supabase Dashboard (Recomendado)**
