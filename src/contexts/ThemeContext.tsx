@@ -11,30 +11,12 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    // Verificar tema salvo no localStorage
-    const savedTheme = localStorage.getItem('theme') as Theme | null
-    if (savedTheme) return savedTheme
-    
-    // Verificar preferência do sistema
-    if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      return 'light'
-    }
-    
-    return 'dark'
-  })
+  const [theme, setThemeState] = useState<Theme>('dark')
 
   useEffect(() => {
     const root = window.document.documentElement
-    
-    // Remover classe anterior
     root.classList.remove('light', 'dark')
-    
-    // Adicionar nova classe
     root.classList.add(theme)
-    
-    // Salvar no localStorage
-    localStorage.setItem('theme', theme)
   }, [theme])
 
   const toggleTheme = () => {

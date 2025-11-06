@@ -10,4 +10,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+  },
+  build: {
+    rollupOptions: {
+      external: (id) => {
+        // Evitar múltiplas cópias do React
+        return id === 'react' || id === 'react-dom' ? false : false
+      }
+    }
+  }
 })
