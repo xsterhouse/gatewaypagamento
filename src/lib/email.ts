@@ -12,24 +12,24 @@ interface SendEmailParams {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
-  // Verificar se está em desenvolvimento OU se não tem API key configurada
-  const isDev = import.meta.env.DEV
   const apiKey = import.meta.env.VITE_RESEND_API_KEY
   
-  // Se estiver em dev OU sem API key, apenas loga no console
-  if (isDev || !apiKey || apiKey === 'your_resend_api_key_here') {
+  // Se não tem API key configurada, apenas loga no console
+  if (!apiKey || apiKey === 'your_resend_api_key_here') {
     console.log('\n' + '='.repeat(60))
-    console.log('📧 EMAIL (MODO DESENVOLVIMENTO)')
+    console.log('📧 EMAIL (MODO DESENVOLVIMENTO - SEM API KEY)')
     console.log('='.repeat(60))
     console.log('Para:', to)
     console.log('Assunto:', subject)
     console.log('\n💡 VEJA O CÓDIGO OTP NO REGISTRO/LOGIN')
+    console.log('⚠️ Configure VITE_RESEND_API_KEY no .env para enviar emails reais')
     console.log('='.repeat(60) + '\n')
     return { success: true, messageId: 'dev-mode' }
   }
 
-  // Em produção, enviar email real
+  // Enviar email real (funciona em dev e produção quando API key está configurada)
   try {
+    console.log('📧 Enviando email para:', to)
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
