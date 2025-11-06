@@ -32,6 +32,14 @@ interface DashboardStats {
   totalFeesCollected: number
   newUsersToday: number
   transactionsToday: number
+  // Gateway específicos:
+  gatewayBalance: number      // Saldo da conta mãe
+  gatewayAvailableBalance: number // Saldo disponível
+  gatewayFeesToday: number    // FEEs gerados hoje
+  pendingPixTransactions: number // PIX pendentes
+  failedPixTransactions: number  // PIX falhados
+  averageTicket: number       // Ticket médio
+  successRate: number         // Taxa de sucesso
 }
 
 interface RecentTransaction {
@@ -62,6 +70,13 @@ export function AdminDashboard() {
     totalFeesCollected: 0,
     newUsersToday: 0,
     transactionsToday: 0,
+    gatewayBalance: 0,
+    gatewayAvailableBalance: 0,
+    gatewayFeesToday: 0,
+    pendingPixTransactions: 0,
+    failedPixTransactions: 0,
+    averageTicket: 0,
+    successRate: 0
   })
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -236,6 +251,36 @@ export function AdminDashboard() {
         // Calcular taxas coletadas (1% de envio como exemplo)
         const totalFeesCollected = pixSentVolume * 0.01
 
+        // Calcular métricas de Gateway
+        const todayTransactions = allTransactions?.filter(t => 
+          t.created_at && t.created_at.startsWith(today)
+        ) || []
+        
+        const todayFees = todayTransactions
+          .filter(t => t.type === 'debit' || t.type === 'send')
+          .reduce((sum, t) => sum + (Number(t.amount || 0) * 0.01), 0)
+        
+        const pendingTransactions = allTransactions?.filter(t => 
+          t.status === 'pending'
+        ).length || 0
+        
+        const failedTransactions = allTransactions?.filter(t => 
+          t.status === 'failed'
+        ).length || 0
+        
+        const completedTransactions = allTransactions?.filter(t => 
+          t.status === 'completed'
+        ).length || 0
+        
+        const totalTxCount = allTransactions?.length || 0
+        const successRate = totalTxCount > 0 
+          ? (completedTransactions / totalTxCount) * 100 
+          : 0
+        
+        const averageTicket = totalTxCount > 0
+          ? (allTransactions || []).reduce((sum, t) => sum + Number(t.amount || 0), 0) / totalTxCount
+          : 0
+
         setStats({
           totalUsers: nonAdminUsers.length,
           activeUsers,
@@ -252,6 +297,14 @@ export function AdminDashboard() {
           totalFeesCollected,
           newUsersToday,
           transactionsToday,
+          // Gateway específicos:
+          gatewayBalance: totalBalance, // Temporariamente usa saldo total
+          gatewayAvailableBalance: totalBalance - lockedBalance,
+          gatewayFeesToday: todayFees,
+          pendingPixTransactions: pendingTransactions,
+          failedPixTransactions: failedTransactions,
+          averageTicket,
+          successRate
         })
       }
 
@@ -547,6 +600,85 @@ export function AdminDashboard() {
                   {stats.newUsersToday} novos
                 </p>
                 <p className="text-xs text-muted-foreground">{stats.transactionsToday} transações</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gateway Metrics - Conta Mãe */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-green-400 rounded-lg flex items-center justify-center">
+            <DollarSign className="text-black" size={16} />
+          </div>
+          Gateway PIX - Conta Mãe
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30 transition-all hover:shadow-lg hover:scale-105">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-blue-500" size={20} />
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Conta Mãe - Saldo</p>
+                <p className="text-xl font-bold text-blue-500">
+                  {formatCurrency(stats.gatewayBalance)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total disponível</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30 transition-all hover:shadow-lg hover:scale-105">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <TrendingUp className="text-green-500" size={20} />
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">FEEs Hoje</p>
+                <p className="text-xl font-bold text-green-500">
+                  {formatCurrency(stats.gatewayFeesToday)}
+                </p>
+                <p className="text-xs text-muted-foreground">Receita do dia</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/30 transition-all hover:shadow-lg hover:scale-105">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <Clock className="text-orange-500" size={20} />
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">PIX Pendentes</p>
+                <p className="text-xl font-bold text-orange-500">
+                  {stats.pendingPixTransactions}
+                </p>
+                <p className="text-xs text-muted-foreground">Aguardando processamento</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/30 transition-all hover:shadow-lg hover:scale-105">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <CheckCircle className="text-purple-500" size={20} />
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Taxa de Sucesso</p>
+                <p className="text-xl font-bold text-purple-500">
+                  {stats.successRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground">Transações aprovadas</p>
               </div>
             </div>
           </CardContent>
