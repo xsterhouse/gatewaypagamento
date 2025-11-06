@@ -29,6 +29,11 @@ export interface BankAcquirer {
   fee_fixed?: number
   description?: string
   logo_url?: string
+  // Webhook fields
+  webhook_url?: string
+  webhook_secret?: string
+  webhook_events?: string[]
+  webhook_enabled?: boolean
   status: 'active' | 'inactive' | 'maintenance'
   created_at: string
   updated_at: string

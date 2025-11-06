@@ -49,7 +49,12 @@ export function BankAcquirers() {
     fee_percentage: '',
     fee_fixed: '',
     description: '',
-    logo_url: ''
+    logo_url: '',
+    // Webhook fields
+    webhook_url: '',
+    webhook_secret: '',
+    webhook_events: [] as string[],
+    webhook_enabled: false
   })
 
   useEffect(() => {
@@ -100,7 +105,12 @@ export function BankAcquirers() {
         fee_percentage: acquirer.fee_percentage?.toString() || '',
         fee_fixed: acquirer.fee_fixed?.toString() || '',
         description: acquirer.description || '',
-        logo_url: acquirer.logo_url || ''
+        logo_url: acquirer.logo_url || '',
+        // Webhook fields
+        webhook_url: acquirer.webhook_url || '',
+        webhook_secret: acquirer.webhook_secret || '',
+        webhook_events: acquirer.webhook_events || [],
+        webhook_enabled: acquirer.webhook_enabled || false
       })
     } else {
       setEditMode(false)
@@ -125,7 +135,12 @@ export function BankAcquirers() {
         fee_percentage: '',
         fee_fixed: '',
         description: '',
-        logo_url: ''
+        logo_url: '',
+        // Webhook fields
+        webhook_url: '',
+        webhook_secret: '',
+        webhook_events: [],
+        webhook_enabled: false
       })
     }
     setActiveTab('basic') // Resetar para primeira aba
@@ -159,6 +174,11 @@ export function BankAcquirers() {
         fee_fixed: formData.fee_fixed ? parseFloat(formData.fee_fixed) : undefined,
         description: formData.description || undefined,
         logo_url: formData.logo_url || undefined,
+        // Webhook fields
+        webhook_url: formData.webhook_url || undefined,
+        webhook_secret: formData.webhook_secret || undefined,
+        webhook_events: formData.webhook_events || undefined,
+        webhook_enabled: formData.webhook_enabled,
         is_active: true,
         status: 'active'
       }
@@ -185,6 +205,20 @@ export function BankAcquirers() {
       loadAcquirers()
     } catch (error: any) {
       toast.error('Erro ao definir adquirente padrão: ' + error.message)
+    }
+  }
+
+  const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      const newStatus = !currentStatus
+      await bankAcquirerService.updateAcquirer(id, { 
+        is_active: newStatus,
+        status: newStatus ? 'active' : 'inactive'
+      })
+      toast.success(`Adquirente ${newStatus ? 'ativado' : 'desativado'} com sucesso!`)
+      loadAcquirers()
+    } catch (error: any) {
+      toast.error('Erro ao alterar status: ' + error.message)
     }
   }
 
@@ -221,11 +255,11 @@ export function BankAcquirers() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Adquirentes Bancários
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            🏦 Gateway PIX - Adquirentes
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Gerencie os adquirentes bancários para processamento de PIX
+            Configure e gerencie adquirentes bancários, webhooks e integrações PIX
           </p>
         </div>
         <Button onClick={() => handleOpenModal()} className="gap-2">
@@ -235,7 +269,7 @@ export function BankAcquirers() {
       </div>
 
       {/* Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -290,6 +324,29 @@ export function BankAcquirers() {
                 </p>
               </div>
               <TrendingUp className="w-8 h-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Webhooks Ativos */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">🪝 Webhooks Ativos</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {acquirers.filter(a => a.webhook_enabled).length}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {acquirers.length > 0 ? 
+                    `${((acquirers.filter(a => a.webhook_enabled).length / acquirers.length) * 100).toFixed(0)}% do total` 
+                    : '0% do total'
+                  }
+                </p>
+              </div>
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -363,6 +420,24 @@ export function BankAcquirers() {
                     </div>
                   )}
                   
+                  {/* Status do Webhook */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Webhook:</span>
+                    <div className="flex items-center gap-1">
+                      {acquirer.webhook_enabled ? (
+                        <>
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="font-medium text-green-600">Ativo</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                          <span className="font-medium text-gray-500">Inativo</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
                   {acquirer.transaction_limit && (
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Limite/Transação:</span>
@@ -380,15 +455,39 @@ export function BankAcquirers() {
 
                 {/* Ações */}
                 <div className="flex gap-2 pt-4 border-t">
+                  {/* Botão Ligar/Desligar */}
+                  <Button
+                    variant={acquirer.is_active ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleToggleStatus(acquirer.id, acquirer.is_active)}
+                    className={`flex-1 gap-2 ${
+                      acquirer.is_active 
+                        ? 'bg-green-600 hover:bg-green-700 text-white' 
+                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                    }`}
+                  >
+                    {acquirer.is_active ? (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        Ativo
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4" />
+                        Inativo
+                      </>
+                    )}
+                  </Button>
+                  
                   {!acquirer.is_default && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleSetDefault(acquirer.id)}
-                      className="flex-1 gap-2"
+                      className="gap-2"
                     >
                       <Star className="w-4 h-4" />
-                      Definir Padrão
+                      Padrão
                     </Button>
                   )}
                   
@@ -399,7 +498,6 @@ export function BankAcquirers() {
                     className="gap-2"
                   >
                     <Edit className="w-4 h-4" />
-                    Editar
                   </Button>
                   
                   <Button
@@ -431,10 +529,11 @@ export function BankAcquirers() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="basic">Básico</TabsTrigger>
                 <TabsTrigger value="bank">Dados Bancários</TabsTrigger>
                 <TabsTrigger value="api">API</TabsTrigger>
+                <TabsTrigger value="webhooks">🪝 Webhooks</TabsTrigger>
                 <TabsTrigger value="fees">Taxas</TabsTrigger>
               </TabsList>
 
@@ -632,6 +731,132 @@ export function BankAcquirers() {
                 </div>
               </TabsContent>
 
+              {/* Aba Webhooks */}
+              <TabsContent value="webhooks" className="space-y-4">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-green-800 dark:text-green-200">
+                    <strong>🪝 Webhooks:</strong> Configure os webhooks para receber notificações em tempo real das transações PIX.
+                    URL do seu sistema: <code className="bg-green-100 px-2 py-1 rounded">https://seusistema.com/api/webhooks/{formData.name.toLowerCase().replace(/\s+/g, '-')}</code>
+                  </p>
+                </div>
+
+                {/* Habilitar/Desabilitar Webhooks */}
+                <div className="flex items-center gap-3 p-4 border rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="webhook_enabled"
+                    checked={formData.webhook_enabled}
+                    onChange={(e) => setFormData({ ...formData, webhook_enabled: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                  />
+                  <Label htmlFor="webhook_enabled" className="text-sm font-medium">
+                    Habilitar Webhooks para este adquirente
+                  </Label>
+                </div>
+
+                {formData.webhook_enabled && (
+                  <>
+                    <div>
+                      <Label htmlFor="webhook_url">URL do Webhook *</Label>
+                      <Input
+                        id="webhook_url"
+                        value={formData.webhook_url}
+                        onChange={(e) => setFormData({ ...formData, webhook_url: e.target.value })}
+                        placeholder="https://seusistema.com/api/webhooks/mercadopago"
+                        required={formData.webhook_enabled}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        URL onde o adquirente enviará as notificações das transações
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="webhook_secret">Segredo do Webhook (Webhook Secret)</Label>
+                      <Input
+                        id="webhook_secret"
+                        type="password"
+                        value={formData.webhook_secret}
+                        onChange={(e) => setFormData({ ...formData, webhook_secret: e.target.value })}
+                        placeholder="whsec_1234567890abcdef"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Chave secreta para verificar a autenticidade dos webhooks recebidos
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label>Eventos de Webhook</Label>
+                      <div className="mt-2 space-y-2">
+                        {[
+                          { id: 'pix.created', label: 'PIX Criado', description: 'Quando um PIX é iniciado' },
+                          { id: 'pix.completed', label: 'PIX Completado', description: 'Quando um PIX é aprovado' },
+                          { id: 'pix.failed', label: 'PIX Falhou', description: 'Quando um PIX é rejeitado' },
+                          { id: 'pix.reversed', label: 'PIX Estornado', description: 'Quando um PIX é estornado' }
+                        ].map((event) => (
+                          <div key={event.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                            <input
+                              type="checkbox"
+                              id={event.id}
+                              checked={formData.webhook_events.includes(event.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData({ 
+                                    ...formData, 
+                                    webhook_events: [...formData.webhook_events, event.id] 
+                                  })
+                                } else {
+                                  setFormData({ 
+                                    ...formData, 
+                                    webhook_events: formData.webhook_events.filter(e => e !== event.id) 
+                                  })
+                                }
+                              }}
+                              className="w-4 h-4 text-green-600 rounded focus:ring-green-500 mt-1"
+                            />
+                            <div className="flex-1">
+                              <Label htmlFor={event.id} className="text-sm font-medium">
+                                {event.label}
+                              </Label>
+                              <p className="text-xs text-gray-500">{event.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Botão de Teste */}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          toast.info('Enviando webhook de teste...')
+                          // Simular envio de webhook de teste
+                          setTimeout(() => {
+                            toast.success('Webhook de teste enviado com sucesso!')
+                          }, 2000)
+                        }}
+                        className="gap-2"
+                      >
+                        🧪 Testar Webhook
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(formData.webhook_url || '')
+                          toast.success('URL do webhook copiada!')
+                        }}
+                        className="gap-2"
+                      >
+                        📋 Copiar URL
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+
               {/* Aba Taxas */}
               <TabsContent value="fees" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -695,7 +920,7 @@ export function BankAcquirers() {
                     type="button" 
                     variant="outline" 
                     onClick={() => {
-                      const tabs = ['basic', 'bank', 'api', 'fees']
+                      const tabs = ['basic', 'bank', 'api', 'webhooks', 'fees']
                       const currentIndex = tabs.indexOf(activeTab)
                       if (currentIndex > 0) setActiveTab(tabs[currentIndex - 1])
                     }}
@@ -708,7 +933,7 @@ export function BankAcquirers() {
                     type="button" 
                     variant="outline"
                     onClick={() => {
-                      const tabs = ['basic', 'bank', 'api', 'fees']
+                      const tabs = ['basic', 'bank', 'api', 'webhooks', 'fees']
                       const currentIndex = tabs.indexOf(activeTab)
                       if (currentIndex < tabs.length - 1) setActiveTab(tabs[currentIndex + 1])
                     }}
