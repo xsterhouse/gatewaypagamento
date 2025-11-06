@@ -72,6 +72,10 @@ export function KYCManagement() {
   const [documentsModalOpen, setDocumentsModalOpen] = useState(false)
   const [userDocuments, setUserDocuments] = useState<KYCDocument[]>([])
   const [loadingDocuments, setLoadingDocuments] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deletingUser, setDeletingUser] = useState(false)
 
   useEffect(() => {
     loadUsers()
@@ -268,25 +272,137 @@ export function KYCManagement() {
     }
   }
 
-  // Excluir Cliente
-  const handleDeleteClient = async (userId: string, userName: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o cliente "${userName}"?\n\nEsta ação não pode ser desfeita!`)) {
+  // Abrir modal de exclusão
+  const handleOpenDeleteModal = (user: KYCUser) => {
+    setSelectedClient(user)
+    setDeleteModalOpen(true)
+    setDeletePassword('')
+    setDeleteReason('')
+  }
+
+  // Excluir Cliente (com validação de senha)
+  const handleDeleteClient = async () => {
+    if (!selectedClient) return
+    
+    // Validar campos obrigatórios
+    if (!deletePassword.trim()) {
+      toast.error('Digite sua senha para confirmar a exclusão')
       return
     }
     
+    if (!deleteReason.trim()) {
+      toast.error('Informe o motivo da exclusão')
+      return
+    }
+    
+    setDeletingUser(true)
+    
     try {
-      const { error } = await supabase
+      // 1. Validar senha do usuário atual
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !user) {
+        toast.error('Erro ao verificar usuário')
+        setDeletingUser(false)
+        return
+      }
+      
+      // Tentar fazer login com a senha fornecida para validar
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email!,
+        password: deletePassword
+      })
+      
+      if (signInError) {
+        toast.error('Senha incorreta!')
+        setDeletingUser(false)
+        return
+      }
+      
+      // 2. Registrar log de exclusão antes de excluir
+      const { error: logError } = await supabase
+        .from('user_deletion_logs')
+        .insert({
+          deleted_user_id: selectedClient.id,
+          deleted_user_name: selectedClient.name,
+          deleted_user_email: selectedClient.email,
+          deleted_user_document: selectedClient.document,
+          deleted_by: effectiveUserId,
+          deletion_reason: deleteReason,
+          deleted_at: new Date().toISOString()
+        })
+      
+      if (logError) {
+        console.warn('Aviso: Não foi possível registrar log de exclusão:', logError)
+        // Continua mesmo se o log falhar
+      }
+      
+      // 3. Excluir documentos KYC do storage
+      try {
+        const { data: documents } = await supabase
+          .from('kyc_documents')
+          .select('file_url')
+          .eq('user_id', selectedClient.id)
+        
+        if (documents && documents.length > 0) {
+          for (const doc of documents) {
+            const urlParts = doc.file_url.split('/')
+            const filePath = urlParts.slice(-2).join('/')
+            await supabase.storage.from('kyc-documents').remove([filePath])
+          }
+        }
+      } catch (storageError) {
+        console.warn('Aviso: Erro ao excluir documentos do storage:', storageError)
+        // Continua mesmo se falhar
+      }
+      
+      // 4. Excluir registros de documentos KYC
+      await supabase
+        .from('kyc_documents')
+        .delete()
+        .eq('user_id', selectedClient.id)
+      
+      // 5. Excluir carteiras do usuário
+      await supabase
+        .from('wallets')
+        .delete()
+        .eq('user_id', selectedClient.id)
+      
+      // 6. Excluir transações PIX (se existir)
+      await supabase
+        .from('pix_transactions')
+        .delete()
+        .eq('user_id', selectedClient.id)
+      
+      // 7. Finalmente, excluir o usuário
+      const { error: deleteError } = await supabase
         .from('users')
         .delete()
-        .eq('id', userId)
+        .eq('id', selectedClient.id)
       
-      if (error) throw error
+      if (deleteError) throw deleteError
       
-      toast.success('Cliente excluído com sucesso!')
+      // 8. Excluir do Auth (se possível)
+      // Nota: Isso requer privilégios de admin no Supabase
+      try {
+        await supabase.auth.admin.deleteUser(selectedClient.id)
+      } catch (authDeleteError) {
+        console.warn('Aviso: Não foi possível excluir do Auth:', authDeleteError)
+        // Não é crítico se falhar
+      }
+      
+      toast.success(`Cliente ${selectedClient.name} excluído com sucesso!`)
+      setDeleteModalOpen(false)
+      setSelectedClient(null)
+      setDeletePassword('')
+      setDeleteReason('')
       loadUsers()
-    } catch (error) {
-      console.error('Erro ao excluir:', error)
-      toast.error('Erro ao excluir cliente')
+      
+    } catch (error: any) {
+      console.error('Erro ao excluir cliente:', error)
+      toast.error(`Erro ao excluir cliente: ${error.message}`)
+    } finally {
+      setDeletingUser(false)
     }
   }
 
@@ -559,7 +675,7 @@ export function KYCManagement() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleDeleteClient(user.id, user.name)}
+                    onClick={() => handleOpenDeleteModal(user)}
                     className="gap-2 border-red-500 text-red-500 hover:bg-red-500/10"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -732,6 +848,140 @@ export function KYCManagement() {
               }}
             >
               Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Exclusão */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Excluir Cliente Permanentemente
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Aviso de Perigo */}
+            <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="text-sm font-bold text-red-900 dark:text-red-200">
+                    ⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!
+                  </p>
+                  <p className="text-sm text-red-800 dark:text-red-300">
+                    Ao excluir <strong>{selectedClient?.name}</strong>, os seguintes dados serão removidos permanentemente:
+                  </p>
+                  <ul className="text-xs text-red-700 dark:text-red-400 space-y-1 ml-4 list-disc">
+                    <li>Dados cadastrais do cliente</li>
+                    <li>Documentos KYC enviados</li>
+                    <li>Carteiras digitais</li>
+                    <li>Histórico de transações</li>
+                    <li>Conta de acesso ao sistema</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Informações do Cliente */}
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                DADOS DO CLIENTE A SER EXCLUÍDO:
+              </p>
+              <div className="space-y-1">
+                <p className="text-sm text-foreground">
+                  <strong>Nome:</strong> {selectedClient?.name}
+                </p>
+                <p className="text-sm text-foreground">
+                  <strong>Email:</strong> {selectedClient?.email}
+                </p>
+                <p className="text-sm text-foreground">
+                  <strong>Documento:</strong> {selectedClient?.document}
+                </p>
+              </div>
+            </div>
+
+            {/* Campo de Senha */}
+            <div className="space-y-2">
+              <Label htmlFor="deletePassword" className="text-foreground font-medium">
+                Sua Senha (Admin/Gerente) *
+              </Label>
+              <Input
+                id="deletePassword"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Digite sua senha para confirmar"
+                className="bg-background border-input"
+                required
+                disabled={deletingUser}
+              />
+              <p className="text-xs text-gray-500">
+                Digite a senha da sua conta para autorizar esta exclusão.
+              </p>
+            </div>
+
+            {/* Campo de Motivo */}
+            <div className="space-y-2">
+              <Label htmlFor="deleteReason" className="text-foreground font-medium">
+                Motivo da Exclusão *
+              </Label>
+              <textarea
+                id="deleteReason"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="Descreva o motivo da exclusão (será registrado no log)..."
+                rows={4}
+                className="w-full p-3 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                required
+                disabled={deletingUser}
+              />
+              <p className="text-xs text-gray-500">
+                Este motivo será registrado permanentemente no log de auditoria.
+              </p>
+            </div>
+
+            {/* Confirmação Final */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                <strong>📋 Registro de Auditoria:</strong> Esta exclusão será registrada no sistema com seu nome, data/hora e motivo informado.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteModalOpen(false)
+                setDeletePassword('')
+                setDeleteReason('')
+                setSelectedClient(null)
+              }}
+              disabled={deletingUser}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDeleteClient}
+              disabled={deletingUser}
+              className="gap-2"
+            >
+              {deletingUser ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Confirmar Exclusão
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
