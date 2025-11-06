@@ -27,6 +27,7 @@ export function BankAcquirers() {
   const [selectedAcquirer, setSelectedAcquirer] = useState<BankAcquirer | null>(null)
   const [statistics, setStatistics] = useState<{ [key: string]: any }>({})
   const [activeTab, setActiveTab] = useState('basic')
+  const [error, setError] = useState<string | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -65,6 +66,7 @@ export function BankAcquirers() {
     try {
       console.log('🏦 Carregando adquirentes...')
       setLoading(true)
+      setError(null)
       const data = await bankAcquirerService.getAllAcquirers()
       console.log('📊 Adquirentes carregados:', data)
       setAcquirers(data)
@@ -82,9 +84,17 @@ export function BankAcquirers() {
       
       // Verificar se é erro de tabela não existente
       if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
-        toast.error('⚠️ Tabela bank_acquirers não encontrada! Execute a migration SQL primeiro.')
+        const errorMsg = '⚠️ Tabela bank_acquirers não encontrada! Execute a migration SQL primeiro.'
+        setError(errorMsg)
+        toast.error(errorMsg)
+      } else if (error.message?.includes('permission denied') || error.message?.includes('RLS')) {
+        const errorMsg = '🔒 Sem permissão para acessar adquirentes. Verifique se você está logado como admin.'
+        setError(errorMsg)
+        toast.error(errorMsg)
       } else {
-        toast.error('Erro ao carregar adquirentes: ' + error.message)
+        const errorMsg = 'Erro ao carregar adquirentes: ' + error.message
+        setError(errorMsg)
+        toast.error(errorMsg)
       }
     } finally {
       setLoading(false)
@@ -256,6 +266,51 @@ export function BankAcquirers() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // Mostrar erro se houver
+  if (error) {
+    return (
+      <div className="p-6 space-y-6">
+        <Card className="bg-red-50 dark:bg-red-950 border-2 border-red-200 dark:border-red-800">
+          <CardContent className="pt-12 pb-12">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="w-20 h-20 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                <XCircle className="w-10 h-10 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-red-900 dark:text-red-100 mb-2">
+                  Erro ao Carregar Adquirentes
+                </h3>
+                <p className="text-red-700 dark:text-red-300 mb-6 max-w-2xl">
+                  {error}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button onClick={loadAcquirers} variant="outline" className="gap-2">
+                    🔄 Tentar Novamente
+                  </Button>
+                  <Button 
+                    onClick={() => window.open('https://app.supabase.com', '_blank')} 
+                    className="gap-2"
+                  >
+                    🗄️ Abrir Supabase Dashboard
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg max-w-3xl text-left">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  <strong>💡 Como resolver:</strong><br/>
+                  1. Abra o Supabase Dashboard<br/>
+                  2. Vá em <strong>SQL Editor</strong><br/>
+                  3. Execute o arquivo: <code className="bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">supabase_migrations/create_bank_acquirers_table.sql</code><br/>
+                  4. Clique em "Tentar Novamente"
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
