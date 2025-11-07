@@ -13,6 +13,24 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom'],
   },
+  server: {
+    proxy: {
+      '/api/resend': {
+        target: 'https://api.resend.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/resend/, ''),
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // Adicionar API Key no header
+            const apiKey = process.env.VITE_RESEND_API_KEY
+            if (apiKey) {
+              proxyReq.setHeader('Authorization', `Bearer ${apiKey}`)
+            }
+          })
+        }
+      }
+    }
+  },
   build: {
     rollupOptions: {
       external: (id) => {

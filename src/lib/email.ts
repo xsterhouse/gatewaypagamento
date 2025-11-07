@@ -34,17 +34,44 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
 
   // Enviar email real (funciona em dev e produção quando API key está configurada)
   try {
-    console.log('📧 Enviando email para:', to)
+    // MODO TESTE: Redireciona para email da conta Resend
+    // MODO PRODUÇÃO: Envia para o email real do cliente
+    // Para ativar modo produção: verifique um domínio em resend.com/domains
+    const RESEND_TEST_MODE = false // ✅ MODO PRODUÇÃO ATIVO - Domínio verificado!
+    const testModeEmail = 'xsterhouse@gmail.com'
+    const finalTo = RESEND_TEST_MODE ? testModeEmail : to
+    
+    if (to !== finalTo) {
+      console.log(`📧 Email original: ${to}`)
+      console.log(`📧 Redirecionado para (modo teste): ${finalTo}`)
+    } else {
+      console.log('📧 Enviando email para:', to)
+    }
 
-    const response = await fetch('https://api.resend.com/emails', {
+    // Em desenvolvimento, usa proxy do Vite para evitar CORS
+    // Em produção, usa API diretamente (precisa de backend)
+    const apiUrl = import.meta.env.DEV 
+      ? '/api/resend/emails'  // Proxy do Vite
+      : 'https://api.resend.com/emails'  // API direta (produção)
+
+    console.log('🌐 URL da API:', apiUrl)
+
+    // Domínio remetente
+    // MODO TESTE: usa onboarding@resend.dev
+    // MODO PRODUÇÃO: use seu domínio verificado (ex: noreply@dimpay.com)
+    const fromEmail = RESEND_TEST_MODE 
+      ? 'DiMPay Gateway <onboarding@resend.dev>'
+      : 'DiMPay Gateway <notificacao@dimpay.com.br>' // Use após verificar domínio
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: 'DiMPay Gateway <onboarding@resend.dev>',
-        to: [to],
+        from: fromEmail,
+        to: [finalTo],
         subject,
         html,
       }),
