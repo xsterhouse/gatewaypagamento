@@ -69,13 +69,13 @@ export function Relatorios() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Relatórios</h1>
-          <p className="text-muted-foreground">Visualize e exporte relatórios de transações</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Relatórios</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Visualize e exporte relatórios de transações</p>
         </div>
-        <Button onClick={exportToCSV} className="gap-2">
+        <Button onClick={exportToCSV} className="gap-2 w-full sm:w-auto" size="sm">
           <Download size={16} />
           Exportar CSV
         </Button>

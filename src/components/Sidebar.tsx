@@ -31,37 +31,37 @@ import { useImpersonation } from '@/contexts/ImpersonationContext'
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Wallet, label: 'Minhas Carteiras', path: '/wallets' },
+  { icon: Wallet, label: 'Carteiras', path: '/wallets' },
   { icon: ArrowUpDown, label: 'Exchange', path: '/exchange' },
   { icon: Download, label: 'Depósitos', path: '/deposits' },
-  { icon: MessageSquare, label: 'Fale com seu Gerente', path: '/gerente' },
+  { icon: MessageSquare, label: 'Gerente', path: '/gerente' },
   { icon: Wallet, label: 'Financeiro', path: '/financeiro' },
   { icon: FileText, label: 'Relatórios', path: '/relatorios' },
   { icon: Gift, label: 'Premiações', path: '/premiacoes' },
-  { icon: ShoppingCart, label: 'Acessar Checkout', path: '/checkout' },
+  { icon: ShoppingCart, label: 'Checkout', path: '/checkout' },
   { icon: RefreshCw, label: 'MED', path: '/med' },
 ]
 
 const adminMenuItems = [
   { icon: LayoutDashboard, label: 'Dashboard Admin', path: '/admin/dashboard' },
-  { icon: Coins, label: 'Gerenciar Carteiras', path: '/admin/wallets' },
-  { icon: TrendingUp, label: 'Exchange & Ordens', path: '/admin/exchange' },
-  { icon: CreditCard, label: 'Depósitos & Saques', path: '/admin/deposits' },
-  { icon: Receipt, label: 'Gerenciar Faturas', path: '/admin/invoices' },
-  { icon: Building2, label: 'Adquirentes Bancários', path: '/admin/acquirers' },
-  { icon: UserCog, label: 'Gerenciar Usuários', path: '/admin' },
-  { icon: Shield, label: 'Gerenciar KYC', path: '/kyc' },
-  { icon: RefreshCw, label: 'Gerenciar MED', path: '/admin/med' },
-  { icon: MessageSquare, label: 'Tickets de Suporte', path: '/admin/tickets' },
+  { icon: Coins, label: 'Carteiras', path: '/admin/wallets' },
+  { icon: TrendingUp, label: 'Exchange', path: '/admin/exchange' },
+  { icon: CreditCard, label: 'Depósitos', path: '/admin/deposits' },
+  { icon: Receipt, label: 'Faturas', path: '/admin/invoices' },
+  { icon: Building2, label: 'Adquirentes', path: '/admin/acquirers' },
+  { icon: UserCog, label: 'Usuários', path: '/admin' },
+  { icon: Shield, label: 'KYC', path: '/kyc' },
+  { icon: RefreshCw, label: 'MED', path: '/admin/med' },
+  { icon: MessageSquare, label: 'Suporte', path: '/admin/tickets' },
   { icon: Wallet, label: 'Transações', path: '/admin/transactions' },
-  { icon: FileText, label: 'Logs de Atividades', path: '/admin/logs' },
-  { icon: Settings, label: 'Configurações Avançadas', path: '/admin/configuracoes-avancadas' },
+  { icon: FileText, label: 'Logs', path: '/admin/logs' },
+  { icon: Settings, label: 'Configurações', path: '/admin/configuracoes-avancadas' },
 ]
 
 const bottomMenuItems = [
-  { icon: HelpCircle, label: 'Central de Ajuda', path: '/ajuda' },
-  { icon: Book, label: 'Documentação', path: '/documentacao' },
-  { icon: Settings, label: 'Configurações', path: '/configuracoes' },
+  { icon: HelpCircle, label: 'Ajuda', path: '/ajuda' },
+  { icon: Book, label: 'Docs', path: '/documentacao' },
+  { icon: Settings, label: 'Config', path: '/configuracoes' },
 ]
 
 export function Sidebar() {
@@ -133,9 +133,9 @@ export function Sidebar() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-card border border-border rounded-lg text-foreground shadow-md"
+        className="lg:hidden fixed top-3 left-3 z-50 p-2.5 bg-card border border-border rounded-lg text-foreground shadow-lg hover:bg-accent transition-colors"
       >
-        {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
+        {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
       </button>
 
       {/* Overlay for mobile */}
@@ -155,13 +155,13 @@ export function Sidebar() {
         )}
       >
         {/* Logo */}
-        <div className="p-4 flex items-center justify-between border-b border-border">
+        <div className="p-3 sm:p-4 flex items-center justify-between border-b border-border">
           {isOpen && (
             <div className="flex items-center gap-2">
               <img 
                 src="/logo-dimpay.png" 
                 alt="DiMPay" 
-                className="h-8 w-auto"
+                className="h-7 sm:h-8 w-auto"
               />
             </div>
           )}
@@ -170,7 +170,7 @@ export function Sidebar() {
               <img 
                 src="/logo-dimpay.png" 
                 alt="DiMPay" 
-                className="h-8 w-auto"
+                className="h-7 sm:h-8 w-auto"
               />
             </div>
           )}
@@ -184,15 +184,15 @@ export function Sidebar() {
 
         {/* User Info */}
         {isOpen && (
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-black font-bold text-sm">
+          <div className="p-3 sm:p-4 border-b border-border">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary rounded-full flex items-center justify-center">
+                <span className="text-black font-bold text-sm sm:text-base">
                   {userName.charAt(0).toUpperCase() || 'U'}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-foreground text-sm font-medium truncate">{userName || 'Carregando...'}</p>
+                <p className="text-foreground text-xs sm:text-sm font-medium truncate">{userName || 'Carregando...'}</p>
                 <p className="text-muted-foreground text-xs truncate">{userEmail}</p>
               </div>
             </div>
@@ -200,9 +200,9 @@ export function Sidebar() {
         )}
 
         {!isOpen && (
-          <div className="p-4 border-b border-border flex justify-center">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-black font-bold text-sm">
+          <div className="p-3 sm:p-4 border-b border-border flex justify-center">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary rounded-full flex items-center justify-center">
+              <span className="text-black font-bold text-sm sm:text-base">
                 {userName.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
@@ -210,12 +210,12 @@ export function Sidebar() {
         )}
 
         {/* Main Menu */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 p-3 sm:p-4 space-y-1.5 sm:space-y-2 overflow-y-auto">
           {/* Se for admin E NÃO está impersonando, mostrar APENAS menu admin */}
           {isAdmin && !isImpersonating ? (
             <>
               {isOpen && (
-                <div className="mb-4">
+                <div className="mb-3 sm:mb-4">
                   <p className="text-xs text-muted-foreground uppercase px-3 mb-2">Administração</p>
                 </div>
               )}
@@ -229,7 +229,7 @@ export function Sidebar() {
                     to={item.path}
                     onClick={() => setIsMobileOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors",
+                      "flex items-center gap-2.5 sm:gap-3 px-3 py-2.5 sm:py-3 rounded-lg transition-colors min-h-[44px]",
                       isActive 
                         ? "bg-primary/10 text-primary border border-primary/20" 
                         : "text-muted-foreground hover:text-foreground hover:bg-accent",
@@ -237,8 +237,8 @@ export function Sidebar() {
                     )}
                     title={!isOpen ? item.label : undefined}
                   >
-                    <Icon size={20} />
-                    {isOpen && <span className="text-sm">{item.label}</span>}
+                    <Icon size={18} className="flex-shrink-0" />
+                    {isOpen && <span className="text-xs sm:text-sm">{item.label}</span>}
                   </Link>
                 )
               })}
@@ -255,7 +255,7 @@ export function Sidebar() {
                   to={item.path}
                   onClick={() => setIsMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                    "flex items-center gap-2.5 sm:gap-3 px-3 py-2.5 rounded-lg transition-colors min-h-[44px]",
                     isActive 
                       ? "bg-primary/10 text-primary border border-primary/20" 
                       : "text-muted-foreground hover:text-foreground hover:bg-accent",
@@ -263,8 +263,8 @@ export function Sidebar() {
                   )}
                   title={!isOpen ? item.label : undefined}
                 >
-                  <Icon size={20} />
-                  {isOpen && <span className="text-sm">{item.label}</span>}
+                  <Icon size={18} className="flex-shrink-0" />
+                  {isOpen && <span className="text-xs sm:text-sm">{item.label}</span>}
                 </Link>
               )
             })
@@ -272,7 +272,7 @@ export function Sidebar() {
         </nav>
 
         {/* Bottom Menu */}
-        <div className="p-4 border-t border-border space-y-2">
+        <div className="p-3 sm:p-4 border-t border-border space-y-1.5 sm:space-y-2">
           {/* Usuários normais */}
           {!isAdmin && (
             <>
@@ -286,7 +286,7 @@ export function Sidebar() {
                   to={item.path}
                   onClick={() => setIsMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                    "flex items-center gap-2.5 sm:gap-3 px-3 py-2.5 rounded-lg transition-colors min-h-[44px]",
                     isActive 
                       ? "bg-primary/10 text-primary border border-primary/20" 
                       : "text-muted-foreground hover:text-foreground hover:bg-accent",
@@ -294,8 +294,8 @@ export function Sidebar() {
                   )}
                   title={!isOpen ? item.label : undefined}
                 >
-                  <Icon size={20} />
-                  {isOpen && <span className="text-sm">{item.label}</span>}
+                  <Icon size={18} className="flex-shrink-0" />
+                  {isOpen && <span className="text-xs sm:text-sm">{item.label}</span>}
                 </Link>
               )
             })}
@@ -323,14 +323,14 @@ export function Sidebar() {
               }
             }}
             className={cn(
-              "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors w-full",
+              "flex items-center gap-2.5 sm:gap-3 px-3 py-2.5 sm:py-3 rounded-lg transition-colors w-full min-h-[44px]",
               "text-destructive hover:text-destructive hover:bg-destructive/10",
               !isOpen && "justify-center"
             )}
             title={!isOpen ? 'Sair' : undefined}
           >
-            <LogOut size={20} />
-            {isOpen && <span className="text-sm font-medium">Sair</span>}
+            <LogOut size={18} className="flex-shrink-0" />
+            {isOpen && <span className="text-xs sm:text-sm font-medium">Sair</span>}
           </button>
         </div>
       </div>

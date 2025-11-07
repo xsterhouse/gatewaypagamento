@@ -52,10 +52,10 @@ export function Premiacoes() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground mb-2">Premiações</h1>
-        <p className="text-muted-foreground">Acompanhe seus pontos e recompensas</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Premiações</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Acompanhe seus pontos e recompensas</p>
       </div>
 
       {/* Pontos Totais */}

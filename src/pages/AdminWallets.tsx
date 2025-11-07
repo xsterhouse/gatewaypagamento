@@ -266,11 +266,11 @@ export function AdminWallets() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Gerenciar Carteiras</h1>
-          <p className="text-gray-500 mt-1">Visualize e gerencie todas as carteiras dos usuários</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Gerenciar Carteiras</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Visualize e gerencie todas as carteiras dos usuários</p>
         </div>
         <Button
           variant="outline"
@@ -283,7 +283,7 @@ export function AdminWallets() {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total de Carteiras</CardTitle>
@@ -345,70 +345,70 @@ export function AdminWallets() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3">Usuário</th>
-                  <th className="text-left p-3">Nome da Carteira</th>
-                  <th className="text-left p-3">Moeda</th>
-                  <th className="text-right p-3">Saldo Total</th>
-                  <th className="text-right p-3">Disponível</th>
-                  <th className="text-right p-3">Bloqueado</th>
-                  <th className="text-center p-3">Ações</th>
+                  <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-medium">Usuário</th>
+                  <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-medium">Nome da Carteira</th>
+                  <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-medium">Moeda</th>
+                  <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-medium">Saldo Total</th>
+                  <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-medium">Disponível</th>
+                  <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-medium">Bloqueado</th>
+                  <th className="text-center p-2 sm:p-3 text-xs sm:text-sm font-medium">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredWallets.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-500">
+                    <td colSpan={7} className="text-center py-8 text-muted-foreground text-sm">
                       Nenhuma carteira encontrada
                     </td>
                   </tr>
                 ) : (
                   filteredWallets.map((wallet) => (
-                    <tr key={wallet.id} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${!wallet.is_active ? 'opacity-60 bg-red-50 dark:bg-red-950/20' : ''}`}>
-                      <td className="p-3">
+                    <tr key={wallet.id} className={`border-b hover:bg-accent ${!wallet.is_active ? 'opacity-60 bg-red-50 dark:bg-red-950/20' : ''}`}>
+                      <td className="p-2 sm:p-3">
                         <div>
-                          <p className="font-semibold">{wallet.user_name}</p>
-                          <p className="text-sm text-gray-500">{wallet.user_email}</p>
+                          <p className="font-medium text-xs sm:text-sm">{wallet.user_name}</p>
+                          <p className="text-xs text-muted-foreground">{wallet.user_email}</p>
                         </div>
                       </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Wallet className="h-4 w-4 text-primary" />
-                          <span className="font-medium">{wallet.wallet_name || 'Sem nome'}</span>
+                      <td className="p-2 sm:p-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Wallet className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
+                          <span className="font-medium text-xs sm:text-sm">{wallet.wallet_name || 'Sem nome'}</span>
                           {!wallet.is_active && (
-                            <span className="text-xs bg-red-500/10 text-red-500 px-2 py-0.5 rounded border border-red-500/20">
+                            <span className="text-xs bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded border border-red-500/20 whitespace-nowrap">
                               🔒 Bloqueada
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl">
+                      <td className="p-2 sm:p-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="text-lg sm:text-xl">
                             {wallet.currency_type === 'fiat' ? '💵' : '₿'}
                           </span>
-                          <span className="font-semibold">{wallet.currency_code}</span>
+                          <span className="font-semibold text-xs sm:text-sm">{wallet.currency_code}</span>
                         </div>
                       </td>
-                      <td className="p-3 text-right font-semibold">
+                      <td className="p-2 sm:p-3 text-right font-semibold text-xs sm:text-sm">
                         {formatCurrency(Number(wallet.balance), wallet.currency_code)}
                       </td>
-                      <td className="p-3 text-right text-green-600">
+                      <td className="p-2 sm:p-3 text-right text-green-600 text-xs sm:text-sm">
                         {formatCurrency(Number(wallet.available_balance), wallet.currency_code)}
                       </td>
-                      <td className="p-3 text-right text-red-600">
+                      <td className="p-2 sm:p-3 text-right text-red-600 text-xs sm:text-sm">
                         {formatCurrency(Number(wallet.blocked_balance), wallet.currency_code)}
                       </td>
-                      <td className="p-3">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="p-2 sm:p-3">
+                        <div className="flex items-center justify-center gap-1 sm:gap-2">
                           {/* Botão Visualizar */}
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleViewWallet(wallet)}
-                            className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-500"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-blue-500/10 hover:text-blue-500"
                             title="Visualizar detalhes"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           </Button>
 
                           {/* Botão Bloquear/Desbloquear */}
@@ -416,10 +416,10 @@ export function AdminWallets() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleBlockWallet(wallet)}
-                            className="h-8 w-8 p-0 hover:bg-yellow-500/10 hover:text-yellow-500"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-yellow-500/10 hover:text-yellow-500"
                             title={wallet.is_active ? 'Bloquear carteira' : 'Desbloquear carteira'}
                           >
-                            <Lock className="h-4 w-4" />
+                            <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           </Button>
 
                           {/* Botão Excluir */}
@@ -427,10 +427,10 @@ export function AdminWallets() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteWallet(wallet)}
-                            className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-500"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-red-500/10 hover:text-red-500"
                             title="Excluir carteira"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </td>

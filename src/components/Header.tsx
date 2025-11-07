@@ -95,9 +95,9 @@ export function Header() {
   }
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 md:px-6 shadow-sm">
+    <header className="h-16 border-b border-border bg-card flex items-center justify-between pl-14 pr-4 md:px-6 shadow-sm">
       <div className="flex items-center gap-2 md:gap-4">
-        <h1 className="text-base md:text-xl text-foreground font-semibold truncate">
+        <h1 className="text-sm md:text-base lg:text-xl text-foreground font-semibold truncate">
           {getGreeting()}, {userData?.name || user?.email?.split('@')[0] || 'Usuário'}
         </h1>
       </div>

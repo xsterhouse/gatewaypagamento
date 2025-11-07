@@ -182,10 +182,10 @@ export function ActivityLogs() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Logs de Atividades</h1>
-        <p className="text-muted-foreground">Histórico detalhado de todas as ações do sistema</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Logs de Atividades</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Histórico detalhado de todas as ações do sistema</p>
       </div>
 
       {/* Filtros */}

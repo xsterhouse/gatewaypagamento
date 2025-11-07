@@ -316,71 +316,73 @@ export function BankAcquirers() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             🏦 Gateway PIX - Adquirentes
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">
             Configure e gerencie adquirentes bancários, webhooks e integrações PIX
           </p>
         </div>
-        <Button onClick={() => handleOpenModal()} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Novo Adquirente
-        </Button>
+        <div>
+          <Button onClick={() => handleOpenModal()} className="gap-2 w-full sm:w-auto" size="sm">
+            <Plus className="w-4 h-4" />
+            Novo Adquirente
+          </Button>
+        </div>
       </div>
 
       {/* Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
-                <p className="text-2xl font-bold">{acquirers.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
+                <p className="text-xl sm:text-2xl font-bold">{acquirers.length}</p>
               </div>
-              <Building2 className="w-8 h-8 text-blue-600" />
+              <Building2 className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Ativos</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs sm:text-sm text-muted-foreground">Ativos</p>
+                <p className="text-xl sm:text-2xl font-bold">
                   {acquirers.filter(a => a.is_active && a.status === 'active').length}
                 </p>
               </div>
-              <CheckCircle className="w-8 h-8 text-green-600" />
+              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Padrão</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs sm:text-sm text-muted-foreground">Padrão</p>
+                <p className="text-xl sm:text-2xl font-bold">
                   {acquirers.find(a => a.is_default)?.name.substring(0, 10) || 'N/A'}
                 </p>
               </div>
-              <Star className="w-8 h-8 text-yellow-600" />
+              <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Volume Total</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs sm:text-sm text-muted-foreground">Volume Total</p>
+                <p className="text-xl sm:text-2xl font-bold">
                   {formatCurrency(
                     Object.values(statistics).reduce((sum: number, stat: any) => 
                       sum + (stat?.total_volume || 0), 0
@@ -388,29 +390,29 @@ export function BankAcquirers() {
                   )}
                 </p>
               </div>
-              <TrendingUp className="w-8 h-8 text-purple-600" />
+              <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
 
         {/* Webhooks Ativos */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">🪝 Webhooks Ativos</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-xs sm:text-sm text-muted-foreground">🪝 Webhooks Ativos</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">
                   {acquirers.filter(a => a.webhook_enabled).length}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {acquirers.length > 0 ? 
                     `${((acquirers.filter(a => a.webhook_enabled).length / acquirers.length) * 100).toFixed(0)}% do total` 
                     : '0% do total'
                   }
                 </p>
               </div>
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full animate-pulse"></div>
               </div>
             </div>
           </CardContent>

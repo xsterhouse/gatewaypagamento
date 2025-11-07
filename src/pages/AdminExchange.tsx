@@ -132,10 +132,10 @@ export function AdminExchange() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Exchange & Ordens</h1>
-        <p className="text-gray-500 mt-1">Gerencie todas as ordens de compra e venda</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Exchange & Ordens</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Gerencie todas as ordens de compra e venda</p>
       </div>
 
       {/* Estatísticas */}

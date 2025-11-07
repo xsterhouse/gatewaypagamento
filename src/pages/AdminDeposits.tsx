@@ -237,10 +237,10 @@ export function AdminDeposits() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Depósitos & Saques</h1>
-        <p className="text-gray-500 mt-1">Gerencie todas as operações financeiras</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Depósitos & Saques</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Gerencie todas as operações financeiras</p>
       </div>
 
       {/* Estatísticas */}

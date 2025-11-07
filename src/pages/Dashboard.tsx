@@ -350,25 +350,25 @@ export function Dashboard() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6">
       {/* Banner KYC Pendente */}
       {userData?.kyc_status === 'pending' && (
         <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/50">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="text-yellow-500" size={24} />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="text-yellow-500" size={20} />
               </div>
               <div className="flex-1">
-                <h3 className="text-foreground font-semibold mb-1">
+                <h3 className="text-sm sm:text-base text-foreground font-semibold mb-1">
                   Documentos Pendentes de Análise
                 </h3>
-                <p className="text-muted-foreground text-sm mb-3">
+                <p className="text-muted-foreground text-xs sm:text-sm mb-2 sm:mb-3">
                   Seus documentos estão sendo analisados pela nossa equipe. Enquanto isso, você já pode usar algumas funcionalidades do sistema.
                 </p>
                 <button
                   onClick={() => navigate('/documents')}
-                  className="flex items-center gap-2 text-yellow-500 hover:text-yellow-400 font-medium text-sm transition-colors"
+                  className="flex items-center gap-2 text-yellow-500 hover:text-yellow-400 font-medium text-xs sm:text-sm transition-colors"
                 >
                   <Upload size={16} />
                   Ver Status dos Documentos
@@ -382,21 +382,21 @@ export function Dashboard() {
 
       {userData?.kyc_status === 'rejected' && (
         <Card className="bg-gradient-to-r from-red-500/10 to-pink-500/10 border-red-500/50">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="text-red-500" size={24} />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="text-red-500" size={20} />
               </div>
               <div className="flex-1">
-                <h3 className="text-foreground font-semibold mb-1">
+                <h3 className="text-sm sm:text-base text-foreground font-semibold mb-1">
                   Documentos Rejeitados
                 </h3>
-                <p className="text-muted-foreground text-sm mb-2">
+                <p className="text-muted-foreground text-xs sm:text-sm mb-2">
                   {userData.kyc_rejection_reason || 'Seus documentos foram rejeitados. Por favor, envie novos documentos.'}
                 </p>
                 <button
                   onClick={() => navigate('/documents')}
-                  className="flex items-center gap-2 text-red-500 hover:text-red-400 font-medium text-sm transition-colors"
+                  className="flex items-center gap-2 text-red-500 hover:text-red-400 font-medium text-xs sm:text-sm transition-colors"
                 >
                   <Upload size={16} />
                   Enviar Novos Documentos
@@ -411,30 +411,30 @@ export function Dashboard() {
       {/* Top Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-muted-foreground text-sm mb-1">Saldo Disponível</p>
-                <h3 className="text-2xl font-bold text-foreground">{formatCurrency(metrics.availableBalance)}</h3>
+                <p className="text-muted-foreground text-xs mb-1">Saldo Disponível</p>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">{formatCurrency(metrics.availableBalance)}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Saldo disponível para saque</p>
               </div>
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                <Wallet className="text-emerald-400" size={20} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                <Wallet className="text-emerald-400" size={18} />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-muted-foreground text-sm mb-1">Recebido Hoje</p>
-                <h3 className="text-2xl font-bold text-foreground">{formatCurrency(metrics.receivedToday)}</h3>
+                <p className="text-muted-foreground text-xs mb-1">Recebido Hoje</p>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">{formatCurrency(metrics.receivedToday)}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Total recebido no dia</p>
               </div>
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                <TrendingUp className="text-emerald-400" size={20} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="text-emerald-400" size={18} />
               </div>
             </div>
           </CardContent>
@@ -447,11 +447,11 @@ export function Dashboard() {
           )}
           onClick={() => navigate('/med')}
         >
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-muted-foreground text-sm mb-1">Bloqueio Cautelar (MED)</p>
-                <h3 className="text-2xl font-bold text-foreground">{formatCurrency(metrics.blockedBalance)}</h3>
+                <p className="text-muted-foreground text-xs mb-1">Bloqueio Cautelar (MED)</p>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">{formatCurrency(metrics.blockedBalance)}</h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   {hasPendingMED ? 'Valor em disputa' : 'Nenhum valor bloqueado'}
                 </p>
@@ -476,13 +476,13 @@ export function Dashboard() {
                 </div>
               </div>
               <div className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center",
+                "w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center",
                 hasPendingMED ? "bg-orange-500/10" : "bg-yellow-500/10"
               )}>
                 {hasPendingMED ? (
-                  <RefreshCw className="text-orange-400" size={20} />
+                  <RefreshCw className="text-orange-400" size={18} />
                 ) : (
-                  <Lock className="text-yellow-400" size={20} />
+                  <Lock className="text-yellow-400" size={18} />
                 )}
               </div>
             </div>
@@ -490,15 +490,15 @@ export function Dashboard() {
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-muted-foreground text-sm mb-1">Faturamento Total</p>
-                <h3 className="text-2xl font-bold text-foreground">{formatCurrency(metrics.totalInvoicing)}</h3>
+                <p className="text-muted-foreground text-xs mb-1">Faturamento Total</p>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">{formatCurrency(metrics.totalInvoicing)}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Valor total de vendas</p>
               </div>
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                <DollarSign className="text-emerald-400" size={20} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-emerald-400" size={18} />
               </div>
             </div>
           </CardContent>
@@ -511,14 +511,14 @@ export function Dashboard() {
           className="bg-card border-border hover:border-emerald-500/50 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
           onClick={() => setIsPixModalOpen(true)}
         >
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                  <QrCode className="text-emerald-400" size={20} />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                  <QrCode className="text-emerald-400" size={18} />
                 </div>
                 <div>
-                  <p className="text-foreground font-medium text-sm">Gerar PIX</p>
+                  <p className="text-foreground font-medium text-xs">Gerar PIX</p>
                   <p className="text-muted-foreground text-xs">QR Code para receber</p>
                 </div>
               </div>
@@ -531,14 +531,14 @@ export function Dashboard() {
           className="bg-card border-border hover:border-emerald-500/50 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
           onClick={() => setIsSaqueModalOpen(true)}
         >
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center">
-                  <CreditCard className="text-cyan-400" size={20} />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center">
+                  <CreditCard className="text-cyan-400" size={18} />
                 </div>
                 <div>
-                  <p className="text-foreground font-medium text-sm">Solicitar Saque</p>
+                  <p className="text-foreground font-medium text-xs">Solicitar Saque</p>
                   <p className="text-muted-foreground text-xs">Transferir via PIX</p>
                 </div>
               </div>
@@ -551,14 +551,14 @@ export function Dashboard() {
           className="bg-card border-border hover:border-emerald-500/50 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
           onClick={() => navigate('/extrato')}
         >
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                  <FileText className="text-emerald-400" size={20} />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                  <FileText className="text-emerald-400" size={18} />
                 </div>
                 <div>
-                  <p className="text-foreground font-medium text-sm">Transações</p>
+                  <p className="text-foreground font-medium text-xs">Transações</p>
                   <p className="text-muted-foreground text-xs">Ver histórico completo</p>
                 </div>
               </div>
@@ -568,14 +568,14 @@ export function Dashboard() {
         </Card>
 
         <Card className="bg-card border-border hover:border-emerald-500/50 transition-all hover:shadow-lg hover:scale-105 cursor-pointer">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
-                  <Code className="text-purple-400" size={20} />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                  <Code className="text-purple-400" size={18} />
                 </div>
                 <div>
-                  <p className="text-foreground font-medium text-sm">Credenciais API</p>
+                  <p className="text-foreground font-medium text-xs">Credenciais API</p>
                   <p className="text-muted-foreground text-xs">Gerencie suas credenciais</p>
                 </div>
               </div>
@@ -586,7 +586,7 @@ export function Dashboard() {
       </div>
 
       {/* Charts and Conversion */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
         {/* Faturamento Chart */}
         <Card className="bg-card border-border lg:col-span-2">
           <CardHeader>
@@ -595,13 +595,13 @@ export function Dashboard() {
                 <Banknote className="text-muted-foreground" size={16} />
               </div>
               <div>
-                <CardTitle className="text-foreground text-base">Faturamento</CardTitle>
-                <p className="text-xs text-muted-foreground">Compare entradas e saídas diárias para acompanhamento do fluxo de caixa.</p>
+                <CardTitle className="text-foreground text-sm">Faturamento</CardTitle>
+                <p className="text-xs text-muted-foreground hidden sm:block">Compare entradas e saídas diárias para acompanhamento do fluxo de caixa.</p>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={200}>
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2a2f3e" />
                 <XAxis dataKey="date" stroke="#6b7280" style={{ fontSize: '12px' }} />
@@ -628,8 +628,8 @@ export function Dashboard() {
                 <Repeat className="text-muted-foreground" size={16} />
               </div>
               <div>
-                <CardTitle className="text-foreground text-base">Conversão</CardTitle>
-                <p className="text-xs text-muted-foreground">Relação entre pagamentos gerados e concluídos.</p>
+                <CardTitle className="text-foreground text-sm">Conversão</CardTitle>
+                <p className="text-xs text-muted-foreground hidden sm:block">Relação entre pagamentos gerados e concluídos.</p>
               </div>
             </div>
           </CardHeader>
@@ -669,60 +669,60 @@ export function Dashboard() {
       {/* Bottom Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-muted-foreground text-sm mb-1">Saldo à Receber</p>
-                <h3 className="text-2xl font-bold text-foreground">{formatCurrency(metrics.pendingAmount)}</h3>
+                <p className="text-muted-foreground text-xs mb-1">Saldo à Receber</p>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">{formatCurrency(metrics.pendingAmount)}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Depósitos pendentes</p>
               </div>
-              <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center">
-                <TrendingUp className="text-cyan-400" size={20} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="text-cyan-400" size={18} />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-muted-foreground text-sm mb-1">Ticket Médio</p>
-                <h3 className="text-2xl font-bold text-foreground">{formatCurrency(metrics.averageTicket)}</h3>
+                <p className="text-muted-foreground text-xs mb-1">Ticket Médio</p>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">{formatCurrency(metrics.averageTicket)}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Valor médio por venda</p>
               </div>
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                <Ticket className="text-emerald-400" size={20} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                <Ticket className="text-emerald-400" size={18} />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-muted-foreground text-sm mb-1">Média diária</p>
-                <h3 className="text-2xl font-bold text-foreground">{formatCurrency(metrics.dailyAverage)}</h3>
+                <p className="text-muted-foreground text-xs mb-1">Média diária</p>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">{formatCurrency(metrics.dailyAverage)}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Faturamento médio diário</p>
               </div>
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                <TrendingUp className="text-emerald-400" size={20} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="text-emerald-400" size={18} />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-muted-foreground text-sm mb-1">Quantidade de Transações</p>
-                <h3 className="text-2xl font-bold text-foreground">{metrics.transactionsCount}</h3>
+                <p className="text-muted-foreground text-xs mb-1">Quantidade de Transações</p>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">{metrics.transactionsCount}</h3>
                 <p className="text-xs text-muted-foreground mt-1">Total de vendas aprovadas</p>
               </div>
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                <FileText className="text-emerald-400" size={20} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                <FileText className="text-emerald-400" size={18} />
               </div>
             </div>
           </CardContent>

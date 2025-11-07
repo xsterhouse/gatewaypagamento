@@ -438,56 +438,56 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-8 bg-gradient-to-br from-background via-background to-primary/5 min-h-screen p-6">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 bg-gradient-to-br from-background via-background to-primary/5 min-h-screen p-3 sm:p-4 md:p-6">
       {/* Header Moderno */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex-1">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-1 sm:mb-2">
             Dashboard Administrativo
           </h1>
-          <p className="text-muted-foreground text-lg">Visão geral do sistema em tempo real</p>
+          <p className="text-muted-foreground text-xs sm:text-sm">Visão geral do sistema em tempo real</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg border border-primary/20">
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary/10 rounded-lg border border-primary/20 self-start sm:self-auto">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-sm font-medium">Sistema Online</span>
+          <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Sistema Online</span>
         </div>
       </div>
 
       {/* Cards Principais - Grid Responsivo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         {/* Total de Usuários */}
         <Card 
           className="bg-card border-border cursor-pointer transition-all hover:shadow-lg hover:scale-105 hover:border-primary/50"
           onClick={() => navigate('/admin')}
         >
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-sm">Total de Usuários</p>
-                <p className="text-2xl font-bold text-foreground">{stats.totalUsers}</p>
+                <p className="text-muted-foreground text-xs">Total de Usuários</p>
+                <p className="text-lg sm:text-xl font-bold text-foreground">{stats.totalUsers}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {stats.activeUsers} ativos
                 </p>
               </div>
-              <Users className="text-primary" size={32} />
+              <Users className="text-primary" size={28} />
             </div>
           </CardContent>
         </Card>
 
         {/* Saldo Total */}
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-sm">Saldo Total</p>
-                <p className="text-2xl font-bold text-primary">
+                <p className="text-muted-foreground text-xs">Saldo Total</p>
+                <p className="text-lg sm:text-xl font-bold text-primary">
                   {formatCurrency(stats.totalBalance)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Em todas as contas
                 </p>
               </div>
-              <DollarSign className="text-primary" size={32} />
+              <DollarSign className="text-primary" size={28} />
             </div>
           </CardContent>
         </Card>
@@ -497,16 +497,16 @@ export function AdminDashboard() {
           className="bg-card border-border cursor-pointer transition-all hover:shadow-lg hover:scale-105 hover:border-yellow-500/50"
           onClick={() => navigate('/kyc')}
         >
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-sm">KYC Pendentes</p>
-                <p className="text-2xl font-bold text-yellow-500">{stats.pendingKYC}</p>
+                <p className="text-muted-foreground text-xs">KYC Pendentes</p>
+                <p className="text-lg sm:text-xl font-bold text-yellow-500">{stats.pendingKYC}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Aguardando aprovação
                 </p>
               </div>
-              <Clock className="text-yellow-500" size={32} />
+              <Clock className="text-yellow-500" size={28} />
             </div>
           </CardContent>
         </Card>
@@ -518,11 +518,11 @@ export function AdminDashboard() {
           }`}
           onClick={() => navigate('/admin/med')}
         >
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <p className="text-muted-foreground text-sm">MEDs Pendentes</p>
-                <p className="text-2xl font-bold text-orange-500">{pendingMEDs}</p>
+                <p className="text-muted-foreground text-xs">MEDs Pendentes</p>
+                <p className="text-lg sm:text-xl font-bold text-orange-500">{pendingMEDs}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {totalMEDAmount > 0 
                     ? `R$ ${totalMEDAmount.toFixed(2)} em disputa`
@@ -537,21 +537,21 @@ export function AdminDashboard() {
                   </div>
                 )}
               </div>
-              <RefreshCw className={`text-orange-500 ${pendingMEDs > 0 ? 'animate-spin' : ''}`} size={32} />
+              <RefreshCw className={`text-orange-500 ${pendingMEDs > 0 ? 'animate-spin' : ''}`} size={28} />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Estatísticas PIX - Grid Compacto */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="text-green-500" size={24} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <TrendingUp className="text-green-500" size={20} />
               <div>
-                <p className="text-muted-foreground text-sm">PIX Recebidos</p>
-                <p className="text-xl font-bold text-green-500">
+                <p className="text-muted-foreground text-xs">PIX Recebidos</p>
+                <p className="text-sm sm:text-base font-bold text-green-500">
                   {formatCurrency(stats.pixReceivedVolume)}
                 </p>
                 <p className="text-xs text-muted-foreground">{stats.pixReceivedCount} transações</p>
@@ -561,12 +561,12 @@ export function AdminDashboard() {
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <TrendingDown className="text-red-500" size={24} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <TrendingDown className="text-red-500" size={20} />
               <div>
-                <p className="text-muted-foreground text-sm">PIX Enviados</p>
-                <p className="text-xl font-bold text-red-500">
+                <p className="text-muted-foreground text-xs">PIX Enviados</p>
+                <p className="text-sm sm:text-base font-bold text-red-500">
                   {formatCurrency(stats.pixSentVolume)}
                 </p>
                 <p className="text-xs text-muted-foreground">{stats.pixSentCount} transações</p>
@@ -576,12 +576,12 @@ export function AdminDashboard() {
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <DollarSign className="text-primary" size={24} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <DollarSign className="text-primary" size={20} />
               <div>
-                <p className="text-muted-foreground text-sm">Taxas Coletadas</p>
-                <p className="text-xl font-bold text-primary">
+                <p className="text-muted-foreground text-xs">Taxas Coletadas</p>
+                <p className="text-sm sm:text-base font-bold text-primary">
                   {formatCurrency(stats.totalFeesCollected)}
                 </p>
                 <p className="text-xs text-muted-foreground">1% de envio</p>
@@ -591,12 +591,12 @@ export function AdminDashboard() {
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="text-blue-500" size={24} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <CheckCircle className="text-blue-500" size={20} />
               <div>
-                <p className="text-muted-foreground text-sm">Hoje</p>
-                <p className="text-xl font-bold text-foreground">
+                <p className="text-muted-foreground text-xs">Hoje</p>
+                <p className="text-sm sm:text-base font-bold text-foreground">
                   {stats.newUsersToday} novos
                 </p>
                 <p className="text-xs text-muted-foreground">{stats.transactionsToday} transações</p>
@@ -607,24 +607,24 @@ export function AdminDashboard() {
       </div>
 
       {/* Gateway Metrics - Conta Mãe */}
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+      <div className="mt-4 sm:mt-6 lg:mt-8">
+        <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-green-400 rounded-lg flex items-center justify-center">
             <DollarSign className="text-black" size={16} />
           </div>
           Gateway PIX - Conta Mãe
         </h2>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30 transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                <DollarSign className="text-blue-500" size={20} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-blue-500" size={18} />
               </div>
               <div>
-                <p className="text-muted-foreground text-sm">Conta Mãe - Saldo</p>
-                <p className="text-xl font-bold text-blue-500">
+                <p className="text-muted-foreground text-xs sm:text-sm">Conta Mãe - Saldo</p>
+                <p className="text-base sm:text-xl font-bold text-blue-500">
                   {formatCurrency(stats.gatewayBalance)}
                 </p>
                 <p className="text-xs text-muted-foreground">Total disponível</p>
@@ -634,14 +634,14 @@ export function AdminDashboard() {
         </Card>
 
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30 transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                <TrendingUp className="text-green-500" size={20} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <TrendingUp className="text-green-500" size={18} />
               </div>
               <div>
-                <p className="text-muted-foreground text-sm">FEEs Hoje</p>
-                <p className="text-xl font-bold text-green-500">
+                <p className="text-muted-foreground text-xs sm:text-sm">FEEs Hoje</p>
+                <p className="text-base sm:text-xl font-bold text-green-500">
                   {formatCurrency(stats.gatewayFeesToday)}
                 </p>
                 <p className="text-xs text-muted-foreground">Receita do dia</p>
@@ -651,14 +651,14 @@ export function AdminDashboard() {
         </Card>
 
         <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/30 transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                <Clock className="text-orange-500" size={20} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <Clock className="text-orange-500" size={18} />
               </div>
               <div>
-                <p className="text-muted-foreground text-sm">PIX Pendentes</p>
-                <p className="text-xl font-bold text-orange-500">
+                <p className="text-muted-foreground text-xs sm:text-sm">PIX Pendentes</p>
+                <p className="text-base sm:text-xl font-bold text-orange-500">
                   {stats.pendingPixTransactions}
                 </p>
                 <p className="text-xs text-muted-foreground">Aguardando processamento</p>
@@ -668,14 +668,14 @@ export function AdminDashboard() {
         </Card>
 
         <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/30 transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                <CheckCircle className="text-purple-500" size={20} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <CheckCircle className="text-purple-500" size={18} />
               </div>
               <div>
-                <p className="text-muted-foreground text-sm">Taxa de Sucesso</p>
-                <p className="text-xl font-bold text-purple-500">
+                <p className="text-muted-foreground text-xs sm:text-sm">Taxa de Sucesso</p>
+                <p className="text-base sm:text-xl font-bold text-purple-500">
                   {stats.successRate.toFixed(1)}%
                 </p>
                 <p className="text-xs text-muted-foreground">Transações aprovadas</p>
@@ -686,38 +686,38 @@ export function AdminDashboard() {
       </div>
 
       {/* Métricas Secundárias */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="text-green-500" size={24} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <CheckCircle className="text-green-500" size={20} />
               <div>
-                <p className="text-muted-foreground text-sm">Usuários Ativos</p>
-                <p className="text-xl font-bold text-foreground">{stats.activeUsers}</p>
+                <p className="text-muted-foreground text-xs sm:text-sm">Usuários Ativos</p>
+                <p className="text-base sm:text-xl font-bold text-foreground">{stats.activeUsers}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Ban className="text-red-500" size={24} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Ban className="text-red-500" size={20} />
               <div>
-                <p className="text-muted-foreground text-sm">Contas Suspensas</p>
-                <p className="text-xl font-bold text-foreground">{stats.suspendedUsers}</p>
+                <p className="text-muted-foreground text-xs sm:text-sm">Contas Suspensas</p>
+                <p className="text-base sm:text-xl font-bold text-foreground">{stats.suspendedUsers}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border transition-all hover:shadow-lg hover:scale-105">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="text-yellow-500" size={24} />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <AlertCircle className="text-yellow-500" size={20} />
               <div>
-                <p className="text-muted-foreground text-sm">Saldo Bloqueado</p>
-                <p className="text-xl font-bold text-foreground">
+                <p className="text-muted-foreground text-xs sm:text-sm">Saldo Bloqueado</p>
+                <p className="text-base sm:text-xl font-bold text-foreground">
                   {formatCurrency(stats.lockedBalance)}
                 </p>
               </div>
@@ -727,22 +727,22 @@ export function AdminDashboard() {
       </div>
 
       {/* Alertas e Ações Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         {/* Tickets Abertos */}
         <Card 
           className="bg-card border-border cursor-pointer transition-all hover:shadow-lg hover:scale-105 hover:border-orange-500/50"
           onClick={() => navigate('/admin/tickets')}
         >
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-sm">Tickets Abertos</p>
-                <p className="text-2xl font-bold text-orange-500">{stats.openTickets}</p>
+                <p className="text-muted-foreground text-xs sm:text-sm">Tickets Abertos</p>
+                <p className="text-xl sm:text-2xl font-bold text-orange-500">{stats.openTickets}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Requer atenção
                 </p>
               </div>
-              <AlertCircle className="text-orange-500" size={32} />
+              <AlertCircle className="text-orange-500" size={28} />
             </div>
           </CardContent>
         </Card>

@@ -476,10 +476,10 @@ export function KYCManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Gerenciamento de KYC</h1>
-        <p className="text-muted-foreground">Aprove ou rejeite cadastros de clientes</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Gerenciamento de KYC</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Aprove ou rejeite cadastros de clientes</p>
       </div>
 
       {/* Stats */}

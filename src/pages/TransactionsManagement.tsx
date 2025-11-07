@@ -198,10 +198,10 @@ export function TransactionsManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Gerenciamento de Transações</h1>
-        <p className="text-muted-foreground">Visualize e gerencie todas as transações do sistema</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Gerenciamento de Transações</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Visualize e gerencie todas as transações do sistema</p>
       </div>
 
       {/* Bloqueios Ativos */}

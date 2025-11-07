@@ -267,10 +267,10 @@ export function AdminPanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Painel Administrativo</h1>
-        <p className="text-muted-foreground">Gerencie usuários, saldos e permissões</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Painel Administrativo</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Gerencie usuários, saldos e permissões</p>
       </div>
 
       {/* Stats */}
@@ -342,38 +342,38 @@ export function AdminPanel() {
       </Card>
 
       {/* Users List */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {filteredUsers.length === 0 ? (
           <Card className="bg-card border-border">
             <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Nenhum usuário encontrado</p>
+              <p className="text-muted-foreground text-sm">Nenhum usuário encontrado</p>
             </CardContent>
           </Card>
         ) : (
           filteredUsers.map((user) => (
             <Card key={user.id} className="bg-card border-border">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-foreground flex items-center gap-2">
+              <CardHeader className="p-3 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="space-y-1 flex-1 min-w-0 w-full sm:w-auto">
+                    <CardTitle className="text-foreground text-sm sm:text-base lg:text-lg truncate">
                       {user.name}
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{user.email}</p>
                   </div>
                   {getStatusBadge(user.status)}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
                 {/* Balance */}
-                <div className="bg-accent/50 rounded-lg p-4 border border-border">
+                <div className="bg-accent/50 rounded-lg p-3 sm:p-4 border border-border">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Saldo Disponível</p>
-                      <p className="text-2xl font-bold text-primary">
+                      <p className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
                         R$ {Number(user.balance).toFixed(2)}
                       </p>
                     </div>
-                    <DollarSign className="text-primary" size={24} />
+                    <DollarSign className="text-primary flex-shrink-0" size={20} />
                   </div>
                   
                   <div className="flex gap-2">
@@ -385,7 +385,7 @@ export function AdminPanel() {
                         ...editingBalance,
                         [user.id]: e.target.value
                       })}
-                      className="bg-input border-border text-foreground"
+                      className="bg-input border-border text-foreground text-sm"
                     />
                     <Button
                       onClick={() => {
@@ -393,7 +393,8 @@ export function AdminPanel() {
                         if (amount > 0) addBalance(user.id, amount)
                       }}
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-600 hover:bg-green-700 h-9 w-9 p-0"
+                      title="Adicionar"
                     >
                       <Plus size={16} />
                     </Button>
@@ -404,7 +405,8 @@ export function AdminPanel() {
                       }}
                       size="sm"
                       variant="outline"
-                      className="border-red-500 text-red-500 hover:bg-red-500/10"
+                      className="border-red-500 text-red-500 hover:bg-red-500/10 h-9 w-9 p-0"
+                      title="Remover"
                     >
                       <Minus size={16} />
                     </Button>
@@ -412,7 +414,7 @@ export function AdminPanel() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
+                <div className="flex flex-wrap gap-2 pt-3 sm:pt-4 border-t border-border">
                   {/* Botão Logar como Cliente */}
                   <Button
                     onClick={async () => {
@@ -423,20 +425,24 @@ export function AdminPanel() {
                         toast.error('Erro ao logar como cliente')
                       }
                     }}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm h-8 sm:h-9"
+                    size="sm"
                   >
-                    <LogIn size={16} className="mr-2" />
-                    Logar como Cliente
+                    <LogIn size={14} className="mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Logar como Cliente</span>
+                    <span className="sm:hidden">Logar</span>
                   </Button>
 
                   {/* Botão MED - Bloquear Saldo */}
                   <Button
                     onClick={() => setLockModalOpen(user.id)}
                     variant="outline"
-                    className="border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                    className="border-orange-500 text-orange-500 hover:bg-orange-500/10 text-xs sm:text-sm h-8 sm:h-9"
+                    size="sm"
                   >
-                    <Lock size={16} className="mr-2" />
-                    MED - Bloquear Saldo
+                    <Lock size={14} className="mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">MED - Bloquear</span>
+                    <span className="sm:hidden">MED</span>
                   </Button>
 
                   {user.status === 'active' ? (
@@ -448,23 +454,25 @@ export function AdminPanel() {
                           ...suspensionReason,
                           [user.id]: e.target.value
                         })}
-                        className="bg-input border-border text-foreground flex-1"
+                        className="bg-input border-border text-foreground flex-1 min-w-[150px] text-xs sm:text-sm h-8 sm:h-9"
                       />
                       <Button
                         onClick={() => suspendUser(user.id)}
                         variant="outline"
-                        className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10"
+                        className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10 text-xs sm:text-sm h-8 sm:h-9"
+                        size="sm"
                       >
-                        <Ban size={16} className="mr-2" />
+                        <Ban size={14} className="mr-1 sm:mr-2" />
                         Suspender
                       </Button>
                     </>
                   ) : (
                     <Button
                       onClick={() => activateUser(user.id)}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm h-8 sm:h-9"
+                      size="sm"
                     >
-                      <Unlock size={16} className="mr-2" />
+                      <Unlock size={14} className="mr-1 sm:mr-2" />
                       Ativar
                     </Button>
                   )}
@@ -472,16 +480,17 @@ export function AdminPanel() {
                   <Button
                     onClick={() => deleteUser(user.id)}
                     variant="outline"
-                    className="border-red-500 text-red-500 hover:bg-red-500/10"
+                    className="border-red-500 text-red-500 hover:bg-red-500/10 text-xs sm:text-sm h-8 sm:h-9"
+                    size="sm"
                   >
-                    <Trash2 size={16} className="mr-2" />
+                    <Trash2 size={14} className="mr-1 sm:mr-2" />
                     Excluir
                   </Button>
                 </div>
 
                 {user.suspension_reason && (
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                    <p className="text-yellow-300 text-sm">
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2 sm:p-3">
+                    <p className="text-yellow-300 text-xs sm:text-sm">
                       <strong>Motivo da suspensão:</strong> {user.suspension_reason}
                     </p>
                   </div>

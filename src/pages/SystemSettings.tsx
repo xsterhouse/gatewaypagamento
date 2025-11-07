@@ -121,11 +121,11 @@ export function SystemSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Configurações do Sistema</h1>
-          <p className="text-muted-foreground">Gerencie taxas, juros e limites</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Configurações do Sistema</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Gerencie taxas, juros e limites</p>
         </div>
         <Button
           onClick={handleSave}

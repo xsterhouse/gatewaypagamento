@@ -312,10 +312,10 @@ export function SupportTickets() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Tickets de Suporte</h1>
-        <p className="text-muted-foreground">Gerencie solicitações dos clientes</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Tickets de Suporte</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Gerencie solicitações dos clientes</p>
       </div>
 
       {/* Filtros */}

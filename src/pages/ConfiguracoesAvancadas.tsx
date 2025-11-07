@@ -439,10 +439,10 @@ export function ConfiguracoesAvancadas() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
           Configurações Avançadas
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">
           Gerencie gerentes de contas, taxas e limites do sistema
         </p>
       </div>
@@ -816,45 +816,43 @@ export function ConfiguracoesAvancadas() {
           {/* Lista de Gerentes */}
           <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-foreground flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Users size={24} />
-                  Gerentes Cadastrados ({managers.length})
-                </span>
+              <CardTitle className="text-foreground flex items-center gap-2 text-sm sm:text-base">
+                <Users size={20} className="flex-shrink-0" />
+                <span>Gerentes Cadastrados ({managers.length})</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {managers.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">
+                  <p className="text-muted-foreground text-center py-8 text-sm">
                     Nenhum gerente cadastrado
                   </p>
                 ) : (
                   managers.map((manager) => (
                     <div
                       key={manager.id}
-                      className="flex items-center justify-between p-4 bg-accent/50 border border-border rounded-lg hover:bg-accent transition-colors"
+                      className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-accent/50 border border-border rounded-lg hover:bg-accent transition-colors"
                     >
-                      <div className="flex items-center gap-4 flex-1">
+                      <div className="flex items-center gap-3 flex-1 w-full sm:w-auto">
                         {/* Foto do Gerente */}
                         {manager.photo_url ? (
                           <img
                             src={manager.photo_url}
                             alt={manager.name}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-primary"
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-primary flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-bold text-sm sm:text-base">
                               {manager.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                         )}
                         
-                        <div className="flex-1">
-                          <p className="text-foreground font-medium">{manager.name}</p>
-                          <p className="text-muted-foreground text-sm">{manager.email}</p>
-                          <div className="flex items-center gap-4 mt-1">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-foreground font-medium text-sm sm:text-base truncate">{manager.name}</p>
+                          <p className="text-muted-foreground text-xs sm:text-sm truncate">{manager.email}</p>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                             <p className="text-muted-foreground text-xs">CPF: {manager.cpf}</p>
                             {manager.whatsapp && (
                               <a
@@ -863,80 +861,82 @@ export function ConfiguracoesAvancadas() {
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1 text-green-500 text-xs hover:underline"
                               >
-                                <MessageCircle size={12} />
-                                {manager.whatsapp}
+                                <MessageCircle size={12} className="flex-shrink-0" />
+                                <span className="truncate">{manager.whatsapp}</span>
                               </a>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-foreground font-medium">
-                            {manager.current_clients || 0}/{manager.max_clients} clientes
-                          </p>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            manager.status === 'active' 
-                              ? 'bg-green-500/10 text-green-500' 
-                              : 'bg-red-500/10 text-red-500'
-                          }`}>
-                            {manager.status === 'active' ? 'Ativo' : 'Suspenso'}
-                          </span>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+                        <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3">
+                          <div className="text-left sm:text-right">
+                            <p className="text-foreground font-medium text-xs sm:text-sm">
+                              {manager.current_clients || 0}/{manager.max_clients} clientes
+                            </p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full inline-block mt-1 ${
+                              manager.status === 'active' 
+                                ? 'bg-green-500/10 text-green-500' 
+                                : 'bg-red-500/10 text-red-500'
+                            }`}>
+                              {manager.status === 'active' ? 'Ativo' : 'Suspenso'}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
                           <Button
                             onClick={() => handleViewManager(manager)}
                             variant="outline"
                             size="sm"
-                            className="border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                            className="border-blue-500 text-blue-500 hover:bg-blue-500/10 h-8 w-8 p-0"
                             title="Visualizar"
                           >
-                            <Eye size={16} />
+                            <Eye size={14} />
                           </Button>
 
                           <Button
                             onClick={() => handleEditManager(manager)}
                             variant="outline"
                             size="sm"
-                            className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10"
+                            className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10 h-8 w-8 p-0"
                             title="Editar"
                           >
-                            <Edit size={16} />
+                            <Edit size={14} />
                           </Button>
 
                           <Button
                             onClick={() => handleChangePassword(manager)}
                             variant="outline"
                             size="sm"
-                            className="border-purple-500 text-purple-500 hover:bg-purple-500/10"
+                            className="border-purple-500 text-purple-500 hover:bg-purple-500/10 h-8 w-8 p-0"
                             title="Trocar Senha"
                           >
-                            <Key size={16} />
+                            <Key size={14} />
                           </Button>
 
                           <Button
                             onClick={() => handleSuspendManager(manager)}
                             variant="outline"
                             size="sm"
-                            className={manager.status === 'active' 
+                            className={`h-8 w-8 p-0 ${manager.status === 'active' 
                               ? 'border-orange-500 text-orange-500 hover:bg-orange-500/10' 
                               : 'border-green-500 text-green-500 hover:bg-green-500/10'
-                            }
+                            }`}
                             title={manager.status === 'active' ? 'Suspender' : 'Reativar'}
                           >
-                            {manager.status === 'active' ? <Ban size={16} /> : <CheckCircle size={16} />}
+                            {manager.status === 'active' ? <Ban size={14} /> : <CheckCircle size={14} />}
                           </Button>
 
                           <Button
                             onClick={() => handleDeleteManager(manager.id)}
                             variant="outline"
                             size="sm"
-                            className="border-red-500 text-red-500 hover:bg-red-500/10"
+                            className="border-red-500 text-red-500 hover:bg-red-500/10 h-8 w-8 p-0"
                             title="Excluir"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </Button>
                         </div>
                       </div>
