@@ -37,10 +37,10 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
     }
 
     // Em desenvolvimento, usa proxy do Vite para evitar CORS
-    // Em produção, usa API diretamente (precisa de backend)
+    // Em produção (Vercel), usa serverless function
     const apiUrl = import.meta.env.DEV 
-      ? '/api/resend/emails'  // Proxy do Vite
-      : 'https://api.resend.com/emails'  // API direta (produção)
+      ? '/api/resend/emails'  // Proxy do Vite (dev)
+      : '/api/resend'         // Serverless function (Vercel)
 
     console.log('🌐 URL da API:', apiUrl)
 
