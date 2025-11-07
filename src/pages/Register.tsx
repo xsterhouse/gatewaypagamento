@@ -184,15 +184,20 @@ export function Register() {
       setSentOTP(otp)
 
       // Enviar email com código
+      console.log('🔄 Tentando enviar email para:', email)
       const emailResult = await sendOTPEmail(email, otp, 'register')
       
       if (!emailResult.success) {
-        console.error('Erro ao enviar email:', emailResult.error)
-        // Em desenvolvimento, continua mesmo se falhar
-        console.log('Código OTP (fallback):', otp)
+        console.error('❌ Erro ao enviar email:', emailResult.error)
+        console.log('⚠️ Código OTP (use este código):', otp)
+        toast.error(`Erro ao enviar email: ${emailResult.error}`)
+        toast.info(`Código de teste: ${otp}`, { duration: 10000 })
+        // Continua para o step 2 mesmo com erro (modo desenvolvimento)
+      } else {
+        console.log('✅ Email enviado com sucesso!')
+        toast.success('Código enviado para seu email!')
       }
 
-      toast.success('Código enviado para seu email!')
       setStep(2)
       setResendTimer(60) // 60 segundos para reenviar
     } catch (error: any) {
@@ -213,15 +218,20 @@ export function Register() {
       setSentOTP(otp)
 
       // Enviar email com código
+      console.log('🔄 Reenviando email para:', email)
       const emailResult = await sendOTPEmail(email, otp, 'register')
       
       if (!emailResult.success) {
-        console.error('Erro ao enviar email:', emailResult.error)
-        toast.error('Erro ao reenviar código. Tente novamente.')
-        return
+        console.error('❌ Erro ao reenviar email:', emailResult.error)
+        console.log('⚠️ Código OTP (use este código):', otp)
+        toast.error(`Erro ao reenviar: ${emailResult.error}`)
+        toast.info(`Código de teste: ${otp}`, { duration: 10000 })
+        // Continua mesmo com erro
+      } else {
+        console.log('✅ Email reenviado com sucesso!')
+        toast.success('Novo código enviado para seu email!')
       }
 
-      toast.success('Novo código enviado para seu email!')
       setResendTimer(60) // Resetar timer
     } catch (error: any) {
       toast.error('Erro ao reenviar código')

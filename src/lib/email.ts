@@ -14,6 +14,10 @@ interface SendEmailParams {
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
   const apiKey = import.meta.env.VITE_RESEND_API_KEY
   
+  console.log('🔑 API Key status:', apiKey ? `Carregada (${apiKey.substring(0, 10)}...)` : 'NÃO CARREGADA')
+  console.log('🌍 Ambiente:', import.meta.env.MODE)
+  console.log('📦 Todas as variáveis:', Object.keys(import.meta.env))
+  
   // Se não tem API key configurada, apenas loga no console
   if (!apiKey || apiKey === 'your_resend_api_key_here') {
     console.log('\n' + '='.repeat(60))
@@ -23,6 +27,7 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
     console.log('Assunto:', subject)
     console.log('\n💡 VEJA O CÓDIGO OTP NO REGISTRO/LOGIN')
     console.log('⚠️ Configure VITE_RESEND_API_KEY no .env para enviar emails reais')
+    console.log('⚠️ LEMBRE-SE: Reinicie o servidor após adicionar no .env!')
     console.log('='.repeat(60) + '\n')
     return { success: true, messageId: 'dev-mode' }
   }
@@ -38,20 +43,48 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: 'Gateway Pagamento <noreply@seudominio.com>',
+        from: 'DiMPay Gateway <onboarding@resend.dev>',
         to: [to],
         subject,
         html,
       }),
     })
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      console.error('Erro ao enviar email:', data)
-      return { success: false, error: data.message }
+    // Verificar se a resposta tem conteúdo
+    const responseText = await response.text()
+    console.log('📥 Resposta da API:', responseText)
+    
+    let data
+    try {
+      data = responseText ? JSON.parse(responseText) : {}
+    } catch (parseError) {
+      console.error('❌ Erro ao fazer parse da resposta:', parseError)
+      console.error('Resposta recebida:', responseText)
+      return { 
+        success: false, 
+        error: `Erro ao processar resposta da API: ${responseText.substring(0, 100)}` 
+      }
     }
 
+    if (!response.ok) {
+      console.error('❌ Erro ao enviar email:', data)
+      console.error('Status:', response.status)
+      console.error('Detalhes:', JSON.stringify(data, null, 2))
+      
+      // Mensagens de erro mais específicas
+      let errorMessage = data.message || `Erro HTTP ${response.status}`
+      if (response.status === 401 || response.status === 403) {
+        errorMessage = 'API Key inválida. Verifique VITE_RESEND_API_KEY no .env'
+      } else if (response.status === 422) {
+        errorMessage = 'Erro de validação. Verifique o email de destino e domínio remetente'
+      } else if (response.status === 429) {
+        errorMessage = 'Limite de envios excedido. Aguarde alguns minutos'
+      }
+      
+      return { success: false, error: errorMessage }
+    }
+
+    console.log('✅ Email enviado com sucesso! ID:', data.id)
     return { success: true, messageId: data.id }
   } catch (error: any) {
     console.error('Erro ao enviar email:', error)

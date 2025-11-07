@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { FormField, FormLabel, FormMessage } from '@/components/ui/form'
 import { toast } from 'sonner'
+import { sendOTPEmail } from '@/lib/email'
 import { 
   UserPlus, 
   Mail, 
@@ -329,10 +330,21 @@ export function RegisterKYC() {
       const otp = Math.floor(100000 + Math.random() * 900000).toString()
       setSentOTP(otp)
 
-      // Aqui você pode enviar o email (opcional)
-      // await sendOTPEmail(formData.email, otp, 'register')
+      // Enviar email com código
+      console.log('🔄 Tentando enviar email para:', formData.email)
+      const emailResult = await sendOTPEmail(formData.email, otp, 'register')
+      
+      if (!emailResult.success) {
+        console.error('❌ Erro ao enviar email:', emailResult.error)
+        console.log('⚠️ Código OTP (use este código):', otp)
+        toast.error(`Erro ao enviar email: ${emailResult.error}`)
+        toast.info(`Código de teste: ${otp}`, { duration: 10000 })
+        // Continua para o step 3 mesmo com erro (modo desenvolvimento)
+      } else {
+        console.log('✅ Email enviado com sucesso!')
+        toast.success('Documentos selecionados! Código enviado para seu email.')
+      }
 
-      toast.success('Documentos selecionados! Verifique seu email.')
       setStep(3)
     } catch (error: any) {
       console.error('Erro:', error)
