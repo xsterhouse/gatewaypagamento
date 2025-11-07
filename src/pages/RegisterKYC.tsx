@@ -1028,25 +1028,7 @@ export function RegisterKYC() {
                   <p className="text-white font-medium">{formData.email}</p>
                 </div>
 
-                {/* Código OTP em Destaque */}
-                <div className="bg-gradient-to-r from-primary/20 to-cyan-500/20 border-2 border-primary rounded-lg p-6">
-                  <div className="text-center space-y-3">
-                    <p className="text-sm text-gray-300">
-                      💡 <strong>MODO DESENVOLVIMENTO</strong>
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Use o código abaixo para continuar:
-                    </p>
-                    <div className="bg-gray-900/50 rounded-lg p-4">
-                      <p className="text-primary font-mono text-3xl font-bold tracking-[0.5em]">
-                        {sentOTP}
-                      </p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      ⚠️ Em produção, o código será enviado por email
-                    </p>
-                  </div>
-                </div>
+                {/* Em produção, o código é enviado por email - não mostra na tela */}
 
                 <FormField>
                   <FormLabel>Código de Verificação</FormLabel>
