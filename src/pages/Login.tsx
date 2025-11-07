@@ -210,11 +210,12 @@ export function Login() {
             </Button>
 
             <div className="text-center text-sm text-gray-400 pt-4">
+              <span className="mr-2">Ainda não tem uma conta?</span>
               <Link 
                 to="/register" 
-                className="text-white hover:text-primary transition-colors underline"
+                className="text-white hover:text-primary transition-colors underline font-semibold"
               >
-                Ainda não tenho uma conta
+                Abra sua conta grátis agora
               </Link>
             </div>
           </form>
@@ -241,19 +242,52 @@ export function Login() {
         {/* Conteúdo Visual */}
         <div className="relative h-full flex flex-col items-center justify-center p-12 text-white">
           <div className="max-w-lg text-center space-y-6">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-white/10 backdrop-blur-sm mb-8">
-              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            {/* Logo Dimpay */}
+            <div className="inline-flex items-center justify-center mb-8">
+              <img 
+                src="/logo-dimpay.png" 
+                alt="DiMPay Gateway" 
+                className="h-20 w-auto drop-shadow-2xl"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  const fallback = document.createElement('div')
+                  fallback.className = 'text-5xl font-bold text-white'
+                  fallback.textContent = 'DiMPay'
+                  e.currentTarget.parentElement?.appendChild(fallback)
+                }}
+              />
             </div>
             
-            <h2 className="text-4xl font-bold leading-tight">
-              Gestão Financeira <br />Inteligente e Segura
+            <h2 className="text-5xl font-bold leading-tight bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
+              Transforme Seu Negócio com Pagamentos Digitais
             </h2>
             
-            <p className="text-xl text-gray-300">
-              Controle total das suas transações financeiras com tecnologia de ponta e segurança bancária.
+            <p className="text-xl text-gray-200 leading-relaxed">
+              Aceite pagamentos online de forma <span className="text-primary font-semibold">rápida, segura e sem complicações</span>. 
+              Com o gateway Dimpay, você aumenta suas vendas e oferece a melhor experiência aos seus clientes.
             </p>
+            
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+              <p className="text-lg text-white font-medium mb-3">🚀 Por que escolher a Dimpay?</p>
+              <ul className="text-left text-gray-300 space-y-2 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1">✓</span>
+                  <span><strong className="text-white">Integração em minutos</strong> - APIs simples e documentação completa</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1">✓</span>
+                  <span><strong className="text-white">Taxas competitivas</strong> - As melhores condições do mercado</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1">✓</span>
+                  <span><strong className="text-white">Receba em 1 dia útil</strong> - Liquidez rápida para seu negócio</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1">✓</span>
+                  <span><strong className="text-white">Segurança PCI-DSS</strong> - Proteção máxima em todas as transações</span>
+                </li>
+              </ul>
+            </div>
             
             <div className="grid grid-cols-3 gap-6 pt-8">
               <div className="text-center">
