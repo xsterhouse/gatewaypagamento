@@ -189,10 +189,9 @@ export function Register() {
       
       if (!emailResult.success) {
         console.error('❌ Erro ao enviar email:', emailResult.error)
-        console.log('⚠️ Código OTP (use este código):', otp)
         toast.error(`Erro ao enviar email: ${emailResult.error}`)
-        toast.info(`Código de teste: ${otp}`, { duration: 10000 })
-        // Continua para o step 2 mesmo com erro (modo desenvolvimento)
+        // Em produção, não continua se falhar
+        return
       } else {
         console.log('✅ Email enviado com sucesso!')
         toast.success('Código enviado para seu email!')
@@ -223,10 +222,9 @@ export function Register() {
       
       if (!emailResult.success) {
         console.error('❌ Erro ao reenviar email:', emailResult.error)
-        console.log('⚠️ Código OTP (use este código):', otp)
         toast.error(`Erro ao reenviar: ${emailResult.error}`)
-        toast.info(`Código de teste: ${otp}`, { duration: 10000 })
-        // Continua mesmo com erro
+        // Em produção, não continua se falhar
+        return
       } else {
         console.log('✅ Email reenviado com sucesso!')
         toast.success('Novo código enviado para seu email!')

@@ -14,22 +14,10 @@ interface SendEmailParams {
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
   const apiKey = import.meta.env.VITE_RESEND_API_KEY
   
-  console.log('🔑 API Key status:', apiKey ? `Carregada (${apiKey.substring(0, 10)}...)` : 'NÃO CARREGADA')
-  console.log('🌍 Ambiente:', import.meta.env.MODE)
-  console.log('📦 Todas as variáveis:', Object.keys(import.meta.env))
-  
-  // Se não tem API key configurada, apenas loga no console
+  // Se não tem API key configurada, retorna erro
   if (!apiKey || apiKey === 'your_resend_api_key_here') {
-    console.log('\n' + '='.repeat(60))
-    console.log('📧 EMAIL (MODO DESENVOLVIMENTO - SEM API KEY)')
-    console.log('='.repeat(60))
-    console.log('Para:', to)
-    console.log('Assunto:', subject)
-    console.log('\n💡 VEJA O CÓDIGO OTP NO REGISTRO/LOGIN')
-    console.log('⚠️ Configure VITE_RESEND_API_KEY no .env para enviar emails reais')
-    console.log('⚠️ LEMBRE-SE: Reinicie o servidor após adicionar no .env!')
-    console.log('='.repeat(60) + '\n')
-    return { success: true, messageId: 'dev-mode' }
+    console.error('❌ API Key não configurada. Configure VITE_RESEND_API_KEY no .env')
+    return { success: false, error: 'API Key não configurada. Configure VITE_RESEND_API_KEY no .env' }
   }
 
   // Enviar email real (funciona em dev e produção quando API key está configurada)

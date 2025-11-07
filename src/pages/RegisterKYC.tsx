@@ -336,10 +336,9 @@ export function RegisterKYC() {
       
       if (!emailResult.success) {
         console.error('❌ Erro ao enviar email:', emailResult.error)
-        console.log('⚠️ Código OTP (use este código):', otp)
         toast.error(`Erro ao enviar email: ${emailResult.error}`)
-        toast.info(`Código de teste: ${otp}`, { duration: 10000 })
-        // Continua para o step 3 mesmo com erro (modo desenvolvimento)
+        // Em produção, não continua se falhar
+        return
       } else {
         console.log('✅ Email enviado com sucesso!')
         toast.success('Documentos selecionados! Código enviado para seu email.')
