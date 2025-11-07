@@ -258,49 +258,64 @@ export function Login() {
               />
             </div>
             
-            <h2 className="text-5xl font-bold leading-tight bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
-              Transforme Seu Negócio com Pagamentos Digitais
+            <h2 className="text-3xl font-semibold leading-tight bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent mb-4">
+              Pagamentos digitais que impulsionam seu negócio
             </h2>
             
-            <p className="text-xl text-gray-200 leading-relaxed">
-              Aceite pagamentos online de forma <span className="text-primary font-semibold">rápida, segura e sem complicações</span>. 
-              Com o gateway Dimpay, você aumenta suas vendas e oferece a melhor experiência aos seus clientes.
+            <p className="text-base text-gray-300 leading-relaxed mb-8">
+              Aceite pagamentos online com <span className="text-primary font-medium">velocidade, segurança e simplicidade</span>. 
+              O gateway Dimpay potencializa suas vendas e oferece a melhor experiência para seus clientes.
             </p>
             
-            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-              <p className="text-lg text-white font-medium mb-3">🚀 Por que escolher a Dimpay?</p>
-              <ul className="text-left text-gray-300 space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-1">✓</span>
-                  <span><strong className="text-white">Integração em minutos</strong> - APIs simples e documentação completa</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-1">✓</span>
-                  <span><strong className="text-white">Taxas competitivas</strong> - As melhores condições do mercado</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-1">✓</span>
-                  <span><strong className="text-white">Receba em 1 dia útil</strong> - Liquidez rápida para seu negócio</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-1">✓</span>
-                  <span><strong className="text-white">Segurança PCI-DSS</strong> - Proteção máxima em todas as transações</span>
-                </li>
-              </ul>
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10 mb-8">
+              <p className="text-sm text-white font-medium mb-4 flex items-center gap-2">
+                <span className="text-primary">⚡</span>
+                Vantagens Dimpay
+              </p>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="flex items-start gap-2">
+                  <span className="text-primary/80 text-xs mt-0.5">●</span>
+                  <div>
+                    <strong className="text-white text-xs">Integração rápida</strong>
+                    <div className="text-gray-400">APIs simples e documentação completa</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-primary/80 text-xs mt-0.5">●</span>
+                  <div>
+                    <strong className="text-white text-xs">Taxas competitivas</strong>
+                    <div className="text-gray-400">Melhores condições do mercado</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-primary/80 text-xs mt-0.5">●</span>
+                  <div>
+                    <strong className="text-white text-xs">Liquidez imediata</strong>
+                    <div className="text-gray-400">Receba em 1 dia útil</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-primary/80 text-xs mt-0.5">●</span>
+                  <div>
+                    <strong className="text-white text-xs">Segurança máxima</strong>
+                    <div className="text-gray-400">Proteção PCI-DSS em todas transações</div>
+                  </div>
+                </div>
+              </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-6 pt-8">
+            <div className="grid grid-cols-3 gap-4 pt-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary mb-1">99.9%</div>
-                <div className="text-sm text-gray-400">Uptime</div>
+                <div className="text-2xl font-bold text-primary mb-1">99.9%</div>
+                <div className="text-xs text-gray-400">Uptime garantido</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary mb-1">256-bit</div>
-                <div className="text-sm text-gray-400">Criptografia</div>
+                <div className="text-2xl font-bold text-primary mb-1">256-bit</div>
+                <div className="text-xs text-gray-400">Criptografia de ponta</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary mb-1">24/7</div>
-                <div className="text-sm text-gray-400">Suporte</div>
+                <div className="text-2xl font-bold text-primary mb-1">24/7</div>
+                <div className="text-xs text-gray-400">Suporte especializado</div>
               </div>
             </div>
           </div>
