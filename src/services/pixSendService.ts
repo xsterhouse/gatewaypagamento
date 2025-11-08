@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { bankAcquirerService, SendPixParams } from './bankAcquirerService'
 import { walletService } from './walletService'
 import { notificationService } from './notificationService'
+import { systemFeeService } from './systemFeeService'
 
 // ========================================
 // TIPOS E INTERFACES
@@ -35,9 +36,15 @@ class PixSendService {
       // 1. Validar saldo disponível
       const availableBalance = await walletService.getAvailableBalance(params.user_id)
       
-      // Calcular valor total (valor + taxa estimada)
-      const estimatedFee = params.amount * 0.0350 + 0.60 // Taxa padrão
-      const totalAmount = params.amount + estimatedFee
+      // Calcular taxas
+      const bankFee = params.amount * 0.0350 + 0.60 // Taxa do banco
+      const systemFee = await systemFeeService.calculateFee('pix_send', params.amount) // Taxa do sistema
+      const totalAmount = params.amount + bankFee + systemFee
+      
+      console.log(`💰 Valor a enviar: R$ ${params.amount.toFixed(2)}`)
+      console.log(`🏦 Taxa do banco: R$ ${bankFee.toFixed(2)}`)
+      console.log(`💵 Taxa do sistema: R$ ${systemFee.toFixed(2)}`)
+      console.log(`📊 Total a debitar: R$ ${totalAmount.toFixed(2)}`)
       
       if (availableBalance < totalAmount) {
         return {
@@ -98,31 +105,50 @@ class PixSendService {
         }
       }
       
-      // 5. Atualizar transação com referência da wallet
+      // 5. Registrar coleta de taxa do sistema
+      await systemFeeService.collectFee({
+        user_id: params.user_id,
+        transaction_id: sendResult.transaction_id,
+        operation_type: 'pix_send',
+        transaction_amount: params.amount,
+        fee_amount: systemFee,
+        metadata: {
+          bank_fee: bankFee,
+          total_debited: totalAmount,
+          pix_key: params.pix_key
+        }
+      })
+      
+      // 6. Atualizar transação com referência da wallet
       if (sendResult.transaction_id) {
         await supabase
           .from('pix_transactions')
           .update({
             metadata: {
               wallet_debit_id: debitResult.wallet?.id,
-              total_debited: totalAmount
+              total_debited: totalAmount,
+              bank_fee: bankFee,
+              system_fee: systemFee
             }
           })
           .eq('id', sendResult.transaction_id)
       }
       
-      // 6. Notificar sucesso
+      // 7. Notificar sucesso
       await notificationService.create({
         user_id: params.user_id,
         title: '✅ PIX Enviado',
-        message: `PIX de R$ ${params.amount.toFixed(2)} enviado para ${params.pix_key}. O valor foi debitado da sua conta.`,
+        message: `PIX de R$ ${params.amount.toFixed(2)} enviado para ${params.pix_key}. Total debitado: R$ ${totalAmount.toFixed(2)} (incluindo taxas).`,
         type: 'success',
         category: 'pix',
         action_url: '/financeiro',
         metadata: {
           transaction_id: sendResult.transaction_id,
           e2e_id: sendResult.e2e_id,
-          amount: params.amount
+          amount: params.amount,
+          bank_fee: bankFee,
+          system_fee: systemFee,
+          total_debited: totalAmount
         }
       })
       

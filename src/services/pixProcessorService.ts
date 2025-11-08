@@ -3,6 +3,7 @@ import { bankAcquirerService, BankAcquirer, PixTransaction } from './bankAcquire
 import { mercadoPagoIntegration } from '@/integrations/mercadopago'
 import { walletService } from './walletService'
 import { notificationService } from './notificationService'
+import { systemFeeService } from './systemFeeService'
 
 // ========================================
 // TIPOS E INTERFACES
@@ -365,10 +366,18 @@ class PixProcessorService {
     // Atualizar status da transação
     await this.updateTransactionStatus(event.transaction_id, 'completed')
     
-    // Creditar saldo do usuário
+    // 1. Calcular taxa do sistema
+    const systemFee = await systemFeeService.calculateFee('pix_receive', event.amount)
+    const netAmount = event.amount - systemFee
+    
+    console.log(`💰 Valor recebido: R$ ${event.amount.toFixed(2)}`)
+    console.log(`💵 Taxa do sistema: R$ ${systemFee.toFixed(2)}`)
+    console.log(`✅ Valor líquido: R$ ${netAmount.toFixed(2)}`)
+    
+    // 2. Creditar saldo líquido do usuário (já descontando a taxa)
     const creditResult = await walletService.credit(
       event.user_id,
-      event.amount,
+      netAmount,
       `Depósito PIX - ${event.description || 'Recarga de saldo'}`,
       event.transaction_id,
       'pix_transaction'
@@ -380,10 +389,23 @@ class PixProcessorService {
     } else {
       console.log('✅ Saldo creditado com sucesso!')
       
-      // Notificar usuário sobre PIX recebido
+      // 3. Registrar coleta de taxa do sistema
+      await systemFeeService.collectFee({
+        user_id: event.user_id,
+        transaction_id: event.transaction_id,
+        operation_type: 'pix_receive',
+        transaction_amount: event.amount,
+        fee_amount: systemFee,
+        metadata: {
+          description: event.description,
+          net_amount: netAmount
+        }
+      })
+      
+      // 4. Notificar usuário sobre PIX recebido
       await notificationService.notifyPixReceived(
         event.user_id,
-        event.amount,
+        netAmount, // Mostrar valor líquido na notificação
         event.transaction_id
       )
     }
