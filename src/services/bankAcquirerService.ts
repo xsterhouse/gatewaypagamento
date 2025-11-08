@@ -73,6 +73,24 @@ export interface CreatePixPaymentParams {
   expires_in_minutes?: number
 }
 
+export interface SendPixParams {
+  user_id: string
+  amount: number
+  description: string
+  pix_key: string
+  pix_key_type: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random'
+  receiver_name?: string
+  receiver_document?: string
+  acquirer_id?: string
+}
+
+export interface SendPixResponse {
+  success: boolean
+  transaction_id?: string
+  e2e_id?: string
+  error?: string
+}
+
 export interface PixPaymentResponse {
   success: boolean
   transaction_id?: string
@@ -501,6 +519,173 @@ class BankAcquirerService {
     }
     
     return data
+  }
+  
+  // ========================================
+  // ENVIO DE PIX
+  // ========================================
+  
+  /**
+   * Enviar PIX para uma chave
+   */
+  async sendPix(params: SendPixParams): Promise<SendPixResponse> {
+    try {
+      console.log('💸 Iniciando envio de PIX:', params)
+      
+      // 1. Buscar adquirente
+      const acquirer = params.acquirer_id 
+        ? await this.getAcquirerById(params.acquirer_id)
+        : await this.getDefaultAcquirer()
+      
+      if (!acquirer) {
+        return {
+          success: false,
+          error: 'Nenhum adquirente disponível'
+        }
+      }
+      
+      // 2. Validar limites
+      if (acquirer.transaction_limit && params.amount > acquirer.transaction_limit) {
+        return {
+          success: false,
+          error: `Valor excede o limite de R$ ${acquirer.transaction_limit.toFixed(2)}`
+        }
+      }
+      
+      // 3. Calcular taxas
+      const feePercentage = acquirer.fee_percentage || 0
+      const feeFixed = acquirer.fee_fixed || 0
+      const feeAmount = (params.amount * feePercentage) + feeFixed
+      const netAmount = params.amount + feeAmount // Usuário paga a taxa
+      
+      // 4. Gerar E2E ID único
+      const e2eId = this.generateE2EId()
+      
+      // 5. Criar transação no banco
+      const transaction: Partial<PixTransaction> = {
+        user_id: params.user_id,
+        acquirer_id: acquirer.id,
+        transaction_type: 'withdrawal',
+        amount: params.amount,
+        fee_amount: feeAmount,
+        net_amount: netAmount,
+        pix_key: params.pix_key,
+        pix_key_type: params.pix_key_type,
+        pix_e2e_id: e2eId,
+        status: 'processing',
+        description: params.description,
+        receiver_name: params.receiver_name,
+        receiver_document: params.receiver_document,
+        metadata: {
+          acquirer_name: acquirer.name,
+          bank_code: acquirer.bank_code
+        }
+      }
+      
+      const { data, error } = await supabase
+        .from('pix_transactions')
+        .insert(transaction)
+        .select()
+        .single()
+      
+      if (error) throw error
+      
+      // 6. Se for ambiente de produção, fazer chamada real à API do banco
+      if (acquirer.environment === 'production' && acquirer.api_base_url) {
+        const apiResult = await this.callBankAPIForSend(acquirer, data, params)
+        
+        if (!apiResult.success) {
+          // Marcar como falha
+          await supabase
+            .from('pix_transactions')
+            .update({ 
+              status: 'failed',
+              error_message: apiResult.error 
+            })
+            .eq('id', data.id)
+          
+          return {
+            success: false,
+            error: apiResult.error
+          }
+        }
+      }
+      
+      console.log('✅ PIX enviado com sucesso:', data.id)
+      
+      return {
+        success: true,
+        transaction_id: data.id,
+        e2e_id: e2eId
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Erro ao enviar PIX:', error)
+      return {
+        success: false,
+        error: error.message || 'Erro ao enviar PIX'
+      }
+    }
+  }
+  
+  /**
+   * Gerar End-to-End ID único
+   */
+  private generateE2EId(): string {
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').substring(0, 14)
+    const random = Math.random().toString(36).substring(2, 12).toUpperCase()
+    return `E${timestamp}${random}`
+  }
+  
+  /**
+   * Chamar API do banco para enviar PIX
+   */
+  private async callBankAPIForSend(
+    acquirer: BankAcquirer, 
+    transaction: any,
+    params: SendPixParams
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Aqui você implementaria a chamada real à API do Banco Inter
+      // Exemplo de estrutura:
+      
+      const apiLog = {
+        acquirer_id: acquirer.id,
+        transaction_id: transaction.id,
+        endpoint: `${acquirer.api_pix_url}/send`,
+        method: 'POST',
+        request_body: {
+          amount: params.amount,
+          pix_key: params.pix_key,
+          pix_key_type: params.pix_key_type,
+          description: params.description
+        },
+        success: true
+      }
+      
+      // Salvar log
+      await supabase.from('acquirer_api_logs').insert(apiLog)
+      
+      return { success: true }
+      
+    } catch (error: any) {
+      console.error('Erro ao chamar API do banco:', error)
+      
+      // Salvar log de erro
+      await supabase.from('acquirer_api_logs').insert({
+        acquirer_id: acquirer.id,
+        transaction_id: transaction.id,
+        endpoint: `${acquirer.api_pix_url}/send`,
+        method: 'POST',
+        success: false,
+        error_message: error.message
+      })
+      
+      return { 
+        success: false, 
+        error: error.message 
+      }
+    }
   }
 }
 

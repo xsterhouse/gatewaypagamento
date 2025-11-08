@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import { bankAcquirerService, BankAcquirer, PixTransaction } from './bankAcquirerService'
 import { mercadoPagoIntegration } from '@/integrations/mercadopago'
+import { walletService } from './walletService'
+import { notificationService } from './notificationService'
 
 // ========================================
 // TIPOS E INTERFACES
@@ -98,6 +100,16 @@ class PixProcessorService {
       })
       
       console.log('✅ PIX criado com sucesso:', transaction.id)
+      
+      // Notificar usuário sobre PIX pendente
+      if (paymentResult.expires_at) {
+        await notificationService.notifyPixPending(
+          params.user_id,
+          params.amount,
+          transaction.id,
+          paymentResult.expires_at as string
+        )
+      }
       
       return {
         success: true,
@@ -354,12 +366,40 @@ class PixProcessorService {
     await this.updateTransactionStatus(event.transaction_id, 'completed')
     
     // Creditar saldo do usuário
-    // await walletService.credit(event.user_id, event.amount)
+    const creditResult = await walletService.credit(
+      event.user_id,
+      event.amount,
+      `Depósito PIX - ${event.description || 'Recarga de saldo'}`,
+      event.transaction_id,
+      'pix_transaction'
+    )
+    
+    if (!creditResult.success) {
+      console.error('❌ Erro ao creditar saldo:', creditResult.error)
+      // Registrar erro mas não falhar o webhook
+    } else {
+      console.log('✅ Saldo creditado com sucesso!')
+      
+      // Notificar usuário sobre PIX recebido
+      await notificationService.notifyPixReceived(
+        event.user_id,
+        event.amount,
+        event.transaction_id
+      )
+    }
   }
   
   private async handlePixFailed(event: any): Promise<void> {
     console.log('❌ PIX falhou:', event)
     await this.updateTransactionStatus(event.transaction_id, 'failed')
+    
+    // Notificar usuário sobre falha
+    await notificationService.notifyPixFailed(
+      event.user_id,
+      event.amount,
+      event.transaction_id,
+      event.error_message
+    )
   }
   
   private async handlePixReversed(event: any): Promise<void> {
