@@ -103,7 +103,7 @@ class PixProcessorService {
       console.log('✅ PIX criado com sucesso:', transaction.id)
       
       // Notificar usuário sobre PIX pendente
-      if (paymentResult.expires_at) {
+      if (paymentResult.expires_at && transaction.id) {
         await notificationService.notifyPixPending(
           params.user_id,
           params.amount,
