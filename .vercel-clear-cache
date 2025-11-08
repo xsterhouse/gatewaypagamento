@@ -1,0 +1,3 @@
+Force clear Vercel cache - $(date)
+Remover completamente pasta api/
+Build: $(date +%s)

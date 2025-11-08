@@ -1,0 +1,9 @@
+api/
+*.md
+*.sql
+*.js
+!vite.config.ts
+!tailwind.config.js
+!postcss.config.js
+node_modules/
+.git/
