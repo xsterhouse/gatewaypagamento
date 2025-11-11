@@ -1,4 +1,14 @@
 {
+  "functions": {
+    "api/mercadopago-create-payment.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "api/mercadopago-webhook.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     {
       "source": "/api/resend/emails",
