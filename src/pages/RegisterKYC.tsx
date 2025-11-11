@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { FormField, FormLabel, FormMessage } from '@/components/ui/form'
 import { toast } from 'sonner'
-import { sendOTPEmail } from '@/lib/email'
 import { 
   UserPlus, 
   Mail, 
@@ -55,14 +54,12 @@ interface Documents {
 
 export function RegisterKYC() {
   const navigate = useNavigate()
-  const [step, setStep] = useState(1) // 1: Dados Básicos, 2: Upload Documentos, 3: Verificação Email, 4: Confirmação
+  const [step, setStep] = useState(1) // 1: Dados Básicos, 2: Upload Documentos, 3: Confirmação
   const [loading, setLoading] = useState(false)
   
   // Debug
   console.log('RegisterKYC - Current Step:', step)
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
-  const [sentOTP, setSentOTP] = useState('')
-  const [otpCode, setOtpCode] = useState('')
   
   // Form data
   const [formData, setFormData] = useState<FormData>({
@@ -308,7 +305,7 @@ export function RegisterKYC() {
     }
   }
 
-  // Validate documents and move to email verification
+  // Create account and upload documents
   const handleStep2Submit = async () => {
     // Verificar se todos os documentos foram selecionados
     const requiredDocs: (keyof Documents)[] = [
@@ -325,47 +322,6 @@ export function RegisterKYC() {
     }
 
     setLoading(true)
-    try {
-      // Gerar código OTP de 6 dígitos
-      const otp = Math.floor(100000 + Math.random() * 900000).toString()
-      setSentOTP(otp)
-
-      // Enviar email com código
-      console.log('🔄 Tentando enviar email para:', formData.email)
-      const emailResult = await sendOTPEmail(formData.email, otp, 'register')
-      
-      if (!emailResult.success) {
-        console.error('❌ Erro ao enviar email:', emailResult.error)
-        toast.error(`Erro ao enviar email: ${emailResult.error}`)
-        // Em produção, não continua se falhar
-        return
-      } else {
-        console.log('✅ Email enviado com sucesso!')
-        toast.success('Documentos selecionados! Código enviado para seu email.')
-      }
-
-      setStep(3)
-    } catch (error: any) {
-      console.error('Erro:', error)
-      toast.error('Erro ao processar')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Handle Step 3 - Email Verification and Account Creation
-  const handleStep3Submit = async () => {
-    console.log('Step 3 - Starting account creation')
-    
-    if (otpCode !== sentOTP) {
-      console.log('OTP validation failed')
-      setErrors({ otpCode: 'Código inválido' })
-      return
-    }
-
-    console.log('OTP validated successfully')
-    setLoading(true)
-    
     try {
       console.log('Creating user in Supabase Auth...')
       // Criar usuário no Supabase Auth
@@ -391,6 +347,7 @@ export function RegisterKYC() {
 
       console.log('User created successfully:', authData.user.id)
       console.log('Creating user record in database...')
+      
       // Criar registro na tabela users com status "pending"
       const { error: upsertError } = await supabase
         .from('users')
@@ -415,12 +372,6 @@ export function RegisterKYC() {
 
       if (upsertError) {
         console.error('Database error:', upsertError)
-        console.error('Error details:', {
-          code: upsertError.code,
-          message: upsertError.message,
-          details: upsertError.details,
-          hint: upsertError.hint
-        })
         toast.error(`Erro ao criar perfil: ${upsertError.message}`)
         await supabase.auth.signOut()
         return
@@ -428,16 +379,8 @@ export function RegisterKYC() {
 
       console.log('User record created successfully')
       console.log('Starting document upload...')
-      console.log('Using user ID for upload:', authData.user.id)
 
       // Upload de todos os documentos
-      const requiredDocs: (keyof Documents)[] = [
-        'identity_document',
-        'address_proof',
-        'selfie',
-        'selfie_with_document'
-      ]
-
       const uploadPromises = requiredDocs.map(doc => uploadDocument(doc, authData.user!.id))
       const results = await Promise.all(uploadPromises)
 
@@ -463,17 +406,29 @@ export function RegisterKYC() {
 
         console.log('Status updated successfully')
         toast.success('Conta criada e documentos enviados com sucesso!')
-        setStep(4)
+        
+        // Fazer login automático
+        await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password
+        })
+        
+        setStep(3)
       } else {
         console.error('Some documents failed to upload')
         toast.error('Erro ao enviar alguns documentos. Tente novamente.')
       }
     } catch (error: any) {
-      console.error('Fatal error in handleStep3Submit:', error)
+      console.error('Fatal error in handleStep2Submit:', error)
       toast.error(`Erro ao criar conta: ${error.message || 'Erro desconhecido'}`)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle Step 3 - Redirect to dashboard
+  const handleStep3Submit = () => {
+    navigate('/')
   }
 
   // Get document label
@@ -1018,67 +973,8 @@ export function RegisterKYC() {
               </div>
             )}
 
-            {/* Step 3: Verificação de Email */}
+            {/* Step 3: Confirmação */}
             {step === 3 && (
-              <div className="space-y-4">
-                <div className="bg-gray-800/50 rounded-lg p-4 text-center">
-                  <p className="text-sm text-gray-300 mb-2">
-                    Enviamos um código de 6 dígitos para:
-                  </p>
-                  <p className="text-white font-medium">{formData.email}</p>
-                </div>
-
-                {/* Em produção, o código é enviado por email - não mostra na tela */}
-
-                <FormField>
-                  <FormLabel>Código de Verificação</FormLabel>
-                  <Input
-                    type="text"
-                    placeholder="000000"
-                    value={otpCode}
-                    onChange={(e) => {
-                      setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))
-                      setErrors({})
-                    }}
-                    className="bg-gray-800 border-gray-700 text-white text-center text-2xl tracking-widest"
-                    maxLength={6}
-                  />
-                  {errors.otpCode && <FormMessage>{errors.otpCode}</FormMessage>}
-                </FormField>
-
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => setStep(2)}
-                    variant="outline"
-                    className="flex-1 border-gray-700"
-                    disabled={loading}
-                  >
-                    <ArrowLeft size={16} className="mr-2" />
-                    Voltar
-                  </Button>
-                  <Button 
-                    onClick={handleStep3Submit} 
-                    className="flex-1"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando conta...
-                      </>
-                    ) : (
-                      <>
-                        Verificar e Criar Conta
-                        <ArrowRight size={16} className="ml-2" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Confirmação */}
-            {step === 4 && (
               <div className="space-y-6 text-center">
                 <div className="flex justify-center">
                   <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center">
@@ -1117,24 +1013,16 @@ export function RegisterKYC() {
 
                 <div className="flex flex-col gap-3">
                   <Button
-                    onClick={() => navigate('/')}
+                    onClick={handleStep3Submit}
                     className="w-full"
                     size="lg"
                   >
-                    Acessar Página Inicial
-                  </Button>
-                  
-                  <Button
-                    onClick={() => navigate('/login')}
-                    variant="outline"
-                    className="w-full border-gray-700"
-                  >
-                    Fazer Login
+                    Acessar Meu Painel
                   </Button>
                 </div>
 
                 <p className="text-xs text-gray-500 mt-4">
-                  💡 Você pode fazer login agora e acompanhar o status da sua análise
+                  💡 Você já está logado! Clique acima para acessar seu painel
                 </p>
               </div>
             )}

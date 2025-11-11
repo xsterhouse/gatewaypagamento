@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useState } from 'react'
 
 interface KYCPendingOverlayProps {
-  status: 'pending' | 'rejected'
+  status: 'pending' | 'awaiting_verification' | 'rejected'
   rejectionReason?: string
 }
 
@@ -33,7 +33,7 @@ export function KYCPendingOverlay({ status, rejectionReason }: KYCPendingOverlay
       <Card className="relative z-10 w-full max-w-md bg-[#1a1f2e]/95 border-gray-700 shadow-2xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-white">
-            {status === 'pending' ? (
+            {(status === 'pending' || status === 'awaiting_verification') ? (
               <>
                 <Clock className="text-yellow-500" size={28} />
                 KYC em Análise
@@ -47,7 +47,7 @@ export function KYCPendingOverlay({ status, rejectionReason }: KYCPendingOverlay
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {status === 'pending' ? (
+          {(status === 'pending' || status === 'awaiting_verification') ? (
             <>
               <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
                 <p className="text-yellow-200 text-sm">

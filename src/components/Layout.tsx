@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function Layout() {
-  const [kycStatus, setKycStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null)
+  const [kycStatus, setKycStatus] = useState<'pending' | 'awaiting_verification' | 'approved' | 'rejected' | null>(null)
   const [rejectionReason, setRejectionReason] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const { effectiveUserId, isImpersonating } = useAuth()
