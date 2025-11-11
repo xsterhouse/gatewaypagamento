@@ -7,7 +7,7 @@ UPDATE public.bank_acquirers
 SET 
   webhook_url = 'https://app.dimpay.com.br/api/mercadopago-webhook',
   webhook_enabled = true,
-  webhook_events = ARRAY['payment']
+  webhook_events = '["payment"]'::jsonb
 WHERE bank_code = 'MP';
 
 -- Verificar

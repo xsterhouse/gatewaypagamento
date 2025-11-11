@@ -311,7 +311,7 @@ class BankAcquirerService {
       // 7. Se for Mercado Pago, usar API real
       if (acquirer.bank_code === 'MP' && acquirer.client_secret) {
         try {
-          const mpResponse = await fetch('/api/mercadopago-create-payment', {
+          const mpResponse = await fetch('/api/debug-create-payment', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -326,24 +326,28 @@ class BankAcquirerService {
 
           if (mpResponse.ok) {
             const mpData = await mpResponse.json()
+            console.log('🔧 Debug response:', mpData)
             
-            // Atualizar transação com dados reais do MP
+            // Gerar PIX simulado temporariamente
+            const tempPixCode = `00020126580014br.gov.bcb.pix0136${acquirer.pix_key || 'test@dimpay.com.br'}520400005303986540${amount.toFixed(2)}5802BR5920DiMPay PIX6009SAOPAULO62070503***6304${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+            
+            // Atualizar transação
             await supabase
               .from('pix_transactions')
               .update({
-                pix_code: mpData.qr_code,
-                pix_qr_code: mpData.qr_code_base64,
-                pix_txid: mpData.id,
-                expires_at: mpData.expires_at
+                pix_code: tempPixCode,
+                pix_qr_code: tempPixCode,
+                pix_txid: `DEBUG-${data.id}`,
+                expires_at: expiresAt.toISOString()
               })
               .eq('id', data.id)
             
             return {
               success: true,
               transaction_id: data.id,
-              pix_code: mpData.qr_code,
-              pix_qr_code: mpData.qr_code_base64,
-              expires_at: mpData.expires_at
+              pix_code: tempPixCode,
+              pix_qr_code: tempPixCode,
+              expires_at: expiresAt.toISOString()
             }
           }
         } catch (mpError) {
