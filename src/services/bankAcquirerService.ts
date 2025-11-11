@@ -311,7 +311,7 @@ class BankAcquirerService {
       // 7. Se for Mercado Pago, usar API real
       if (acquirer.bank_code === 'MP' && acquirer.client_secret) {
         try {
-          const mpResponse = await fetch('/api/mercadopago/create-payment', {
+          const mpResponse = await fetch('/api/mercadopago-create-payment', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
