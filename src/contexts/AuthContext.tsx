@@ -164,14 +164,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    // Limpar dados locais imediatamente
-    localStorage.removeItem('impersonation')
-    localStorage.removeItem('isLoggingOut')
-    
-    // Fazer logout em background (não bloqueante)
-    supabase.auth.signOut().catch(error => {
-      console.error('Logout error:', error)
-    })
+    try {
+      // Limpar dados locais imediatamente
+      localStorage.removeItem('impersonation')
+      localStorage.removeItem('isLoggingOut')
+      
+      // Fazer logout no Supabase
+      await supabase.auth.signOut()
+      
+      console.log('✅ Logout successful')
+    } catch (error) {
+      console.error('❌ Logout error:', error)
+      throw error
+    }
   }
 
   return (

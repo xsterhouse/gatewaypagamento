@@ -17,15 +17,24 @@ export function KYCPendingOverlay({ status, rejectionReason }: KYCPendingOverlay
     setLoggingOut(true)
     
     try {
+      console.log('🚪 Iniciando logout...')
+      
       // Sign out first
       await signOut()
       
-      // Then redirect to login
-      window.location.href = '/login'
+      console.log('✅ Logout completo, redirecionando...')
+      
+      // Clear any cached data
+      sessionStorage.clear()
+      
+      // Force redirect to login
+      window.location.replace('/login')
     } catch (error) {
-      console.error('Logout error:', error)
+      console.error('❌ Logout error:', error)
+      
       // Force redirect even if logout fails
-      window.location.href = '/login'
+      sessionStorage.clear()
+      window.location.replace('/login')
     }
   }
   return (
