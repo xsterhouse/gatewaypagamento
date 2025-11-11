@@ -5,6 +5,14 @@
       "destination": "/api/resend-emails"
     },
     {
+      "source": "/api/mercadopago/create-payment",
+      "destination": "/api/mercadopago-create-payment"
+    },
+    {
+      "source": "/api/mercadopago/webhook",
+      "destination": "/api/mercadopago-webhook"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
