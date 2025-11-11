@@ -16,13 +16,17 @@ export function KYCPendingOverlay({ status, rejectionReason }: KYCPendingOverlay
   const handleLogout = async () => {
     setLoggingOut(true)
     
-    // Navigate immediately using window.location
-    window.location.replace('/login')
-    
-    // Sign out in background (non-blocking)
-    signOut().catch(error => {
+    try {
+      // Sign out first
+      await signOut()
+      
+      // Then redirect to login
+      window.location.href = '/login'
+    } catch (error) {
       console.error('Logout error:', error)
-    })
+      // Force redirect even if logout fails
+      window.location.href = '/login'
+    }
   }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
