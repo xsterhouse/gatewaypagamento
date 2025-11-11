@@ -308,8 +308,52 @@ class BankAcquirerService {
       
       if (error) throw error
       
-      // 7. Se for ambiente de produção, fazer chamada real à API do banco
-      if (acquirer.environment === 'production' && acquirer.api_base_url) {
+      // 7. Se for Mercado Pago, usar API real
+      if (acquirer.bank_code === 'MP' && acquirer.client_secret) {
+        try {
+          const mpResponse = await fetch('/api/mercadopago/create-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              transactionId: data.id,
+              amount: params.amount,
+              description: params.description,
+              externalReference: `PIX-${data.id}`
+            })
+          })
+
+          if (mpResponse.ok) {
+            const mpData = await mpResponse.json()
+            
+            // Atualizar transação com dados reais do MP
+            await supabase
+              .from('pix_transactions')
+              .update({
+                pix_code: mpData.qr_code,
+                pix_qr_code: mpData.qr_code_base64,
+                pix_txid: mpData.id,
+                expires_at: mpData.expires_at
+              })
+              .eq('id', data.id)
+            
+            return {
+              success: true,
+              transaction_id: data.id,
+              pix_code: mpData.qr_code,
+              pix_qr_code: mpData.qr_code_base64,
+              expires_at: mpData.expires_at
+            }
+          }
+        } catch (mpError) {
+          console.error('Erro ao chamar API do Mercado Pago:', mpError)
+          // Continua com o código simulado se a API falhar
+        }
+      }
+      
+      // 8. Se for ambiente de produção de outros bancos, fazer chamada real à API
+      if (acquirer.environment === 'production' && acquirer.api_base_url && acquirer.bank_code !== 'MP') {
         await this.callBankAPI(acquirer, data)
       }
       
