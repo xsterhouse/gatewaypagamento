@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { createPixPayment as createMercadoPagoPixPayment } from '@/lib/mercadopago-direct'
 
 // ========================================
 // TIPOS E INTERFACES
@@ -308,49 +309,43 @@ class BankAcquirerService {
       
       if (error) throw error
       
-      // 7. Se for Mercado Pago, usar API real
-      if (acquirer.bank_code === 'MP' && acquirer.client_secret) {
+      // 7. Se for Mercado Pago, chamar API diretamente
+      if (acquirer.bank_code === 'MP') {
         try {
-          const mpResponse = await fetch('https://gatewaypagamento.vercel.app/api/mercadopago_create_payment', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              transactionId: data.id,
-              amount: params.amount,
-              description: params.description,
-              externalReference: `PIX-${data.id}`
-            })
+          console.log('🔵 Chamando Mercado Pago diretamente...')
+          
+          const mpResult = await createMercadoPagoPixPayment({
+            amount: params.amount,
+            description: params.description,
+            transactionId: data.id
           })
 
-          if (mpResponse.ok) {
-            const mpData = await mpResponse.json()
-            console.log('✅ Mercado Pago response:', mpData)
+          if (mpResult.success && mpResult.qr_code) {
+            console.log('✅ Mercado Pago - PIX criado com sucesso!')
             
             // Atualizar transação com dados reais do MP
             await supabase
               .from('pix_transactions')
               .update({
-                pix_code: mpData.qr_code,
-                pix_qr_code: mpData.qr_code_base64,
-                pix_txid: mpData.id,
-                expires_at: mpData.expires_at
+                pix_code: mpResult.qr_code,
+                pix_qr_code: mpResult.qr_code_base64 || mpResult.qr_code,
+                pix_txid: mpResult.id,
+                expires_at: mpResult.expires_at
               })
               .eq('id', data.id)
             
             return {
               success: true,
               transaction_id: data.id,
-              pix_code: mpData.qr_code,
-              pix_qr_code: mpData.qr_code_base64,
-              expires_at: mpData.expires_at
+              pix_code: mpResult.qr_code,
+              pix_qr_code: mpResult.qr_code_base64 || mpResult.qr_code,
+              expires_at: mpResult.expires_at
             }
           } else {
-            console.error('❌ Mercado Pago API error:', mpResponse.status, mpResponse.statusText)
+            console.error('❌ Mercado Pago falhou:', mpResult.error)
           }
         } catch (mpError) {
-          console.error('Erro ao chamar API do Mercado Pago:', mpError)
+          console.error('❌ Erro ao chamar Mercado Pago:', mpError)
           // Continua com o código simulado se a API falhar
         }
       }
