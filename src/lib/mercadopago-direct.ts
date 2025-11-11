@@ -3,7 +3,6 @@
  * Usa a API do Mercado Pago diretamente do frontend
  */
 
-const MERCADO_PAGO_PUBLIC_KEY = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY
 const MERCADO_PAGO_ACCESS_TOKEN = import.meta.env.VITE_MERCADO_PAGO_ACCESS_TOKEN || 'hxE568qqSBPbyCoTQtmS5rO6l0GCyzjI'
 
 export interface CreatePixPaymentParams {
