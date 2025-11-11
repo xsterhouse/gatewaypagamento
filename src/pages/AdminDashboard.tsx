@@ -214,7 +214,9 @@ export function AdminDashboard() {
         })))
         
         // Filtrar clientes com KYC pendente (apenas role = 'user')
-        const usersWithPendingKYC = clientUsers.filter(u => u.kyc_status === 'pending')
+        const usersWithPendingKYC = clientUsers.filter(u => 
+          u.kyc_status === 'pending' || u.kyc_status === 'awaiting_verification'
+        )
         console.log('⚠️ Clientes com KYC PENDENTE:', usersWithPendingKYC.map(u => ({
           name: u.name,
           email: u.email,
