@@ -11,29 +11,31 @@ Erro ao enviar email: Erro HTTP 405
 
 1. **Em desenvolvimento**: O código usa `/api/resend/emails` mas o proxy do Vite está configurado para `/api/resend`
 2. **Em produção (Vercel)**: Não existia serverless function configurada, então todas as rotas `/api/*` eram redirecionadas para `/index.html`, causando erro 405 (Method Not Allowed)
+3. **Estrutura incorreta**: Vercel requer que serverless functions estejam diretamente na pasta `api/`, não em subpastas
 
 ## Solução Implementada
 
 ### 1. Criada Serverless Function no Vercel
 
-**Arquivo**: `api/resend/emails.ts`
+**Arquivo**: `api/resend-emails.ts` (diretamente na pasta api/)
 
 Esta função:
 - Recebe requisições POST com dados do email
 - Valida a API Key do Resend
 - Faz proxy para a API do Resend
 - Retorna a resposta apropriada
+- Inclui suporte a CORS
 
 ### 2. Atualizado `vercel.json`
 
-Adicionado rewrite para não redirecionar rotas da API:
+Adicionado rewrite para mapear a rota corretamente:
 
 ```json
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/resend/emails",
+      "destination": "/api/resend-emails"
     },
     {
       "source": "/(.*)",
@@ -82,8 +84,9 @@ git push
 
 ## Arquivos Modificados
 
-- ✅ `api/resend/emails.ts` (NOVO)
-- ✅ `vercel.json` (atualizado)
+- ✅ `api/resend-emails.ts` (NOVO - serverless function principal)
+- ✅ `api/resend/emails.ts` (ANTIGO - pode ser removido)
+- ✅ `vercel.json` (atualizado com rewrite correto)
 - ✅ `package.json` (adicionado @vercel/node)
 - ✅ `src/lib/email.ts` (URL da API corrigida)
 
