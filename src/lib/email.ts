@@ -40,7 +40,7 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
     // Em produção (Vercel), usa serverless function
     const apiUrl = import.meta.env.DEV 
       ? '/api/resend/emails'  // Proxy do Vite (dev)
-      : '/api/resend'         // Serverless function (Vercel)
+      : '/api/resend/emails'  // Serverless function (Vercel)
 
     console.log('🌐 URL da API:', apiUrl)
 
