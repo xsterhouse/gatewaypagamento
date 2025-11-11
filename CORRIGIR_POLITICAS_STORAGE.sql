@@ -1,26 +1,16 @@
 -- ============================================
--- EXECUTAR ESTE SQL AGORA NO SUPABASE
+-- CORRIGIR POLÍTICAS DO BUCKET kyc-documents
+-- Execute este SQL no Supabase SQL Editor
 -- ============================================
 
--- 1. CRIAR BUCKET kyc-documents
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'kyc-documents',
-  'kyc-documents',
-  true,
-  5242880, -- 5MB
-  ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf']
-)
-ON CONFLICT (id) DO NOTHING;
-
--- 2. REMOVER POLÍTICAS ANTIGAS (se existirem)
+-- 1. REMOVER TODAS AS POLÍTICAS ANTIGAS DO BUCKET
 DROP POLICY IF EXISTS "Users can upload their own KYC documents" ON storage.objects;
 DROP POLICY IF EXISTS "Users can view their own KYC documents" ON storage.objects;
 DROP POLICY IF EXISTS "Admins can view all KYC documents" ON storage.objects;
 DROP POLICY IF EXISTS "Users can update their own KYC documents" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete their own KYC documents" ON storage.objects;
 
--- 3. POLÍTICAS DE STORAGE - Usuários podem fazer upload
+-- 2. CRIAR POLÍTICA DE UPLOAD (INSERT)
 CREATE POLICY "Users can upload their own KYC documents"
 ON storage.objects
 FOR INSERT
@@ -30,7 +20,7 @@ WITH CHECK (
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
--- 4. POLÍTICAS DE STORAGE - Usuários podem ver seus documentos
+-- 3. CRIAR POLÍTICA DE VISUALIZAÇÃO PRÓPRIA (SELECT)
 CREATE POLICY "Users can view their own KYC documents"
 ON storage.objects
 FOR SELECT
@@ -40,7 +30,7 @@ USING (
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
--- 5. POLÍTICAS DE STORAGE - Admins podem ver todos
+-- 4. CRIAR POLÍTICA DE VISUALIZAÇÃO ADMIN (SELECT)
 CREATE POLICY "Admins can view all KYC documents"
 ON storage.objects
 FOR SELECT
@@ -48,13 +38,13 @@ TO authenticated
 USING (
   bucket_id = 'kyc-documents' AND
   EXISTS (
-    SELECT 1 FROM users
+    SELECT 1 FROM public.users
     WHERE users.id = auth.uid()
     AND users.role IN ('admin', 'master')
   )
 );
 
--- 6. POLÍTICAS DE STORAGE - Usuários podem atualizar
+-- 5. CRIAR POLÍTICA DE ATUALIZAÇÃO (UPDATE)
 CREATE POLICY "Users can update their own KYC documents"
 ON storage.objects
 FOR UPDATE
@@ -64,7 +54,7 @@ USING (
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
--- 7. POLÍTICAS DE STORAGE - Usuários podem deletar
+-- 6. CRIAR POLÍTICA DE EXCLUSÃO (DELETE)
 CREATE POLICY "Users can delete their own KYC documents"
 ON storage.objects
 FOR DELETE
@@ -75,7 +65,30 @@ USING (
 );
 
 -- ============================================
--- VERIFICAR SE FOI CRIADO
+-- VERIFICAR POLÍTICAS CRIADAS
 -- ============================================
 
-SELECT * FROM storage.buckets WHERE id = 'kyc-documents';
+SELECT 
+  schemaname,
+  tablename,
+  policyname,
+  permissive,
+  roles,
+  cmd
+FROM pg_policies
+WHERE tablename = 'objects'
+AND policyname LIKE '%KYC%'
+ORDER BY policyname;
+
+-- ============================================
+-- VERIFICAR BUCKET
+-- ============================================
+
+SELECT 
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+FROM storage.buckets
+WHERE id = 'kyc-documents';
