@@ -233,15 +233,6 @@ export function RegisterKYC() {
 
       console.log('📦 Uploading to storage...')
       
-      // Check if bucket exists first
-      const { data: buckets } = await supabase.storage.listBuckets()
-      const bucketExists = buckets?.some(b => b.name === 'kyc-documents')
-      
-      if (!bucketExists) {
-        console.error('❌ Bucket kyc-documents does not exist!')
-        throw new Error('Bucket de documentos não encontrado. Contate o administrador.')
-      }
-      
       // Upload para Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('kyc-documents')
