@@ -1,9 +1,7 @@
 /**
- * Cliente Mercado Pago - Chamadas Diretas
- * Usa a API do Mercado Pago diretamente do frontend
+ * Cliente Mercado Pago - Chamadas via Backend
+ * Usa endpoint do backend para evitar CORS
  */
-
-const MERCADO_PAGO_ACCESS_TOKEN = import.meta.env.VITE_MERCADO_PAGO_ACCESS_TOKEN || 'hxE568qqSBPbyCoTQtmS5rO6l0GCyzjI'
 
 export interface CreatePixPaymentParams {
   amount: number
@@ -22,40 +20,25 @@ export interface PixPaymentResult {
 
 /**
  * Criar pagamento PIX via Mercado Pago
+ * Usa endpoint do backend para evitar CORS
  */
 export async function createPixPayment(params: CreatePixPaymentParams): Promise<PixPaymentResult> {
   try {
-    console.log('🚀 Criando PIX no Mercado Pago:', params)
-
-    // Verificar se o token está configurado
-    if (!MERCADO_PAGO_ACCESS_TOKEN || MERCADO_PAGO_ACCESS_TOKEN === 'hxE568qqSBPbyCoTQtmS5rO6l0GCyzjI') {
-      console.error('❌ Token do Mercado Pago não configurado!')
-      return {
-        success: false,
-        error: 'Token do Mercado Pago não configurado. Configure VITE_MERCADO_PAGO_ACCESS_TOKEN no arquivo .env'
-      }
-    }
+    console.log('🚀 Criando PIX via backend:', params)
 
     const body = {
-      transaction_amount: params.amount,
+      amount: params.amount,
       description: params.description,
-      payment_method_id: 'pix',
-      payer: {
-        email: 'cliente@dimpay.com.br'
-      },
-      external_reference: params.transactionId,
-      notification_url: window.location.origin + '/api/mercadopago/webhook'
+      transactionId: params.transactionId
     }
 
     console.log('📦 Request body:', body)
-    console.log('🔑 Token length:', MERCADO_PAGO_ACCESS_TOKEN.length)
 
-    const response = await fetch('https://api.mercadopago.com/v1/payments', {
+    // Chamar endpoint do backend em vez da API diretamente
+    const response = await fetch('/api/mercadopago_create_pix', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
-        'X-Idempotency-Key': params.transactionId
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
     })

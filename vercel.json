@@ -9,6 +9,10 @@
       "destination": "/api/mercadopago_create_payment"
     },
     {
+      "source": "/api/mercadopago_create_pix",
+      "destination": "/api/mercadopago_create_pix"
+    },
+    {
       "source": "/api/mercadopago/webhook",
       "destination": "/api/mercadopago_webhook"
     },
