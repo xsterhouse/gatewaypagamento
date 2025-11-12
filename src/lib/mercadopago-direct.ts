@@ -27,6 +27,15 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
   try {
     console.log('🚀 Criando PIX no Mercado Pago:', params)
 
+    // Verificar se o token está configurado
+    if (!MERCADO_PAGO_ACCESS_TOKEN || MERCADO_PAGO_ACCESS_TOKEN === 'hxE568qqSBPbyCoTQtmS5rO6l0GCyzjI') {
+      console.error('❌ Token do Mercado Pago não configurado!')
+      return {
+        success: false,
+        error: 'Token do Mercado Pago não configurado. Configure VITE_MERCADO_PAGO_ACCESS_TOKEN no arquivo .env'
+      }
+    }
+
     const body = {
       transaction_amount: params.amount,
       description: params.description,
@@ -35,10 +44,11 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
         email: 'cliente@dimpay.com.br'
       },
       external_reference: params.transactionId,
-      notification_url: 'https://app.dimpay.com.br/api/mercadopago_webhook'
+      notification_url: window.location.origin + '/api/mercadopago/webhook'
     }
 
     console.log('📦 Request body:', body)
+    console.log('🔑 Token length:', MERCADO_PAGO_ACCESS_TOKEN.length)
 
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -90,6 +100,15 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
 
   } catch (error: any) {
     console.error('❌ Erro ao criar PIX:', error)
+    
+    // Erro de rede/CORS
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      return {
+        success: false,
+        error: 'Erro de conexão com Mercado Pago. Verifique sua conexão com a internet ou se o token está correto.'
+      }
+    }
+    
     return {
       success: false,
       error: error.message || 'Erro ao criar pagamento PIX'
