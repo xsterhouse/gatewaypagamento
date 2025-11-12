@@ -228,27 +228,63 @@ export function AdminDashboard() {
           return userDate.toDateString() === todayLocal.toDateString()
         }).length
         
-        const { count: pixReceivedCount, error: countError } = await supabase
+        // ==================================================================
+        // CORREÇÃO: Buscar estatísticas de PIX de forma eficiente
+        // ==================================================================
+        const { count: pixReceivedCount, error: receivedCountError } = await supabase
           .from('pix_transactions')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'completed')
           .eq('transaction_type', 'deposit')
 
-        const { data: pixReceivedData, error: volumeError } = await supabase
+        const { data: pixReceivedData, error: receivedVolumeError } = await supabase
           .from('pix_transactions')
           .select('amount')
           .eq('status', 'completed')
           .eq('transaction_type', 'deposit')
-
-        if (countError) console.error('Erro ao contar PIX recebidos:', countError)
-        if (volumeError) console.error('Erro ao somar volume PIX:', volumeError)
-
-        const pixReceivedVolume = pixReceivedData?.reduce((sum, t) => sum + Number(t.amount || 0), 0) || 0
         
-        const pixSent = allTransactions?.filter(t => 
-          t.transaction_type === 'debit'
-        ) || []
-        const pixSentVolume = pixSent.reduce((sum, t) => sum + Number(t.amount || 0), 0)
+        const pixReceivedVolume = pixReceivedData?.reduce((sum, t) => sum + Number(t.amount || 0), 0) || 0
+
+        const { count: pixSentCount, error: sentCountError } = await supabase
+          .from('pix_transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed')
+          .eq('transaction_type', 'withdrawal')
+
+        const { data: pixSentData, error: sentVolumeError } = await supabase
+          .from('pix_transactions')
+          .select('amount')
+          .eq('status', 'completed')
+          .eq('transaction_type', 'withdrawal')
+        
+        const pixSentVolume = pixSentData?.reduce((sum, t) => sum + Number(t.amount || 0), 0) || 0
+
+        const { count: pendingPixTransactions, error: pendingError } = await supabase
+          .from('pix_transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending')
+
+        const { count: failedPixTransactions, error: failedError } = await supabase
+          .from('pix_transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'failed')
+
+        const { count: totalPixCount, error: totalError } = await supabase
+          .from('pix_transactions')
+          .select('*', { count: 'exact', head: true })
+
+        if (receivedCountError) console.error('Erro ao contar PIX recebidos:', receivedCountError)
+        if (receivedVolumeError) console.error('Erro ao somar volume PIX recebido:', receivedVolumeError)
+        if (sentCountError) console.error('Erro ao contar PIX enviados:', sentCountError)
+        if (sentVolumeError) console.error('Erro ao somar volume PIX enviado:', sentVolumeError)
+        if (pendingError) console.error('Erro ao contar PIX pendentes:', pendingError)
+        if (failedError) console.error('Erro ao contar PIX falhados:', failedError)
+        if (totalError) console.error('Erro ao contar total de PIX:', totalError)
+
+        const completedPixCount = (pixReceivedCount || 0) + (pixSentCount || 0)
+        const successRate = (totalPixCount || 0) > 0 
+          ? (completedPixCount / (totalPixCount || 1)) * 100 
+          : 0
         
         const transactionsToday = allTransactions?.filter(t => {
           if (!t.created_at) return false
@@ -277,19 +313,6 @@ export function AdminDashboard() {
         
         const todayFees = (adminTodayTransactions || []).reduce((sum, t) => sum + Number(t.amount || 0), 0)
         
-        const { data: pixTransactions } = await supabase
-          .from('pix_transactions')
-          .select('status')
-        
-        const pendingTransactions = pixTransactions?.filter(t => t.status === 'pending').length || 0
-        const failedTransactions = pixTransactions?.filter(t => t.status === 'failed').length || 0
-        const completedTransactions = pixTransactions?.filter(t => t.status === 'completed').length || 0
-        
-        const totalPixCount = pixTransactions?.length || 0
-        const successRate = totalPixCount > 0 
-          ? (completedTransactions / totalPixCount) * 100 
-          : 0
-        
         const totalTxCount = allTransactions?.length || 0
         const averageTicket = totalTxCount > 0
           ? (allTransactions || []).reduce((sum, t) => sum + Number(t.amount || 0), 0) / totalTxCount
@@ -306,7 +329,7 @@ export function AdminDashboard() {
           lockedBalance,
           pixSentVolume,
           pixReceivedVolume,
-          pixSentCount: pixSent.length,
+          pixSentCount: pixSentCount || 0,
           pixReceivedCount: pixReceivedCount || 0,
           totalFeesCollected,
           newUsersToday,
@@ -314,8 +337,8 @@ export function AdminDashboard() {
           gatewayBalance: adminWallet?.balance || 0,
           gatewayAvailableBalance: adminWallet?.balance || 0,
           gatewayFeesToday: todayFees,
-          pendingPixTransactions: pendingTransactions,
-          failedPixTransactions: failedTransactions,
+          pendingPixTransactions: pendingPixTransactions || 0,
+          failedPixTransactions: failedPixTransactions || 0,
           averageTicket,
           successRate
         })
