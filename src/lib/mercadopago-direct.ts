@@ -65,12 +65,26 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
 
     // Verificar se a resposta é JSON
     const contentType = response.headers.get('content-type')
+    console.log('📄 Content-Type:', contentType)
+    
     if (!contentType || !contentType.includes('application/json')) {
       const text = await response.text()
-      console.error('❌ Resposta não é JSON:', text.substring(0, 500))
+      console.error('❌ Resposta não é JSON!')
+      console.error('📄 Content-Type recebido:', contentType)
+      console.error('📄 Primeiros 500 caracteres:', text.substring(0, 500))
+      console.error('📄 Resposta completa:', text)
+      
+      // Se for HTML, provavelmente é uma página de erro
+      if (text.includes('<html') || text.includes('<!DOCTYPE')) {
+        return {
+          success: false,
+          error: 'API do Mercado Pago retornou HTML em vez de JSON. Possível problema de CORS ou URL incorreta.'
+        }
+      }
+      
       return {
         success: false,
-        error: `Erro na API do Mercado Pago (${response.status}). Verifique se o token está correto.`
+        error: `Resposta inesperada da API (${response.status}): ${text.substring(0, 100)}`
       }
     }
 
