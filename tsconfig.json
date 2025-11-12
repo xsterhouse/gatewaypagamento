@@ -23,9 +23,10 @@
     /* Alias */
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+
+    /* Add Node.js types for serverless functions */
+    "types": ["vite/client", "node"]
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }],
-  "exclude": ["node_modules", "dist", "api"]
+  "include": ["src", "api", "vite.config.ts", "vite-api-plugin.ts", "test-email.js", "check-email-status.js", "testar-subdominio.js", "force-deploy-final.js", "debug-dashboard.js"]
 }
