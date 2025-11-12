@@ -91,7 +91,7 @@ export function AdminDashboard() {
     // Timeout de segurança para evitar tela preta infinita
     const safetyTimeout = setTimeout(() => {
       if (loading) {
-        console.log('⚠️ Timeout de segurança atingido, forçando carregamento')
+        console.warn('⚠️ Timeout de segurança atingido, forçando carregamento')
         if (user) {
           loadDashboardData()
         } else {
@@ -234,6 +234,9 @@ export function AdminDashboard() {
         const newUsersToday = users.filter(u => 
           u.created_at && u.created_at.startsWith(today)
         ).length
+        
+        console.log('🆕 Novos usuários hoje:', newUsersToday, 'de', users.length, 'total')
+        console.log('📅 Data de hoje:', today)
 
         // Calcular estatísticas de PIX/Transações
         // wallet_transactions usa transaction_type: 'credit' ou 'debit'
@@ -252,11 +255,13 @@ export function AdminDashboard() {
         ).length || 0
 
         // Buscar taxas reais da carteira Conta Mãe
-        const { data: adminWallet } = await supabase
+        const { data: adminWallet, error: adminWalletError } = await supabase
           .from('wallets')
-          .select('balance')
+          .select('balance, id')
           .eq('wallet_name', 'Conta Mãe - Taxas Gateway')
           .single()
+        
+        console.log('💰 Admin Wallet:', adminWallet, adminWalletError)
         
         const totalFeesCollected = adminWallet?.balance || 0
 
@@ -266,17 +271,15 @@ export function AdminDashboard() {
         ) || []
         
         // Buscar taxas de hoje da carteira admin
-        const { data: adminTodayTransactions } = await supabase
+        const { data: adminTodayTransactions, error: adminTodayError } = await supabase
           .from('wallet_transactions')
-          .select('amount')
-          .eq('wallet_id', (await supabase
-            .from('wallets')
-            .select('id')
-            .eq('wallet_name', 'Conta Mãe - Taxas Gateway')
-            .single()
-          ).data?.id)
+          .select('amount, created_at')
+          .eq('wallet_id', adminWallet?.id)
           .gte('created_at', `${today}T00:00:00`)
           .lte('created_at', `${today}T23:59:59`)
+        
+        console.log('📅 Admin Today Transactions:', adminTodayTransactions, adminTodayError)
+        console.log('📅 Today filter:', `${today}T00:00:00`)
         
         const todayFees = (adminTodayTransactions || []).reduce((sum, t) => sum + Number(t.amount || 0), 0)
         
