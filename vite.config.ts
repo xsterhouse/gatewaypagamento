@@ -20,8 +20,8 @@ export default defineConfig({
         target: 'https://api.resend.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/resend/, ''),
-        configure: (proxy, options) => {
-          proxy.on('proxyReq', (proxyReq, req, res) => {
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
             // Adicionar API Key no header
             const apiKey = process.env.VITE_RESEND_API_KEY
             if (apiKey) {

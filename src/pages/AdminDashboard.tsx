@@ -91,7 +91,6 @@ export function AdminDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [pendingMEDs, setPendingMEDs] = useState(0)
   const [totalMEDAmount, setTotalMEDAmount] = useState(0)
-  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null)
   
   // Modals State
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -101,7 +100,6 @@ export function AdminDashboard() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [transactionToView, setTransactionToView] = useState<RecentTransaction | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [transactionToEdit, setTransactionToEdit] = useState<RecentTransaction | null>(null)
 
 
   useEffect(() => {
@@ -132,8 +130,6 @@ export function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0]
-
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('id, status, kyc_status, created_at, name, email, role')
@@ -293,7 +289,7 @@ export function AdminDashboard() {
           return transDate.toDateString() === todayLocal.toDateString()
         }).length || 0
 
-        const { data: adminWallet, error: adminWalletError } = await supabase
+        const { data: adminWallet } = await supabase
           .from('wallets')
           .select('balance, id')
           .eq('wallet_name', 'Conta Mãe - Taxas Gateway')
@@ -305,7 +301,7 @@ export function AdminDashboard() {
         const yesterday = new Date(now)
         yesterday.setDate(yesterday.getDate() - 1)
         
-        const { data: adminTodayTransactions, error: adminTodayError } = await supabase
+        const { data: adminTodayTransactions } = await supabase
           .from('wallet_transactions')
           .select('amount, created_at')
           .eq('wallet_id', adminWallet?.id)
@@ -425,7 +421,6 @@ export function AdminDashboard() {
   const confirmDeleteTransaction = async () => {
     if (!transactionToDelete) return
     const { id: transactionId } = transactionToDelete
-    setDeletingTransactionId(transactionId)
     setShowDeleteModal(false)
 
     try {
@@ -441,7 +436,6 @@ export function AdminDashboard() {
     } catch (error: any) {
       alert('Erro ao deletar transação: ' + (error?.message || 'Erro desconhecido'))
     } finally {
-      setDeletingTransactionId(null)
       setTransactionToDelete(null)
     }
   }
