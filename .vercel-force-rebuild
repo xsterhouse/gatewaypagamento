@@ -1,4 +1,2 @@
-FORCE_REBUILD=true
-TIMESTAMP=2025-11-07T17:25:00Z
-REASON=Consolidate all changes from today
-CHANGES=email-system,ui-modernization,serverless-functions
+# This file is used to force a new Vercel build.
+# Timestamp: 1762987500
