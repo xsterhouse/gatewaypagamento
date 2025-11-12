@@ -133,7 +133,7 @@ export function AdminDashboard() {
       // Carregar todas as carteiras para calcular saldos
       const { data: wallets, error: walletsError } = await supabase
         .from('wallets')
-        .select('user_id, currency_code, balance, available_balance, blocked_balance, is_active')
+        .select('user_id, currency_code, balance, available_balance, blocked_balance, is_active, wallet_name')
         .eq('is_active', true)
 
       if (walletsError) {
@@ -180,17 +180,13 @@ export function AdminDashboard() {
       }
 
       // ==================================================================
-      // CORREÇÃO: Calcular saldo total DISPONÍVEL APENAS dos clientes
+      // CORREÇÃO DEFINITIVA: Excluir a "Conta Mãe" do cálculo de saldo total
       // ==================================================================
       
-      // 1. Identificar o admin/master para excluir sua carteira do cálculo
-      const adminUser = users?.find(u => u.role === 'admin' || u.role === 'master');
-      const adminUserId = adminUser?.id;
-
-      // 2. Filtrar para ter apenas carteiras de clientes
-      const clientWallets = (wallets || []).filter(w => w.user_id !== adminUserId);
+      // 1. Filtrar para ter apenas carteiras de clientes (excluindo a Conta Mãe)
+      const clientWallets = (wallets || []).filter(w => w.wallet_name !== 'Conta Mãe - Taxas Gateway');
       
-      // 3. Buscar preços atuais das criptomoedas
+      // 2. Buscar preços atuais das criptomoedas
       const { data: cryptoPricesData, error: pricesError } = await supabase
         .from('crypto_prices')
         .select('cryptocurrency_symbol, price_brl')
@@ -203,7 +199,7 @@ export function AdminDashboard() {
         cryptoPricesData?.map(p => [p.cryptocurrency_symbol, p.price_brl]) || []
       )
       
-      // 4. Calcular saldo total DISPONÍVEL APENAS dos clientes, convertendo cripto para BRL
+      // 3. Calcular saldo total DISPONÍVEL APENAS dos clientes, convertendo cripto para BRL
       const totalBalance = clientWallets.reduce((sum, wallet) => {
         const available = Number(wallet.available_balance || 0); // Usar available_balance
         if (wallet.currency_code === 'BRL') {
@@ -214,7 +210,7 @@ export function AdminDashboard() {
         return sum + (available * price);
       }, 0);
       
-      // 5. Calcular saldo bloqueado APENAS dos clientes
+      // 4. Calcular saldo bloqueado APENAS dos clientes
       const lockedBalance = clientWallets.reduce((sum, wallet) => {
         const blocked = Number(wallet.blocked_balance || 0);
         if (wallet.currency_code === 'BRL') {
