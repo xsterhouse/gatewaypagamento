@@ -176,35 +176,19 @@ export async function processWithdrawal({
 
     console.log('✅ Transação criada:', transaction.id)
 
-    // Chamar API do Mercado Pago via serverless function
-    const response = await fetch('/api/mercadopago/process-withdrawal', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        transactionId: transaction.id,
-        amount: netAmount,
-        pixKey,
-        pixKeyType,
-        description,
-        externalReference: transaction.mp_external_reference
-      })
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Erro ao processar saque')
-    }
-
-    const withdrawalData = await response.json()
-
-    // Atualizar transação com dados do MP
+    // NOTA: Mercado Pago não tem API para ENVIAR PIX (apenas receber)
+    // Por enquanto, marcar como 'pending' para processamento manual
+    // TODO: Integrar com provedor de envio de PIX (ex: Asaas, PagSeguro, etc)
+    
     await supabase
       .from('pix_transactions')
       .update({
-        mp_payment_id: withdrawalData.id,
-        status: 'processing'
+        status: 'pending',
+        metadata: {
+          ...transaction.metadata,
+          requires_manual_processing: true,
+          note: 'Aguardando integração com provedor de envio de PIX'
+        }
       })
       .eq('id', transaction.id)
 
@@ -238,8 +222,7 @@ export async function processWithdrawal({
             pix_key: pixKey,
             pix_key_type: pixKeyType,
             original_amount: amount,
-            fee: fee,
-            mp_payment_id: withdrawalData.id
+            fee: fee
           }
         })
 
@@ -286,8 +269,7 @@ export async function processWithdrawal({
               metadata: {
                 pix_transaction_id: transaction.id,
                 source_user_id: userId,
-                fee_type: 'pix_withdrawal',
-                mp_payment_id: withdrawalData.id
+                fee_type: 'pix_withdrawal'
               }
             })
 
@@ -302,11 +284,11 @@ export async function processWithdrawal({
       }
     }
 
-    console.log('✅ Saque PIX processado:', withdrawalData.id)
+    console.log('✅ Saque PIX criado (aguardando processamento manual):', transaction.id)
 
     return {
       success: true,
-      paymentId: withdrawalData.id
+      paymentId: transaction.id
     }
   } catch (error: any) {
     console.error('❌ Erro ao processar saque PIX:', error)
