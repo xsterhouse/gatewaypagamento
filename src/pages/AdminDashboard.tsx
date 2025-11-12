@@ -99,7 +99,6 @@ export function AdminDashboard() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [transactionToView, setTransactionToView] = useState<RecentTransaction | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [transactionToEdit, setTransactionToEdit] = useState<RecentTransaction | null>(null)
 
 
   useEffect(() => {
@@ -900,7 +899,7 @@ export function AdminDashboard() {
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Ver" onClick={() => { setTransactionToView(transaction); setShowViewModal(true); }}>
                         <Eye size={16} />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Editar" onClick={() => { setTransactionToEdit(transaction); setShowEditModal(true); }}>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Editar" onClick={() => { setShowEditModal(true); }}>
                         <Edit size={16} />
                       </Button>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Cancelar" onClick={() => handleOpenCancelModal(transaction)}>
