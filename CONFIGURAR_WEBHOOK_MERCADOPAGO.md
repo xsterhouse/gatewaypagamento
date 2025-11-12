@@ -49,7 +49,7 @@ vercel --prod
 3. **Configurar webhook no Mercado Pago:**
    - Acesse: https://www.mercadopago.com.br/developers/panel/app
    - Vá em sua aplicação → **Webhooks**
-   - URL de produção: `https://seu-app.vercel.app/api/mercadopago/webhook`
+   - URL de produção: `https://app.dimpay.com.br/api/mercadopago/webhook`
    - Eventos: Selecione **Pagamentos**
    - Clique em **Testar** - deve retornar **200 OK**
 
@@ -178,7 +178,7 @@ LIMIT 10;
 **Solução**:
 1. Verifique se o arquivo existe: `api/mercadopago_webhook.ts`
 2. Faça deploy: `vercel --prod`
-3. Confirme a URL: `https://seu-app.vercel.app/api/mercadopago/webhook`
+3. Confirme a URL: `https://app.dimpay.com.br/api/mercadopago/webhook`
 
 ### Erro: 500 Internal Server Error
 
