@@ -7,7 +7,16 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Only allow POST
+  // Mercado Pago testa o webhook com GET primeiro
+  if (req.method === 'GET') {
+    console.log('✅ Webhook GET test from Mercado Pago')
+    return res.status(200).json({ 
+      status: 'ok',
+      message: 'Webhook endpoint is ready' 
+    })
+  }
+
+  // Processar notificações POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -17,11 +26,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('Headers:', req.headers)
     console.log('Body:', req.body)
 
-    const { type, data } = req.body
+    const { type, action, data } = req.body
 
     // Mercado Pago envia notificações de diferentes tipos
-    if (type === 'payment') {
-      const paymentId = data.id
+    // Pode ser type: "payment" ou action: "payment.created", "payment.updated"
+    if (type === 'payment' || action?.startsWith('payment.')) {
+      const paymentId = data?.id
 
       console.log('💳 Payment notification:', paymentId)
 
@@ -53,16 +63,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         external_reference: payment.external_reference
       })
 
-      // Buscar transação no banco
+      // Buscar transação no banco (usando pix_txid que armazena o ID do Mercado Pago)
       const { data: transaction, error: txError } = await supabase
         .from('pix_transactions')
         .select('*')
-        .eq('mp_payment_id', paymentId)
+        .eq('pix_txid', paymentId.toString())
         .single()
 
       if (txError || !transaction) {
-        console.error('❌ Transaction not found:', paymentId)
-        return res.status(404).json({ error: 'Transaction not found' })
+        console.error('❌ Transaction not found for payment:', paymentId)
+        console.error('Error:', txError)
+        // Retornar 200 para evitar retry do Mercado Pago
+        return res.status(200).json({ 
+          received: true,
+          message: 'Transaction not found in database' 
+        })
       }
 
       console.log('✅ Transaction found:', transaction.id)
