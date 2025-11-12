@@ -1,9 +1,13 @@
 import type { Plugin } from 'vite'
+import { loadEnv } from 'vite'
 
 export function apiPlugin(): Plugin {
   return {
     name: 'api-plugin',
     configureServer(server) {
+      // Carregar variáveis de ambiente
+      const env = loadEnv(server.config.mode, process.cwd(), '')
+      
       server.middlewares.use(async (req, res, next) => {
         // Verificar se é a rota correta
         if (req.url !== '/api/mercadopago_create_pix') {
@@ -28,7 +32,9 @@ export function apiPlugin(): Plugin {
           try {
             const { amount, description, transactionId } = JSON.parse(body)
 
-            const token = process.env.VITE_MERCADO_PAGO_ACCESS_TOKEN
+            const token = env.VITE_MERCADO_PAGO_ACCESS_TOKEN
+            
+            console.log('🔑 [DEV] Token encontrado:', token ? `${token.substring(0, 20)}...` : 'NÃO CONFIGURADO')
 
             if (!token) {
               res.statusCode = 500
