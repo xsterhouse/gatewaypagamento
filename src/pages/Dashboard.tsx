@@ -86,9 +86,9 @@ export function Dashboard() {
       // Pegar a primeira carteira (ou null se não houver)
       const wallet = wallets?.[0] || null
 
-      // Buscar transações
+      // Buscar transações da carteira
       const { data: transactions, error: transError } = await supabase
-        .from('transactions')
+        .from('wallet_transactions')
         .select('*')
         .eq('user_id', effectiveUserId)
 
@@ -97,8 +97,9 @@ export function Dashboard() {
       }
 
       const today = new Date().toISOString().split('T')[0]
-      const approvedTransactions = transactions?.filter(t => t.status === 'approved') || []
-      const pendingTransactions = transactions?.filter(t => t.status === 'pending') || []
+      // wallet_transactions não tem 'status', considerar todas as transações como aprovadas
+      const approvedTransactions = transactions || []
+      const pendingTransactions: any[] = [] // wallet_transactions não tem status pending
       
       const todayTransactions = approvedTransactions.filter(t => 
         t.created_at && t.created_at.startsWith(today)
@@ -107,15 +108,13 @@ export function Dashboard() {
       // Total de vendas aprovadas
       const total = approvedTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0)
       
-      // Recebido hoje (apenas entradas aprovadas)
+      // Recebido hoje (apenas créditos)
       const todayTotal = todayTransactions
-        .filter(t => t.type === 'deposit' || t.payment_method === 'pix')
+        .filter(t => t.transaction_type === 'credit')
         .reduce((sum, t) => sum + Number(t.amount || 0), 0)
 
-      // Saldo a receber (transações pendentes)
-      const pendingAmount = pendingTransactions
-        .filter(t => t.type === 'deposit')
-        .reduce((sum, t) => sum + Number(t.amount || 0), 0)
+      // Saldo a receber (não aplicável para wallet_transactions)
+      const pendingAmount = 0
 
       // Calcular média diária dos últimos 30 dias
       const thirtyDaysAgo = new Date()
