@@ -20,7 +20,6 @@ import {
   XCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 
 interface DashboardStats {
   totalUsers: number
@@ -100,6 +99,7 @@ export function AdminDashboard() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [transactionToView, setTransactionToView] = useState<RecentTransaction | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [transactionToEdit, setTransactionToEdit] = useState<RecentTransaction | null>(null)
 
 
   useEffect(() => {
