@@ -4,12 +4,20 @@ export function apiPlugin(): Plugin {
   return {
     name: 'api-plugin',
     configureServer(server) {
-      server.middlewares.use('/api/mercadopago_create_pix', async (req, res, next) => {
+      server.middlewares.use(async (req, res, next) => {
+        // Verificar se é a rota correta
+        if (req.url !== '/api/mercadopago_create_pix') {
+          return next()
+        }
+
         if (req.method !== 'POST') {
           res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: 'Method not allowed' }))
           return
         }
+
+        console.log('🎯 [DEV] Interceptando requisição para /api/mercadopago_create_pix')
 
         let body = ''
         req.on('data', chunk => {
