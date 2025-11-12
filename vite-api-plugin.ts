@@ -102,12 +102,27 @@ export function apiPlugin(): Plugin {
             const qrCodeBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64
             const expiresAt = data.date_of_expiration
 
+            console.log('🔍 [DEV] Verificando QR Code:', {
+              hasPointOfInteraction: !!data.point_of_interaction,
+              hasTransactionData: !!data.point_of_interaction?.transaction_data,
+              hasQrCode: !!qrCode,
+              hasQrCodeBase64: !!qrCodeBase64,
+              fullData: JSON.stringify(data, null, 2)
+            })
+
             if (!qrCode) {
+              console.error('❌ [DEV] QR Code não encontrado na resposta!')
+              console.error('📄 [DEV] Estrutura completa:', JSON.stringify(data, null, 2))
               res.statusCode = 500
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify({
                 success: false,
-                error: 'QR Code não gerado'
+                error: 'QR Code não gerado pelo Mercado Pago',
+                debug: {
+                  paymentId: data.id,
+                  status: data.status,
+                  statusDetail: data.status_detail
+                }
               }))
               return
             }

@@ -93,31 +93,19 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
       }
     }
 
-    // Extrair dados do QR Code
-    const qrCode = data.point_of_interaction?.transaction_data?.qr_code
-    const qrCodeBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64
-    const expiresAt = data.date_of_expiration
-
-    if (!qrCode) {
-      console.error('❌ QR Code não encontrado na resposta')
-      return {
-        success: false,
-        error: 'QR Code não gerado pelo Mercado Pago'
-      }
-    }
-
+    // Backend já retorna os dados formatados
     console.log('✅ PIX criado com sucesso!', {
       id: data.id,
-      status: data.status,
-      qr_code_length: qrCode?.length
+      qr_code_length: data.qr_code?.length
     })
 
     return {
-      success: true,
-      qr_code: qrCode,
-      qr_code_base64: qrCodeBase64,
-      id: String(data.id),
-      expires_at: expiresAt
+      success: data.success,
+      qr_code: data.qr_code,
+      qr_code_base64: data.qr_code_base64,
+      id: data.id,
+      expires_at: data.expires_at,
+      error: data.error
     }
 
   } catch (error: any) {
