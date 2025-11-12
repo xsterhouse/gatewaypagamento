@@ -303,8 +303,7 @@ export function Dashboard() {
         const generalRate = 100 // Todas aprovadas
 
         // Calcular por método (extrair de metadata)
-        const pixTransactions = allTransactions.filter(t => t.metadata?.payment_method === 'pix')
-        const pixRate = 100 // Todas aprovadas
+        const pixRate = allTransactions.some(t => t.metadata?.payment_method === 'pix') ? 100 : 0
 
         const cardTransactions = allTransactions.filter(t => 
           t.metadata?.payment_method === 'credit_card' || 
