@@ -179,16 +179,49 @@ export function AdminDashboard() {
         console.error('Erro ao carregar tickets:', ticketsError)
       }
 
-      // Calcular saldo total em BRL das carteiras
-      const brlWallets = wallets?.filter(w => w.currency_code === 'BRL') || []
-      const totalBalance = brlWallets.reduce((sum, w) => sum + Number(w.balance || 0), 0)
-      const lockedBalance = brlWallets.reduce((sum, w) => sum + Number(w.blocked_balance || 0), 0)
+      // ==================================================================
+      // CORREÇÃO: Calcular saldo total CONVERTENDO cripto para BRL
+      // ==================================================================
+      
+      // 1. Buscar preços atuais das criptomoedas
+      const { data: cryptoPricesData, error: pricesError } = await supabase
+        .from('crypto_prices')
+        .select('cryptocurrency_symbol, price_brl')
+
+      if (pricesError) {
+        console.error('Erro ao buscar preços de cripto:', pricesError)
+      }
+      
+      const cryptoPrices = new Map(
+        cryptoPricesData?.map(p => [p.cryptocurrency_symbol, p.price_brl]) || []
+      )
+      
+      // 2. Calcular saldo total CONVERTENDO cripto para BRL
+      const totalBalance = (wallets || []).reduce((sum, wallet) => {
+        const balance = Number(wallet.balance || 0)
+        if (wallet.currency_code === 'BRL') {
+          return sum + balance
+        }
+        
+        // Se for cripto, converter para BRL
+        const price = cryptoPrices.get(wallet.currency_code) || 0
+        return sum + (balance * price)
+      }, 0)
+      
+      const lockedBalance = (wallets || []).reduce((sum, wallet) => {
+        const blocked = Number(wallet.blocked_balance || 0)
+        if (wallet.currency_code === 'BRL') {
+          return sum + blocked
+        }
+        
+        const price = cryptoPrices.get(wallet.currency_code) || 0
+        return sum + (blocked * price)
+      }, 0)
 
       // Debug: Mostrar dados carregados
       console.log('📊 Dashboard Stats:', {
         users: users?.length,
         wallets: wallets?.length,
-        brlWallets: brlWallets.length,
         totalBalance,
         lockedBalance,
         transactions: allTransactions?.length,
