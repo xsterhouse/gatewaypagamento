@@ -236,11 +236,12 @@ export function AdminDashboard() {
         ).length
 
         // Calcular estatísticas de PIX/Transações
+        // wallet_transactions usa transaction_type: 'credit' ou 'debit'
         const pixSent = allTransactions?.filter(t => 
-          t.type === 'debit' || t.type === 'withdrawal' || t.type === 'send'
+          t.transaction_type === 'debit'
         ) || []
         const pixReceived = allTransactions?.filter(t => 
-          t.type === 'credit' || t.type === 'deposit' || t.type === 'receive'
+          t.transaction_type === 'credit'
         ) || []
         const pixSentVolume = pixSent.reduce((sum, t) => sum + Number(t.amount || 0), 0)
         const pixReceivedVolume = pixReceived.reduce((sum, t) => sum + Number(t.amount || 0), 0)
@@ -250,29 +251,43 @@ export function AdminDashboard() {
           t.created_at && t.created_at.startsWith(today)
         ).length || 0
 
-        // Calcular taxas coletadas (1% de envio como exemplo)
-        const totalFeesCollected = pixSentVolume * 0.01
+        // Buscar taxas reais da carteira Conta Mãe
+        const { data: adminWallet } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('wallet_name', 'Conta Mãe - Taxas Gateway')
+          .single()
+        
+        const totalFeesCollected = adminWallet?.balance || 0
 
         // Calcular métricas de Gateway
         const todayTransactions = allTransactions?.filter(t => 
           t.created_at && t.created_at.startsWith(today)
         ) || []
         
-        const todayFees = todayTransactions
-          .filter(t => t.type === 'debit' || t.type === 'send')
-          .reduce((sum, t) => sum + (Number(t.amount || 0) * 0.01), 0)
+        // Buscar taxas de hoje da carteira admin
+        const { data: adminTodayTransactions } = await supabase
+          .from('wallet_transactions')
+          .select('amount')
+          .eq('wallet_id', (await supabase
+            .from('wallets')
+            .select('id')
+            .eq('wallet_name', 'Conta Mãe - Taxas Gateway')
+            .single()
+          ).data?.id)
+          .gte('created_at', `${today}T00:00:00`)
+          .lte('created_at', `${today}T23:59:59`)
         
-        const pendingTransactions = allTransactions?.filter(t => 
-          t.status === 'pending'
-        ).length || 0
+        const todayFees = (adminTodayTransactions || []).reduce((sum, t) => sum + Number(t.amount || 0), 0)
         
-        const failedTransactions = allTransactions?.filter(t => 
-          t.status === 'failed'
-        ).length || 0
+        // Buscar estatísticas de pix_transactions
+        const { data: pixTransactions } = await supabase
+          .from('pix_transactions')
+          .select('status')
         
-        const completedTransactions = allTransactions?.filter(t => 
-          t.status === 'completed'
-        ).length || 0
+        const pendingTransactions = pixTransactions?.filter(t => t.status === 'pending').length || 0
+        const failedTransactions = pixTransactions?.filter(t => t.status === 'failed').length || 0
+        const completedTransactions = pixTransactions?.filter(t => t.status === 'completed').length || 0
         
         const totalTxCount = allTransactions?.length || 0
         const successRate = totalTxCount > 0 
@@ -300,8 +315,8 @@ export function AdminDashboard() {
           newUsersToday,
           transactionsToday,
           // Gateway específicos:
-          gatewayBalance: totalBalance, // Temporariamente usa saldo total
-          gatewayAvailableBalance: totalBalance - lockedBalance,
+          gatewayBalance: adminWallet?.balance || 0,
+          gatewayAvailableBalance: adminWallet?.balance || 0,
           gatewayFeesToday: todayFees,
           pendingPixTransactions: pendingTransactions,
           failedPixTransactions: failedTransactions,
