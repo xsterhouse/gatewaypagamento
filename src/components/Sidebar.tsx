@@ -16,7 +16,6 @@ import {
   ArrowUpDown,
   Coins,
   TrendingUp,
-  CreditCard,
   LogOut,
   Receipt,
   Building2,
@@ -45,7 +44,7 @@ const adminMenuItems = [
   { icon: LayoutDashboard, label: 'Dashboard Admin', path: '/admin/dashboard' },
   { icon: Coins, label: 'Carteiras', path: '/admin/wallets' },
   { icon: TrendingUp, label: 'Exchange', path: '/admin/exchange' },
-  { icon: CreditCard, label: 'Depósitos', path: '/admin/deposits' },
+  // { icon: CreditCard, label: 'Depósitos', path: '/admin/deposits' }, // REMOVIDO: Redundante
   { icon: Receipt, label: 'Faturas', path: '/admin/invoices' },
   { icon: Building2, label: 'Adquirentes', path: '/admin/acquirers' },
   { icon: UserCog, label: 'Usuários', path: '/admin' },

@@ -37,7 +37,7 @@ import { Exchange } from './pages/Exchange'
 // import { Deposits } from './pages/Deposits' // REMOVIDO: Redundante com Dashboard e Carteiras
 import { AdminWallets } from './pages/AdminWallets'
 import { AdminExchange } from './pages/AdminExchange'
-import { AdminDeposits } from './pages/AdminDeposits'
+// import { AdminDeposits } from './pages/AdminDeposits' // REMOVIDO: Redundante
 import { Documents } from './pages/Documents'
 import { FullCalendar } from './pages/FullCalendar'
 import { ConfiguracoesAvancadas } from './pages/ConfiguracoesAvancadas'
@@ -96,7 +96,7 @@ function App() {
             <Route path="admin/logs" element={<ActivityLogs />} />
             <Route path="admin/wallets" element={<AdminWallets />} />
             <Route path="admin/exchange" element={<AdminExchange />} />
-            <Route path="admin/deposits" element={<AdminDeposits />} />
+            {/* <Route path="admin/deposits" element={<AdminDeposits />} /> */} {/* REMOVIDO: Redundante */}
             <Route path="admin/invoices" element={<AdminInvoices />} />
             <Route path="/admin/bank-acquirers" element={<BankAcquirers />} />
             <Route path="/admin/acquirers" element={<BankAcquirers />} />
