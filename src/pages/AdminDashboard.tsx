@@ -238,16 +238,27 @@ export function AdminDashboard() {
         console.log('🆕 Novos usuários hoje:', newUsersToday, 'de', users.length, 'total')
         console.log('📅 Data de hoje:', today)
 
-        // Calcular estatísticas de PIX/Transações
-        // wallet_transactions usa transaction_type: 'credit' ou 'debit'
+        // Buscar estatísticas de PIX reais de pix_transactions
+        const { data: allPixTransactions } = await supabase
+          .from('pix_transactions')
+          .select('amount, status, created_at')
+        
+        const pixCompleted = allPixTransactions?.filter(t => t.status === 'completed') || []
+        const pixReceivedVolume = pixCompleted.reduce((sum, t) => sum + Number(t.amount || 0), 0)
+        const pixReceivedCount = pixCompleted.length
+        
+        // Para PIX enviados, buscar de wallet_transactions tipo debit
         const pixSent = allTransactions?.filter(t => 
           t.transaction_type === 'debit'
         ) || []
-        const pixReceived = allTransactions?.filter(t => 
-          t.transaction_type === 'credit'
-        ) || []
         const pixSentVolume = pixSent.reduce((sum, t) => sum + Number(t.amount || 0), 0)
-        const pixReceivedVolume = pixReceived.reduce((sum, t) => sum + Number(t.amount || 0), 0)
+        
+        console.log('📊 PIX Stats:', {
+          received: pixReceivedVolume,
+          receivedCount: pixReceivedCount,
+          sent: pixSentVolume,
+          sentCount: pixSent.length
+        })
 
         // Transações de hoje
         const transactionsToday = allTransactions?.filter(t => 
@@ -270,16 +281,19 @@ export function AdminDashboard() {
           t.created_at && t.created_at.startsWith(today)
         ) || []
         
-        // Buscar taxas de hoje da carteira admin
+        // Buscar taxas de hoje da carteira admin (últimas 24h)
+        const now = new Date()
+        const yesterday = new Date(now)
+        yesterday.setDate(yesterday.getDate() - 1)
+        
         const { data: adminTodayTransactions, error: adminTodayError } = await supabase
           .from('wallet_transactions')
           .select('amount, created_at')
           .eq('wallet_id', adminWallet?.id)
-          .gte('created_at', `${today}T00:00:00`)
-          .lte('created_at', `${today}T23:59:59`)
+          .gte('created_at', yesterday.toISOString())
         
         console.log('📅 Admin Today Transactions:', adminTodayTransactions, adminTodayError)
-        console.log('📅 Today filter:', `${today}T00:00:00`)
+        console.log('📅 Today filter (últimas 24h):', yesterday.toISOString())
         
         const todayFees = (adminTodayTransactions || []).reduce((sum, t) => sum + Number(t.amount || 0), 0)
         
@@ -292,11 +306,18 @@ export function AdminDashboard() {
         const failedTransactions = pixTransactions?.filter(t => t.status === 'failed').length || 0
         const completedTransactions = pixTransactions?.filter(t => t.status === 'completed').length || 0
         
-        const totalTxCount = allTransactions?.length || 0
-        const successRate = totalTxCount > 0 
-          ? (completedTransactions / totalTxCount) * 100 
+        const totalPixCount = pixTransactions?.length || 0
+        const successRate = totalPixCount > 0 
+          ? (completedTransactions / totalPixCount) * 100 
           : 0
         
+        console.log('📊 Taxa de Sucesso:', {
+          completed: completedTransactions,
+          total: totalPixCount,
+          rate: successRate
+        })
+        
+        const totalTxCount = allTransactions?.length || 0
         const averageTicket = totalTxCount > 0
           ? (allTransactions || []).reduce((sum, t) => sum + Number(t.amount || 0), 0) / totalTxCount
           : 0
@@ -313,7 +334,7 @@ export function AdminDashboard() {
           pixSentVolume,
           pixReceivedVolume,
           pixSentCount: pixSent.length,
-          pixReceivedCount: pixReceived.length,
+          pixReceivedCount,
           totalFeesCollected,
           newUsersToday,
           transactionsToday,
