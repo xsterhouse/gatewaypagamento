@@ -60,14 +60,39 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
       body: JSON.stringify(body)
     })
 
+    console.log('📡 Status da resposta:', response.status)
+    console.log('📡 Headers:', Object.fromEntries(response.headers.entries()))
+
+    // Verificar se a resposta é JSON
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text()
+      console.error('❌ Resposta não é JSON:', text.substring(0, 500))
+      return {
+        success: false,
+        error: `Erro na API do Mercado Pago (${response.status}). Verifique se o token está correto.`
+      }
+    }
+
     const data = await response.json()
     console.log('✅ Resposta Mercado Pago:', data)
 
     if (!response.ok) {
       console.error('❌ Erro Mercado Pago:', response.status, data)
+      
+      // Mensagens de erro mais claras
+      let errorMsg = 'Erro ao criar pagamento PIX'
+      if (response.status === 401) {
+        errorMsg = 'Token do Mercado Pago inválido ou expirado'
+      } else if (response.status === 400) {
+        errorMsg = data.message || 'Dados inválidos enviados ao Mercado Pago'
+      } else if (data.message) {
+        errorMsg = data.message
+      }
+      
       return {
         success: false,
-        error: data.message || `HTTP ${response.status}: ${JSON.stringify(data)}`
+        error: errorMsg
       }
     }
 
