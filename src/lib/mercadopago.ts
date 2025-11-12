@@ -127,18 +127,20 @@ export async function processWithdrawal({
   try {
     console.log('🔵 Processando saque PIX:', { userId, amount, pixKey, pixKeyType })
 
-    // Verificar saldo
-    const { data: balance, error: balanceError } = await supabase
-      .from('user_balances')
+    // Verificar saldo na carteira
+    const { data: wallet, error: balanceError } = await supabase
+      .from('wallets')
       .select('available_balance')
       .eq('user_id', userId)
+      .eq('currency_code', 'BRL')
+      .eq('is_active', true)
       .single()
 
-    if (balanceError || !balance) {
-      throw new Error('Erro ao verificar saldo')
+    if (balanceError || !wallet) {
+      throw new Error('Carteira não encontrada')
     }
 
-    if (balance.available_balance < amount) {
+    if (wallet.available_balance < amount) {
       throw new Error('Saldo insuficiente')
     }
 
@@ -203,12 +205,99 @@ export async function processWithdrawal({
       })
       .eq('id', transaction.id)
 
-    // Bloquear saldo
-    await supabase.rpc('update_user_balance', {
-      p_user_id: userId,
-      p_amount: amount,
-      p_operation: 'subtract'
-    })
+    // Buscar ID da carteira
+    const { data: userWallet } = await supabase
+      .from('wallets')
+      .select('id, available_balance')
+      .eq('user_id', userId)
+      .eq('currency_code', 'BRL')
+      .eq('is_active', true)
+      .single()
+
+    if (userWallet) {
+      const totalAmount = amount + fee
+      const balanceBefore = Number(userWallet.available_balance) || 0
+      const balanceAfter = balanceBefore - totalAmount
+
+      // Debitar da carteira
+      await supabase
+        .from('wallet_transactions')
+        .insert({
+          wallet_id: userWallet.id,
+          user_id: userId,
+          transaction_type: 'debit',
+          amount: totalAmount,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          description: `Saque PIX - ${pixKey}`,
+          metadata: {
+            pix_transaction_id: transaction.id,
+            pix_key: pixKey,
+            pix_key_type: pixKeyType,
+            original_amount: amount,
+            fee: fee,
+            mp_payment_id: withdrawalData.id
+          }
+        })
+
+      // Atualizar saldo da carteira
+      await supabase
+        .from('wallets')
+        .update({
+          available_balance: balanceAfter,
+          balance: balanceAfter
+        })
+        .eq('id', userWallet.id)
+
+      // Creditar taxa ao admin
+      const { data: adminUser } = await supabase
+        .from('users')
+        .select('id')
+        .in('role', ['admin', 'master'])
+        .limit(1)
+        .single()
+
+      if (adminUser) {
+        const { data: adminWallet } = await supabase
+          .from('wallets')
+          .select('id, available_balance')
+          .eq('user_id', adminUser.id)
+          .eq('currency_code', 'BRL')
+          .eq('is_active', true)
+          .single()
+
+        if (adminWallet) {
+          const adminBalanceBefore = Number(adminWallet.available_balance) || 0
+          const adminBalanceAfter = adminBalanceBefore + fee
+
+          await supabase
+            .from('wallet_transactions')
+            .insert({
+              wallet_id: adminWallet.id,
+              user_id: adminUser.id,
+              transaction_type: 'credit',
+              amount: fee,
+              balance_before: adminBalanceBefore,
+              balance_after: adminBalanceAfter,
+              description: `Taxa PIX - Saque de cliente`,
+              metadata: {
+                pix_transaction_id: transaction.id,
+                source_user_id: userId,
+                fee_type: 'pix_withdrawal',
+                mp_payment_id: withdrawalData.id
+              }
+            })
+
+          await supabase
+            .from('wallets')
+            .update({
+              available_balance: adminBalanceAfter,
+              balance: adminBalanceAfter
+            })
+            .eq('id', adminWallet.id)
+        }
+      }
+    }
 
     console.log('✅ Saque PIX processado:', withdrawalData.id)
 
