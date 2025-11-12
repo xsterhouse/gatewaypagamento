@@ -1,9 +1,9 @@
-api/
 *.md
 *.sql
 *.js
 !vite.config.ts
 !tailwind.config.js
 !postcss.config.js
+!api/**/*.ts
 node_modules/
 .git/
