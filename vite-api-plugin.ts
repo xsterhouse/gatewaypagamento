@@ -53,8 +53,9 @@ export function apiPlugin(): Plugin {
               payer: {
                 email: 'cliente@dimpay.com.br'
               },
-              external_reference: transactionId,
-              notification_url: `http://localhost:${server.config.server.port}/api/mercadopago/webhook`
+              external_reference: transactionId
+              // notification_url removido em dev - Mercado Pago não aceita localhost
+              // Em produção, o endpoint serverless usa a URL correta
             }
 
             console.log('🚀 [DEV] Criando PIX no Mercado Pago:', mpBody)
