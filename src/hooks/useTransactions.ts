@@ -30,13 +30,12 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       setError(null)
 
       let query = supabase
-        .from('transactions')
+        .from('wallet_transactions')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
 
-      if (options.status && options.status !== 'all') {
-        query = query.eq('status', options.status)
-      }
+      // wallet_transactions não tem campo 'status', ignorar filtro por enquanto
+      // TODO: Adicionar lógica de filtro baseada em transaction_type ou metadata
 
       if (options.limit) {
         query = query.limit(options.limit)
@@ -50,7 +49,19 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
 
       if (queryError) throw queryError
 
-      setTransactions(data || [])
+      // Mapear wallet_transactions para formato esperado
+      const mappedData = (data || []).map(t => ({
+        id: t.id,
+        amount: t.amount,
+        status: 'approved', // wallet_transactions não tem status, considerar todas aprovadas
+        payment_method: t.metadata?.payment_method || 'pix',
+        customer_name: t.metadata?.customer_name || null,
+        customer_email: t.metadata?.customer_email || null,
+        description: t.description,
+        created_at: t.created_at
+      }))
+
+      setTransactions(mappedData)
       setTotal(count || 0)
     } catch (err) {
       setError(err as Error)
