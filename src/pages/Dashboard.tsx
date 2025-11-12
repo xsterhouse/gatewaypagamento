@@ -209,22 +209,21 @@ export function Dashboard() {
 
   const loadChartData = async () => {
     if (!effectiveUserId) return
-
+    
     try {
-      // Buscar transações dos últimos 7 dias
       const today = new Date()
-      const sevenDaysAgo = new Date(today)
-      sevenDaysAgo.setDate(today.getDate() - 7)
+      const fiveDaysAgo = new Date(today)
+      fiveDaysAgo.setDate(today.getDate() - 5)
 
+      // Buscar transações dos últimos 5 dias
       const { data: transactions, error } = await supabase
-        .from('transactions')
+        .from('wallet_transactions')
         .select('*')
         .eq('user_id', effectiveUserId)
-        .eq('status', 'approved')
-        .gte('created_at', sevenDaysAgo.toISOString())
+        .gte('created_at', fiveDaysAgo.toISOString())
 
       if (error) {
-        console.error('Erro ao buscar transações para gráfico:', error)
+        console.error('Erro ao buscar transações:', error)
         return
       }
 
@@ -247,12 +246,12 @@ export function Dashboard() {
         if (dataByDay[dateStr]) {
           const amount = Number(transaction.amount) / 1000 // Converter para milhares
           
-          // Entradas: deposits, receitas
-          if (transaction.type === 'deposit' || transaction.payment_method === 'pix') {
+          // Entradas: credit (depósitos)
+          if (transaction.transaction_type === 'credit') {
             dataByDay[dateStr].entradas += amount
           }
-          // Saídas: withdrawals, transferências
-          if (transaction.type === 'withdrawal' || transaction.type === 'transfer') {
+          // Saídas: debit (saques, transferências)
+          if (transaction.transaction_type === 'debit') {
             dataByDay[dateStr].saidas += amount
           }
         }
@@ -285,7 +284,7 @@ export function Dashboard() {
     
     try {
       const { data: allTransactions, error } = await supabase
-        .from('transactions')
+        .from('wallet_transactions')
         .select('*')
         .eq('user_id', effectiveUserId)
 
@@ -295,27 +294,28 @@ export function Dashboard() {
       }
 
       if (allTransactions && allTransactions.length > 0) {
-        const approved = allTransactions.filter(t => t.status === 'approved')
-        const pending = allTransactions.filter(t => t.status === 'pending')
-        const rejected = allTransactions.filter(t => t.status === 'rejected')
-        const refunded = allTransactions.filter(t => t.status === 'refunded')
+        // wallet_transactions não tem status, considerar todas aprovadas
+        const approved = allTransactions
+        const pending: any[] = []
+        const rejected: any[] = []
+        const refunded: any[] = []
         
-        const generalRate = (approved.length / allTransactions.length) * 100
+        const generalRate = 100 // Todas aprovadas
 
-        // Calcular por método
-        const pixTransactions = allTransactions.filter(t => t.payment_method === 'pix')
-        const pixApproved = pixTransactions.filter(t => t.status === 'approved')
-        const pixRate = pixTransactions.length > 0 ? (pixApproved.length / pixTransactions.length) * 100 : 0
+        // Calcular por método (extrair de metadata)
+        const pixTransactions = allTransactions.filter(t => t.metadata?.payment_method === 'pix')
+        const pixRate = 100 // Todas aprovadas
 
-        const cardTransactions = allTransactions.filter(t => t.payment_method === 'credit_card' || t.payment_method === 'debit_card')
-        const cardApproved = cardTransactions.filter(t => t.status === 'approved')
-        const cardRate = cardTransactions.length > 0 ? (cardApproved.length / cardTransactions.length) * 100 : 0
+        const cardTransactions = allTransactions.filter(t => 
+          t.metadata?.payment_method === 'credit_card' || 
+          t.metadata?.payment_method === 'debit_card'
+        )
+        const cardRate = cardTransactions.length > 0 ? 100 : 0
 
-        const boletoTransactions = allTransactions.filter(t => t.payment_method === 'boleto')
-        const boletoApproved = boletoTransactions.filter(t => t.status === 'approved')
-        const boletoRate = boletoTransactions.length > 0 ? (boletoApproved.length / boletoTransactions.length) * 100 : 0
+        const boletoTransactions = allTransactions.filter(t => t.metadata?.payment_method === 'boleto')
+        const boletoRate = boletoTransactions.length > 0 ? 100 : 0
 
-        const returnRate = allTransactions.length > 0 ? (refunded.length / allTransactions.length) * 100 : 0
+        const returnRate = 0 // Sem reembolsos em wallet_transactions
 
         setConversionRates([
           { name: 'Conversão Geral', rate: Math.round(generalRate), icon: Repeat, color: 'text-emerald-400' },
