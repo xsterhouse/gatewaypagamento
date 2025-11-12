@@ -1,36 +1,37 @@
 -- ============================================
--- LIMPAR PIX PENDENTES
+-- LIMPAR PIX PENDENTES DO BANCO DE DADOS
 -- ============================================
 
--- PASSO 1: Ver PIX pendentes
+-- PASSO 1: Ver todos os PIX pendentes
 -- ============================================
 
 SELECT 
   id,
   user_id,
   amount,
+  fee_amount,
   status,
-  pix_txid,
-  created_at,
-  EXTRACT(EPOCH FROM (NOW() - created_at))/3600 as horas_pendente
+  pix_code,
+  transaction_type,
+  created_at
 FROM pix_transactions
 WHERE status = 'pending'
 ORDER BY created_at DESC;
 
 
--- PASSO 2: Marcar como expirados (mais de 30 minutos)
+-- PASSO 2: Marcar como cancelados (mais de 30 minutos)
 -- ============================================
 
--- Atualizar PIX pendentes há mais de 30 minutos para 'expired'
+-- Atualizar PIX pendentes há mais de 30 minutos para 'cancelled'
 UPDATE pix_transactions
-SET status = 'expired'
+SET status = 'cancelled'
 WHERE status = 'pending'
 AND created_at < NOW() - INTERVAL '30 minutes';
 
 -- Ver quantos foram atualizados
-SELECT COUNT(*) as pix_expirados
+SELECT COUNT(*) as pix_cancelados
 FROM pix_transactions
-WHERE status = 'expired';
+WHERE status = 'cancelled';
 
 
 -- PASSO 3: OU deletar PIX pendentes antigos (CUIDADO!)
@@ -56,21 +57,25 @@ AND created_at < NOW() - INTERVAL '1 day';
 -- AND created_at < NOW() - INTERVAL '1 day';
 
 
--- PASSO 4: Limpar TODOS os PIX pendentes (EXTREMO CUIDADO!)
+-- PASSO 4: DELETAR TODOS OS PIX PENDENTES (Use este!)
 -- ============================================
 
--- ATENÇÃO: Isso vai deletar TODOS os PIX pendentes!
--- Use apenas em desenvolvimento ou se tiver certeza
-
--- Ver TODOS os PIX pendentes
-SELECT COUNT(*) as total_pendentes
+-- Ver quantos PIX pendentes existem
+SELECT COUNT(*) as total_pendentes, SUM(amount) as valor_total
 FROM pix_transactions
 WHERE status = 'pending';
 
--- Deletar TODOS os PIX pendentes
--- DESCOMENTE APENAS SE TIVER ABSOLUTA CERTEZA!
--- DELETE FROM pix_transactions
--- WHERE status = 'pending';
+-- DELETAR TODOS OS PIX PENDENTES
+-- Execute este comando para limpar tudo:
+
+DELETE FROM pix_transactions
+WHERE status = 'pending'
+AND transaction_type = 'withdrawal';
+
+-- Confirmar que foram deletados
+SELECT COUNT(*) as pendentes_restantes
+FROM pix_transactions
+WHERE status = 'pending';
 
 
 -- PASSO 5: Verificar resultado

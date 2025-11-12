@@ -13,7 +13,8 @@ import {
   CheckCircle,
   Ban,
   RefreshCw,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -83,6 +84,9 @@ export function AdminDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [pendingMEDs, setPendingMEDs] = useState(0)
   const [totalMEDAmount, setTotalMEDAmount] = useState(0)
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; status: string } | null>(null)
 
   useEffect(() => {
     console.log('🔵 AdminDashboard montado')
@@ -136,6 +140,7 @@ export function AdminDashboard() {
         console.error('Erro ao carregar carteiras:', walletsError)
       }
 
+      
       // Carregar todas as transações para estatísticas (se a tabela existir)
       const { data: allTransactions, error: allTransError } = await supabase
         .from('transactions')
@@ -145,18 +150,7 @@ export function AdminDashboard() {
       if (allTransError && !allTransError.message.includes('does not exist')) {
         console.error('Erro ao carregar transações:', allTransError)
       }
-
-      // Carregar transações recentes
-      const { data: transactions, error: transError } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (transError && !transError.message.includes('does not exist')) {
-        console.error('Erro ao carregar transações recentes:', transError)
-      }
-
+      
       // Carregar MEDs pendentes
       const { data: medRequests, error: medError } = await supabase
         .from('med_requests')
@@ -231,12 +225,28 @@ export function AdminDashboard() {
         
         console.log('🔢 Total KYC Pendentes (apenas clientes):', pendingKYC)
         
-        const newUsersToday = users.filter(u => 
-          u.created_at && u.created_at.startsWith(today)
-        ).length
+        const newUsersToday = users.filter(u => {
+          if (!u.created_at) return false
+          
+          // Handle different date formats and timezones
+          const userDate = new Date(u.created_at)
+          const todayLocal = new Date()
+          
+          // Compare dates in local timezone
+          return userDate.toDateString() === todayLocal.toDateString()
+        }).length
         
         console.log('🆕 Novos usuários hoje:', newUsersToday, 'de', users.length, 'total')
-        console.log('📅 Data de hoje:', today)
+        console.log('📅 Data de hoje (local):', new Date().toDateString())
+        console.log('📅 Data de hoje (ISO):', today)
+        
+        // Debug: Show recent user creation dates
+        const recentUsers = users.slice(0, 5).map(u => ({
+          name: u.name,
+          created_at: u.created_at,
+          date_string: u.created_at ? new Date(u.created_at).toDateString() : 'null'
+        }))
+        console.log('📋 Usuários recentes e datas:', recentUsers)
 
         // Buscar estatísticas de PIX reais de pix_transactions
         const { data: allPixTransactions } = await supabase
@@ -260,10 +270,28 @@ export function AdminDashboard() {
           sentCount: pixSent.length
         })
 
-        // Transações de hoje
-        const transactionsToday = allTransactions?.filter(t => 
-          t.created_at && t.created_at.startsWith(today)
-        ).length || 0
+        // Transações de hoje - improved date handling
+        const transactionsToday = allTransactions?.filter(t => {
+          if (!t.created_at) return false
+          
+          // Handle different date formats and timezones
+          const transDate = new Date(t.created_at)
+          const todayLocal = new Date()
+          
+          // Compare dates in local timezone
+          return transDate.toDateString() === todayLocal.toDateString()
+        }).length || 0
+
+        console.log('📈 Transações hoje:', transactionsToday, 'de', allTransactions?.length || 0, 'total')
+        
+        // Debug: Show recent transaction dates
+        const recentTransactions = allTransactions?.slice(0, 5).map(t => ({
+          id: t.id,
+          amount: t.amount,
+          created_at: t.created_at,
+          date_string: t.created_at ? new Date(t.created_at).toDateString() : 'null'
+        }))
+        console.log('📋 Transações recentes e datas:', recentTransactions)
 
         // Buscar taxas reais da carteira Conta Mãe
         const { data: adminWallet, error: adminWalletError } = await supabase
@@ -277,10 +305,6 @@ export function AdminDashboard() {
         const totalFeesCollected = adminWallet?.balance || 0
 
         // Calcular métricas de Gateway
-        const todayTransactions = allTransactions?.filter(t => 
-          t.created_at && t.created_at.startsWith(today)
-        ) || []
-        
         // Buscar taxas de hoje da carteira admin (últimas 24h)
         const now = new Date()
         const yesterday = new Date(now)
@@ -419,6 +443,151 @@ export function AdminDashboard() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(value)
+  }
+
+  const handleDeleteTransaction = (transactionId: string, status: string) => {
+    console.log('🗑️ Tentando deletar transação:', { transactionId, status })
+    
+    // Só permite deletar transações falhadas
+    if (status !== 'failed') {
+      console.warn('⚠️ Tentativa de deletar transação não falhada')
+      alert('Apenas transações falhadas podem ser excluídas!')
+      return
+    }
+
+    // Abrir modal de confirmação
+    setTransactionToDelete({ id: transactionId, status })
+    setShowDeleteModal(true)
+  }
+
+  const confirmDeleteTransaction = async () => {
+    if (!transactionToDelete) {
+      console.error('❌ Nenhuma transação selecionada para deletar')
+      return
+    }
+
+    const { id: transactionId } = transactionToDelete
+    
+    console.log('🔄 Confirmação recebida! Iniciando exclusão da transação:', transactionId)
+    
+    setDeletingTransactionId(transactionId)
+    setShowDeleteModal(false)
+
+    try {
+      console.log('📡 Método 1: Tentando DELETE direto no Supabase...')
+      console.log('Tabela: pix_transactions')
+      console.log('ID:', transactionId)
+      
+      // Primeiro, verificar se a transação existe
+      const { data: existingTransaction, error: existError } = await supabase
+        .from('pix_transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .single()
+
+      console.log('🔍 Verificação da transação:', { existingTransaction, existError })
+
+      if (existError || !existingTransaction) {
+        console.error('❌ Transação não encontrada:', existError)
+        alert('Erro: Transação não encontrada no banco de dados.')
+        return
+      }
+
+      console.log('✅ Transação encontrada:', existingTransaction)
+      console.log('Status:', existingTransaction.status)
+      
+      // Tentar deletar
+      const { error, data, count } = await supabase
+        .from('pix_transactions')
+        .delete()
+        .eq('id', transactionId)
+        .select()
+
+      console.log('📥 Resposta completa do DELETE:', { 
+        error, 
+        data, 
+        count,
+        hasError: !!error,
+        dataLength: data?.length 
+      })
+
+      if (error) {
+        console.error('❌ Erro ao deletar transação (Método 1):', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        
+        // Se falhar, tentar método alternativo usando SQL direto
+        console.log('🔄 Tentando Método 2: SQL direto via RPC...')
+        
+        const { data: rpcData, error: rpcError } = await supabase.rpc('delete_failed_transaction', {
+          transaction_id: transactionId
+        })
+        
+        if (rpcError) {
+          console.error('❌ Método 2 também falhou:', rpcError)
+          alert(`Erro ao deletar transação: ${error.message}\n\nPermissões insuficientes. Execute o SQL: FIX_DELETE_PERMISSIONS_URGENT.sql`)
+          return
+        }
+        
+        console.log('✅ Método 2 funcionou!', rpcData)
+      }
+
+      if (!error && (!data || data.length === 0)) {
+        console.warn('⚠️ Nenhum registro foi deletado. Problema de permissão RLS.')
+        alert('Aviso: Nenhum registro foi deletado. Execute o SQL: FIX_DELETE_PERMISSIONS_URGENT.sql no Supabase.')
+        return
+      }
+
+      // Remover da lista local IMEDIATAMENTE
+      setRecentTransactions(prev => {
+        const filtered = prev.filter(t => t.id !== transactionId)
+        console.log('📋 Lista atualizada:', {
+          antes: prev.length,
+          depois: filtered.length,
+          removido: transactionId
+        })
+        return filtered
+      })
+      
+      console.log('✅ Transação deletada com sucesso!', data)
+      
+      // Verificar se realmente foi deletada do banco
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('pix_transactions')
+        .select('id')
+        .eq('id', transactionId)
+        .maybeSingle()
+      
+      console.log('🔍 Verificação pós-exclusão:', { verifyData, verifyError })
+      
+      if (verifyData) {
+        console.error('❌ ERRO: Transação ainda existe no banco!', verifyData)
+        alert('❌ Erro: A transação não foi excluída do banco de dados. Verifique as permissões RLS.')
+        // Recarregar para mostrar o estado real
+        await loadDashboardData()
+        return
+      }
+      
+      console.log('✅ Confirmado: Transação removida do banco de dados!')
+      alert('✅ Transação excluída com sucesso!')
+      
+      // NÃO recarregar automaticamente para evitar que a transação "volte"
+      // await loadDashboardData()
+    } catch (error: any) {
+      console.error('❌ Exceção ao deletar transação:', {
+        error,
+        message: error?.message,
+        stack: error?.stack
+      })
+      alert('Erro ao deletar transação: ' + (error?.message || 'Erro desconhecido'))
+    } finally {
+      setDeletingTransactionId(null)
+      setTransactionToDelete(null)
+      console.log('🏁 Processo de exclusão finalizado')
+    }
   }
 
   // Aguardar tanto a autenticação quanto o carregamento dos dados
@@ -841,15 +1010,39 @@ export function AdminDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right ml-3">
-                    <p className={`font-bold text-sm ${
-                      transaction.type === 'credit' ? 'text-green-500' : 'text-red-500'
-                    }`}>
-                      {transaction.type === 'credit' ? '+' : '-'} {formatCurrency(transaction.amount)}
-                    </p>
-                    <div className="mt-1">
-                      {getStatusBadge(transaction.status)}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className={`font-bold text-sm ${
+                        transaction.type === 'credit' ? 'text-green-500' : 'text-red-500'
+                      }`}>
+                        {transaction.type === 'credit' ? '+' : '-'} {formatCurrency(transaction.amount)}
+                      </p>
+                      <div className="mt-1">
+                        {getStatusBadge(transaction.status)}
+                      </div>
                     </div>
+                    
+                    {/* Botão de exclusão - apenas para transações falhadas */}
+                    {transaction.status === 'failed' && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          console.log('🖱️ Botão de exclusão clicado para:', transaction.id)
+                          handleDeleteTransaction(transaction.id, transaction.status)
+                        }}
+                        disabled={deletingTransactionId === transaction.id}
+                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110"
+                        title="Excluir transação falhada"
+                        type="button"
+                      >
+                        {deletingTransactionId === transaction.id ? (
+                          <RefreshCw className="animate-spin" size={16} />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -867,6 +1060,45 @@ export function AdminDashboard() {
         </CardContent>
       </Card>
       
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDeleteModal(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="text-red-500" size={24} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Excluir Transação Falhada?
+                </h3>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowDeleteModal(false)
+                      setTransactionToDelete(null)
+                    }}
+                    className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-foreground transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDeleteTransaction}
+                    className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all flex items-center gap-2"
+                  >
+                    <Trash2 size={16} />
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;

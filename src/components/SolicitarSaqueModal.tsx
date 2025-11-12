@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { FormField, FormLabel } from './ui/form'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { processWithdrawal } from '@/lib/mercadopago'
 
 interface SolicitarSaqueModalProps {
   open: boolean
@@ -26,6 +27,7 @@ export function SolicitarSaqueModal({ open, onOpenChange }: SolicitarSaqueModalP
   const [transferType, setTransferType] = useState<TransferType>('pix')
   const [valor, setValor] = useState('')
   const [chavePix, setChavePix] = useState('')
+  const [pixKeyType, setPixKeyType] = useState<'cpf' | 'cnpj' | 'email' | 'phone' | 'random'>('cpf')
   const [usuario, setUsuario] = useState('@')
   const [descricao, setDescricao] = useState('')
   const [pin, setPin] = useState('')
@@ -186,52 +188,140 @@ export function SolicitarSaqueModal({ open, onOpenChange }: SolicitarSaqueModalP
     setLoading(true)
     try {
       if (transferType === 'pix') {
-        // Criar transação de saque PIX
-        const { data, error } = await supabase
-          .from('transactions')
-          .insert({
-            user_id: effectiveUserId,
-            type: 'withdrawal',
-            amount: amount,
-            tax: calculateTax(),
-            status: 'pending',
-            payment_method: 'pix',
-            description: descricao || 'Saque via PIX',
-            pix_key: chavePix,
-          })
-          .select()
-          .single()
+        console.log('🚀 Iniciando saque PIX via Mercado Pago...')
+        
+        // Processar saque PIX via Mercado Pago
+        const result = await processWithdrawal({
+          userId: effectiveUserId!,
+          amount: amount,
+          pixKey: chavePix,
+          pixKeyType: pixKeyType,
+          description: descricao || 'Saque via PIX'
+        })
 
-        if (error) throw error
+        if (!result.success) {
+          throw new Error(result.error || 'Erro ao processar saque PIX')
+        }
 
-        toast.success('Saque PIX solicitado com sucesso!')
-        console.log('💸 Saque PIX criado:', data.id)
+        console.log('✅ PIX processado via Mercado Pago:', result.paymentId)
+        toast.success('✅ PIX enviado com sucesso! O valor será transferido em instantes.')
+        
+        // Recarregar saldo
+        await loadBalance()
       } else {
         // Transferência interna
-        const { data, error } = await supabase
-          .from('transactions')
-          .insert({
-            user_id: effectiveUserId,
-            type: 'transfer',
-            amount: amount,
-            tax: 0,
-            status: 'pending',
-            payment_method: 'internal',
-            description: descricao || 'Transferência interna',
-            destination_user_id: selectedUserId,
-          })
-          .select()
+        
+        // 1. Buscar carteira do remetente
+        const { data: senderWallet, error: senderWalletError } = await supabase
+          .from('wallets')
+          .select('id, available_balance')
+          .eq('user_id', effectiveUserId)
+          .eq('currency_code', 'BRL')
+          .eq('is_active', true)
           .single()
 
-        if (error) throw error
+        if (senderWalletError || !senderWallet) {
+          throw new Error('Carteira do remetente não encontrada')
+        }
+
+        // 2. Buscar carteira do destinatário
+        const { data: receiverWallet, error: receiverWalletError } = await supabase
+          .from('wallets')
+          .select('id, available_balance')
+          .eq('user_id', selectedUserId)
+          .eq('currency_code', 'BRL')
+          .eq('is_active', true)
+          .single()
+
+        if (receiverWalletError || !receiverWallet) {
+          throw new Error('Carteira do destinatário não encontrada')
+        }
+
+        // 3. Verificar saldo do remetente
+        if (senderWallet.available_balance < amount) {
+          throw new Error('Saldo insuficiente')
+        }
+
+        // 4. Calcular saldos
+        const senderBalanceBefore = Number(senderWallet.available_balance) || 0
+        const senderBalanceAfter = senderBalanceBefore - amount
+        const receiverBalanceBefore = Number(receiverWallet.available_balance) || 0
+        const receiverBalanceAfter = receiverBalanceBefore + amount
+
+        // 5. Debitar do remetente
+        const { error: debitError } = await supabase
+          .from('wallet_transactions')
+          .insert({
+            wallet_id: senderWallet.id,
+            user_id: effectiveUserId,
+            transaction_type: 'debit',
+            amount: amount,
+            balance_before: senderBalanceBefore,
+            balance_after: senderBalanceAfter,
+            description: `Transferência interna para ${usuario}`,
+            metadata: {
+              transfer_type: 'internal',
+              destination_user_id: selectedUserId,
+              destination_username: usuario,
+              description: descricao
+            }
+          })
+
+        if (debitError) throw debitError
+
+        // 6. Creditar no destinatário
+        const { error: creditError } = await supabase
+          .from('wallet_transactions')
+          .insert({
+            wallet_id: receiverWallet.id,
+            user_id: selectedUserId,
+            transaction_type: 'credit',
+            amount: amount,
+            balance_before: receiverBalanceBefore,
+            balance_after: receiverBalanceAfter,
+            description: `Transferência recebida de ${usuario}`,
+            metadata: {
+              transfer_type: 'internal',
+              sender_user_id: effectiveUserId,
+              description: descricao
+            }
+          })
+
+        if (creditError) throw creditError
+
+        // 7. Atualizar saldo do remetente
+        const { error: updateSenderError } = await supabase
+          .from('wallets')
+          .update({
+            available_balance: senderBalanceAfter,
+            balance: senderBalanceAfter
+          })
+          .eq('id', senderWallet.id)
+
+        if (updateSenderError) throw updateSenderError
+
+        // 8. Atualizar saldo do destinatário
+        const { error: updateReceiverError } = await supabase
+          .from('wallets')
+          .update({
+            available_balance: receiverBalanceAfter,
+            balance: receiverBalanceAfter
+          })
+          .eq('id', receiverWallet.id)
+
+        if (updateReceiverError) throw updateReceiverError
 
         toast.success('Transferência interna realizada com sucesso!')
-        console.log('🔄 Transferência interna criada:', data.id)
+        console.log('🔄 Transferência interna concluída')
+        
+        // Recarregar saldo
+        await loadBalance()
       }
       
       // Limpar campos
       setValor('')
       setChavePix('')
+      setPixKeyType('cpf')
       setUsuario('@')
       setDescricao('')
       setPin('')
@@ -304,6 +394,12 @@ export function SolicitarSaqueModal({ open, onOpenChange }: SolicitarSaqueModalP
           <div className="bg-accent/50 rounded-lg p-3 space-y-1">
             {transferType === 'pix' ? (
               <>
+                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <p className="text-xs text-green-500 font-medium">
+                    Processamento Automático
+                  </p>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   <span className="text-foreground">Taxa de transferência:</span> 2,00%
                 </p>
@@ -317,10 +413,18 @@ export function SolicitarSaqueModal({ open, onOpenChange }: SolicitarSaqueModalP
                 )}
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                <span className="text-foreground">Taxa de transferência:</span>{' '}
-                <span className="text-primary font-medium">Isento</span>
-              </p>
+              <>
+                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <p className="text-xs text-green-500 font-medium">
+                    Transferência Instantânea
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-foreground">Taxa de transferência:</span>{' '}
+                  <span className="text-primary font-medium">Isento</span>
+                </p>
+              </>
             )}
           </div>
 
@@ -332,6 +436,24 @@ export function SolicitarSaqueModal({ open, onOpenChange }: SolicitarSaqueModalP
                   Dados do destinatário
                 </h3>
                 
+                {/* Seletor de Tipo de Chave PIX */}
+                <FormField>
+                  <FormLabel>
+                    Tipo de Chave PIX <span className="text-red-400">*</span>
+                  </FormLabel>
+                  <select
+                    value={pixKeyType}
+                    onChange={(e) => setPixKeyType(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="cpf">CPF</option>
+                    <option value="cnpj">CNPJ</option>
+                    <option value="email">E-mail</option>
+                    <option value="phone">Telefone</option>
+                    <option value="random">Chave Aleatória</option>
+                  </select>
+                </FormField>
+
                 <FormField>
                   <FormLabel>
                     Chave PIX <span className="text-red-400">*</span>
@@ -340,7 +462,13 @@ export function SolicitarSaqueModal({ open, onOpenChange }: SolicitarSaqueModalP
                     type="text"
                     value={chavePix}
                     onChange={(e) => setChavePix(e.target.value)}
-                    placeholder="CPF"
+                    placeholder={
+                      pixKeyType === 'cpf' ? '000.000.000-00' :
+                      pixKeyType === 'cnpj' ? '00.000.000/0000-00' :
+                      pixKeyType === 'email' ? 'email@exemplo.com' :
+                      pixKeyType === 'phone' ? '(00) 00000-0000' :
+                      'Chave aleatória'
+                    }
                     className="bg-background border-border text-foreground"
                   />
                 </FormField>
@@ -443,15 +571,20 @@ export function SolicitarSaqueModal({ open, onOpenChange }: SolicitarSaqueModalP
             className="w-full bg-primary hover:bg-primary/90 text-black font-medium"
             size="lg"
           >
-            {transferType === 'pix' ? (
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin mr-2"></div>
+                Processando...
+              </>
+            ) : transferType === 'pix' ? (
               <>
                 <QrCode size={20} className="mr-2" />
-                Transferir via PIX
+                Enviar PIX Agora
               </>
             ) : (
               <>
                 <ArrowLeftRight size={20} className="mr-2" />
-                Realizar Transferência
+                Transferir Agora
               </>
             )}
           </Button>

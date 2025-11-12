@@ -56,7 +56,7 @@ export function AdminPanel() {
     try {
       console.log('📋 Carregando apenas CLIENTES (excluindo admin e manager)...')
       
-      const { data, error } = await supabase
+      const { data: usersData, error } = await supabase
         .from('users')
         .select('*')
         .neq('role', 'admin')
@@ -65,8 +65,28 @@ export function AdminPanel() {
 
       if (error) throw error
       
-      console.log('✅ Clientes carregados:', data?.length || 0)
-      setUsers(data || [])
+      console.log('✅ Clientes carregados:', usersData?.length || 0)
+      
+      // Buscar saldos das carteiras BRL para cada usuário
+      const usersWithBalance = await Promise.all(
+        (usersData || []).map(async (user) => {
+          const { data: wallet } = await supabase
+            .from('wallets')
+            .select('available_balance, balance')
+            .eq('user_id', user.id)
+            .eq('currency_code', 'BRL')
+            .eq('is_active', true)
+            .maybeSingle()
+          
+          return {
+            ...user,
+            balance: wallet?.available_balance || 0
+          }
+        })
+      )
+      
+      console.log('✅ Saldos carregados para', usersWithBalance.length, 'usuários')
+      setUsers(usersWithBalance)
     } catch (error) {
       console.error('❌ Erro ao carregar clientes:', error)
       toast.error('Erro ao carregar usuários')
@@ -90,10 +110,16 @@ export function AdminPanel() {
 
   const updateBalance = async (userId: string, newBalance: number) => {
     try {
+      // Atualizar o saldo na carteira BRL do usuário
       const { error } = await supabase
-        .from('users')
-        .update({ balance: newBalance })
-        .eq('id', userId)
+        .from('wallets')
+        .update({ 
+          available_balance: newBalance,
+          balance: newBalance 
+        })
+        .eq('user_id', userId)
+        .eq('currency_code', 'BRL')
+        .eq('is_active', true)
 
       if (error) throw error
 
@@ -101,6 +127,7 @@ export function AdminPanel() {
       loadUsers()
       setEditingBalance({ ...editingBalance, [userId]: '' })
     } catch (error) {
+      console.error('Erro ao atualizar saldo:', error)
       toast.error('Erro ao atualizar saldo')
     }
   }
@@ -109,7 +136,7 @@ export function AdminPanel() {
     const user = users.find(u => u.id === userId)
     if (!user) return
 
-    const newBalance = Number(user.balance) + amount
+    const newBalance = Number(user.balance || 0) + amount
     await updateBalance(userId, newBalance)
   }
 
@@ -117,7 +144,7 @@ export function AdminPanel() {
     const user = users.find(u => u.id === userId)
     if (!user) return
 
-    const newBalance = Math.max(0, Number(user.balance) - amount)
+    const newBalance = Math.max(0, Number(user.balance || 0) - amount)
     await updateBalance(userId, newBalance)
   }
 
@@ -370,7 +397,7 @@ export function AdminPanel() {
                     <div>
                       <p className="text-xs text-muted-foreground">Saldo Disponível</p>
                       <p className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
-                        R$ {Number(user.balance).toFixed(2)}
+                        R$ {Number(user.balance || 0).toFixed(2)}
                       </p>
                     </div>
                     <DollarSign className="text-primary flex-shrink-0" size={20} />

@@ -165,17 +165,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Limpar dados locais imediatamente
+      console.log('🚪 Iniciando logout...')
+      
+      // Setar flag de logout
+      setLoggingOut(true)
+      localStorage.setItem('isLoggingOut', 'true')
+      
+      // Limpar dados locais
       localStorage.removeItem('impersonation')
+      
+      // Fazer logout no Supabase com timeout
+      const logoutPromise = supabase.auth.signOut()
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Logout timeout')), 3000)
+      )
+      
+      try {
+        await Promise.race([logoutPromise, timeoutPromise])
+        console.log('✅ Logout successful')
+      } catch (timeoutError) {
+        console.warn('⚠️ Logout demorou muito, forçando redirecionamento')
+      }
+      
+      // Limpar flag e redirecionar
       localStorage.removeItem('isLoggingOut')
+      setLoggingOut(false)
       
-      // Fazer logout no Supabase
-      await supabase.auth.signOut()
+      // Forçar redirecionamento para login
+      window.location.href = '/login'
       
-      console.log('✅ Logout successful')
     } catch (error) {
       console.error('❌ Logout error:', error)
-      throw error
+      // Mesmo com erro, redirecionar para login
+      localStorage.removeItem('isLoggingOut')
+      setLoggingOut(false)
+      window.location.href = '/login'
     }
   }
 
