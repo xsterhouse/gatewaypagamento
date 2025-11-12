@@ -153,15 +153,18 @@ export async function processWithdrawal({
       .from('pix_transactions')
       .insert({
         user_id: userId,
-        type: 'withdrawal',
+        transaction_type: 'withdrawal',
         amount,
-        fee,
+        fee_amount: fee,
         net_amount: netAmount,
         status: 'pending',
-        description,
-        pix_key: pixKey,
-        pix_key_type: pixKeyType,
-        mp_external_reference: `WIT-${userId}-${Date.now()}`
+        pix_code: pixKey,
+        metadata: {
+          description,
+          pix_key: pixKey,
+          pix_key_type: pixKeyType,
+          mp_external_reference: `WIT-${userId}-${Date.now()}`
+        }
       })
       .select()
       .single()
