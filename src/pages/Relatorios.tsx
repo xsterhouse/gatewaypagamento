@@ -5,7 +5,7 @@ import { FileText, Filter, Loader2, Calendar, FileDown, Eye, Edit, Trash2, X } f
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
-import { useTransactions } from '@/hooks/useTransactions'
+import { useTransactions, type Transaction } from '@/hooks/useTransactions'
 import { usePagination } from '@/hooks/usePagination'
 import { toast } from 'sonner'
 import jsPDF from 'jspdf'
