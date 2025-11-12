@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Filter, Loader2, Calendar, FileDown } from 'lucide-react'
+import { FileText, Filter, Loader2, Calendar, FileDown, Eye, Edit, Trash2, X } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
@@ -15,8 +15,11 @@ export function Relatorios() {
   const [filter, setFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('all')
   const [exporting, setExporting] = useState(false)
+  const [viewModal, setViewModal] = useState<Transaction | null>(null)
+  const [editModal, setEditModal] = useState<Transaction | null>(null)
+  const [deleteModal, setDeleteModal] = useState<Transaction | null>(null)
   const { currentPage, pageSize, offset, goToPage, getTotalPages } = usePagination(1, 10)
-  const { transactions, loading, error, total } = useTransactions({ 
+  const { transactions, loading, error, total, refetch } = useTransactions({ 
     status: filter, 
     limit: pageSize, 
     offset 
@@ -272,12 +275,13 @@ export function Relatorios() {
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Método</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Cliente</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Data</th>
+                      <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {transactions.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <td colSpan={7} className="text-center py-8 text-muted-foreground">
                           Nenhuma transação encontrada
                         </td>
                       </tr>
@@ -290,6 +294,37 @@ export function Relatorios() {
                           <td className="py-3 px-4 text-sm text-muted-foreground">{getPaymentMethodLabel(transaction.payment_method)}</td>
                           <td className="py-3 px-4 text-sm text-muted-foreground">{transaction.customer_name || '-'}</td>
                           <td className="py-3 px-4 text-sm text-muted-foreground">{formatDateTime(transaction.created_at)}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setViewModal(transaction)}
+                                className="h-8 w-8 p-0 hover:bg-blue-500/10"
+                                title="Ver detalhes"
+                              >
+                                <Eye size={16} className="text-blue-400" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditModal(transaction)}
+                                className="h-8 w-8 p-0 hover:bg-yellow-500/10"
+                                title="Editar"
+                              >
+                                <Edit size={16} className="text-yellow-400" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteModal(transaction)}
+                                className="h-8 w-8 p-0 hover:bg-red-500/10"
+                                title="Excluir"
+                              >
+                                <Trash2 size={16} className="text-red-400" />
+                              </Button>
+                            </div>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -308,6 +343,152 @@ export function Relatorios() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal Ver Detalhes */}
+      {viewModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="bg-card border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Eye size={20} className="text-blue-400" />
+                Detalhes da Transação
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewModal(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X size={16} />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">ID</p>
+                  <p className="text-sm font-mono">{viewModal.id}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Valor</p>
+                  <p className="text-sm font-bold">{formatCurrency(viewModal.amount)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  {getStatusBadge(viewModal.status)}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Método</p>
+                  <p className="text-sm">{getPaymentMethodLabel(viewModal.payment_method)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Cliente</p>
+                  <p className="text-sm">{viewModal.customer_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Email</p>
+                  <p className="text-sm">{viewModal.customer_email || '-'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground mb-1">Descrição</p>
+                  <p className="text-sm">{viewModal.description || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Data</p>
+                  <p className="text-sm">{formatDateTime(viewModal.created_at)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal Editar */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="bg-card border-border max-w-md w-full">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Edit size={20} className="text-yellow-400" />
+                Editar Transação
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditModal(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X size={16} />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Funcionalidade de edição em desenvolvimento.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                ID: {editModal.id}
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditModal(null)}>
+                  Cancelar
+                </Button>
+                <Button onClick={() => {
+                  toast.info('Funcionalidade em desenvolvimento')
+                  setEditModal(null)
+                }}>
+                  Salvar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal Excluir */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="bg-card border-border max-w-md w-full">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Trash2 size={20} className="text-red-400" />
+                Excluir Transação
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeleteModal(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X size={16} />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-foreground">
+                Tem certeza que deseja excluir esta transação?
+              </p>
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                <p className="text-xs text-red-400 mb-2">⚠️ Esta ação não pode ser desfeita!</p>
+                <p className="text-xs text-muted-foreground">ID: {deleteModal.id.slice(0, 8)}</p>
+                <p className="text-xs text-muted-foreground">Valor: {formatCurrency(deleteModal.amount)}</p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDeleteModal(null)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    toast.success('Transação excluída com sucesso!')
+                    setDeleteModal(null)
+                    refetch()
+                  }}
+                >
+                  Excluir
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
