@@ -73,15 +73,26 @@ export function apiPlugin(): Plugin {
 
             console.log('📡 [DEV] Resposta Mercado Pago:', {
               status: response.status,
-              id: data.id
+              id: data.id,
+              statusDetail: data.status_detail
             })
 
             if (!response.ok) {
+              console.error('❌ [DEV] Erro completo:', JSON.stringify(data, null, 2))
+              
+              let errorMsg = 'Erro ao criar pagamento'
+              if (data.message) {
+                errorMsg = data.message
+              } else if (data.cause && data.cause.length > 0) {
+                errorMsg = data.cause.map((c: any) => c.description || c.code).join(', ')
+              }
+              
               res.statusCode = response.status
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify({
                 success: false,
-                error: data.message || 'Erro ao criar pagamento'
+                error: errorMsg,
+                details: data
               }))
               return
             }
