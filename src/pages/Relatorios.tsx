@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Download, Filter, Loader2 } from 'lucide-react'
+import { FileText, Filter, Loader2, Calendar, FileDown } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
 import { useTransactions } from '@/hooks/useTransactions'
 import { usePagination } from '@/hooks/usePagination'
 import { toast } from 'sonner'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 export function Relatorios() {
   const [filter, setFilter] = useState<string>('all')
+  const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('all')
+  const [exporting, setExporting] = useState(false)
   const { currentPage, pageSize, offset, goToPage, getTotalPages } = usePagination(1, 10)
   const { transactions, loading, error, total } = useTransactions({ 
     status: filter, 
@@ -47,25 +51,84 @@ export function Relatorios() {
     return labels[method] || method
   }
 
-  const exportToCSV = () => {
-    const headers = ['ID', 'Valor', 'Status', 'Método', 'Cliente', 'Email', 'Data']
-    const rows = transactions.map(t => [
-      t.id,
-      t.amount,
-      t.status,
-      t.payment_method,
-      t.customer_name || '-',
-      t.customer_email || '-',
-      formatDateTime(t.created_at)
-    ])
-
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `relatorio-transacoes-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
+  const exportToPDF = async () => {
+    try {
+      setExporting(true)
+      const doc = new jsPDF()
+      
+      // Cabeçalho
+      doc.setFontSize(18)
+      doc.setTextColor(0, 255, 136) // Verde #00ff88
+      doc.text('Relatório de Transações', 14, 20)
+      
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      doc.text(`Gerado em: ${formatDateTime(new Date().toISOString())}`, 14, 28)
+      doc.text(`Total de transações: ${transactions.length}`, 14, 34)
+      
+      // Calcular totais
+      const totalAmount = transactions.reduce((sum, t) => sum + Number(t.amount || 0), 0)
+      doc.text(`Valor total: ${formatCurrency(totalAmount)}`, 14, 40)
+      
+      // Tabela
+      const tableData = transactions.map(t => [
+        t.id.slice(0, 8),
+        formatCurrency(t.amount),
+        t.status === 'approved' ? 'Aprovado' : 
+        t.status === 'pending' ? 'Pendente' : 
+        t.status === 'rejected' ? 'Rejeitado' : t.status,
+        getPaymentMethodLabel(t.payment_method),
+        t.customer_name || '-',
+        formatDateTime(t.created_at)
+      ])
+      
+      ;(doc as any).autoTable({
+        head: [['ID', 'Valor', 'Status', 'Método', 'Cliente', 'Data']],
+        body: tableData,
+        startY: 50,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [0, 255, 136],
+          textColor: [0, 0, 0],
+          fontStyle: 'bold'
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 3
+        },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 25, halign: 'right' },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 40 },
+          5: { cellWidth: 35 }
+        }
+      })
+      
+      // Rodapé
+      const pageCount = (doc as any).internal.getNumberOfPages()
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setTextColor(150, 150, 150)
+        doc.text(
+          `Página ${i} de ${pageCount}`,
+          doc.internal.pageSize.getWidth() / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: 'center' }
+        )
+      }
+      
+      // Download
+      doc.save(`relatorio-transacoes-${new Date().toISOString().split('T')[0]}.pdf`)
+      toast.success('Relatório exportado com sucesso!')
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error)
+      toast.error('Erro ao exportar relatório')
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -73,24 +136,42 @@ export function Relatorios() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Relatórios</h1>
-          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Visualize e exporte relatórios de transações</p>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Visualize e exporte relatórios de transações em PDF</p>
         </div>
-        <Button onClick={exportToCSV} className="gap-2 w-full sm:w-auto" size="sm">
-          <Download size={16} />
-          Exportar CSV
+        <Button 
+          onClick={exportToPDF} 
+          disabled={exporting || transactions.length === 0}
+          className="gap-2 w-full sm:w-auto bg-primary hover:bg-primary/90" 
+          size="sm"
+        >
+          {exporting ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              Exportando...
+            </>
+          ) : (
+            <>
+              <FileDown size={16} />
+              Exportar PDF
+            </>
+          )}
         </Button>
       </div>
 
       {/* Filtros */}
-      <Card className="bg-card border-border">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <Filter size={20} className="text-muted-foreground" />
-            <div className="flex gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Filter size={18} className="text-primary" />
+              <span className="text-sm font-medium text-foreground">Filtrar por Status</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={filter === 'all' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter('all')}
+                className="text-xs"
               >
                 Todos
               </Button>
@@ -98,6 +179,7 @@ export function Relatorios() {
                 variant={filter === 'approved' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter('approved')}
+                className="text-xs"
               >
                 Aprovados
               </Button>
@@ -105,6 +187,7 @@ export function Relatorios() {
                 variant={filter === 'pending' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter('pending')}
+                className="text-xs"
               >
                 Pendentes
               </Button>
@@ -112,13 +195,57 @@ export function Relatorios() {
                 variant={filter === 'rejected' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter('rejected')}
+                className="text-xs"
               >
                 Rejeitados
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Calendar size={18} className="text-primary" />
+              <span className="text-sm font-medium text-foreground">Filtrar por Período</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={dateFilter === 'today' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDateFilter('today')}
+                className="text-xs"
+              >
+                Hoje
+              </Button>
+              <Button
+                variant={dateFilter === 'week' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDateFilter('week')}
+                className="text-xs"
+              >
+                7 Dias
+              </Button>
+              <Button
+                variant={dateFilter === 'month' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDateFilter('month')}
+                className="text-xs"
+              >
+                30 Dias
+              </Button>
+              <Button
+                variant={dateFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDateFilter('all')}
+                className="text-xs"
+              >
+                Todos
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Tabela de Transações */}
       <Card className="bg-card border-border">
