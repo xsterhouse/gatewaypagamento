@@ -271,16 +271,87 @@ class BankAcquirerService {
       const feeAmount = (params.amount * feePercentage) + feeFixed
       const netAmount = params.amount - feeAmount
       
-      // 4. Gerar código PIX
-      const pixCode = this.generatePixCode(params.amount, acquirer)
-      const pixQrCode = await this.generateQRCode(pixCode)
-      
-      // 5. Calcular expiração
+      // 4. Calcular expiração
       const expiresInMinutes = params.expires_in_minutes || 30
       const expiresAt = new Date()
       expiresAt.setMinutes(expiresAt.getMinutes() + expiresInMinutes)
       
-      // 6. Criar transação no banco
+      // 5. Se for Mercado Pago, chamar API PRIMEIRO para obter código PIX real
+      if (acquirer.bank_code === 'MP') {
+        try {
+          console.log('🔵 Chamando Mercado Pago para gerar PIX real...')
+          
+          // Gerar ID temporário para a transação
+          const tempTxId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`
+          
+          const mpResult = await createMercadoPagoPixPayment({
+            amount: params.amount,
+            description: params.description,
+            transactionId: tempTxId
+          })
+
+          if (mpResult.success && mpResult.qr_code) {
+            console.log('✅ Mercado Pago - PIX criado com sucesso!')
+            
+            // Criar transação com dados reais do Mercado Pago
+            const transaction: Partial<PixTransaction> = {
+              user_id: params.user_id,
+              acquirer_id: acquirer.id,
+              transaction_type: 'deposit',
+              amount: params.amount,
+              fee_amount: feeAmount,
+              net_amount: netAmount,
+              pix_code: mpResult.qr_code,
+              pix_qr_code: mpResult.qr_code_base64 || mpResult.qr_code,
+              pix_key: acquirer.pix_key,
+              pix_key_type: acquirer.pix_key_type,
+              pix_txid: mpResult.id,
+              status: 'pending',
+              description: params.description,
+              expires_at: mpResult.expires_at || expiresAt.toISOString(),
+              metadata: {
+                acquirer_name: acquirer.name,
+                bank_code: acquirer.bank_code,
+                mercadopago_payment_id: mpResult.id
+              }
+            }
+            
+            const { data, error } = await supabase
+              .from('pix_transactions')
+              .insert(transaction)
+              .select()
+              .single()
+            
+            if (error) throw error
+            
+            return {
+              success: true,
+              transaction_id: data.id,
+              pix_code: mpResult.qr_code,
+              pix_qr_code: mpResult.qr_code_base64 || mpResult.qr_code,
+              expires_at: mpResult.expires_at || expiresAt.toISOString()
+            }
+          } else {
+            console.error('❌ Mercado Pago falhou:', mpResult.error)
+            return {
+              success: false,
+              error: mpResult.error || 'Erro ao gerar PIX no Mercado Pago'
+            }
+          }
+        } catch (mpError: any) {
+          console.error('❌ Erro ao chamar Mercado Pago:', mpError)
+          return {
+            success: false,
+            error: mpError.message || 'Erro ao conectar com Mercado Pago'
+          }
+        }
+      }
+      
+      // 6. Para outros bancos: gerar código PIX simulado
+      const pixCode = this.generatePixCode(params.amount, acquirer)
+      const pixQrCode = await this.generateQRCode(pixCode)
+      
+      // 7. Criar transação no banco com código simulado
       const transaction: Partial<PixTransaction> = {
         user_id: params.user_id,
         acquirer_id: acquirer.id,
@@ -309,49 +380,8 @@ class BankAcquirerService {
       
       if (error) throw error
       
-      // 7. Se for Mercado Pago, chamar API diretamente
-      if (acquirer.bank_code === 'MP') {
-        try {
-          console.log('🔵 Chamando Mercado Pago diretamente...')
-          
-          const mpResult = await createMercadoPagoPixPayment({
-            amount: params.amount,
-            description: params.description,
-            transactionId: data.id
-          })
-
-          if (mpResult.success && mpResult.qr_code) {
-            console.log('✅ Mercado Pago - PIX criado com sucesso!')
-            
-            // Atualizar transação com dados reais do MP
-            await supabase
-              .from('pix_transactions')
-              .update({
-                pix_code: mpResult.qr_code,
-                pix_qr_code: mpResult.qr_code_base64 || mpResult.qr_code,
-                pix_txid: mpResult.id,
-                expires_at: mpResult.expires_at
-              })
-              .eq('id', data.id)
-            
-            return {
-              success: true,
-              transaction_id: data.id,
-              pix_code: mpResult.qr_code,
-              pix_qr_code: mpResult.qr_code_base64 || mpResult.qr_code,
-              expires_at: mpResult.expires_at
-            }
-          } else {
-            console.error('❌ Mercado Pago falhou:', mpResult.error)
-          }
-        } catch (mpError) {
-          console.error('❌ Erro ao chamar Mercado Pago:', mpError)
-          // Continua com o código simulado se a API falhar
-        }
-      }
-      
       // 8. Se for ambiente de produção de outros bancos, fazer chamada real à API
-      if (acquirer.environment === 'production' && acquirer.api_base_url && acquirer.bank_code !== 'MP') {
+      if (acquirer.environment === 'production' && acquirer.api_base_url) {
         await this.callBankAPI(acquirer, data)
       }
       
