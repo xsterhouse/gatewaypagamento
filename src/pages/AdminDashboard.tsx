@@ -349,10 +349,17 @@ export function AdminDashboard() {
         })
       }
 
+      // Buscar transações recentes de PIX
+      const { data: pixRecentTransactions } = await supabase
+        .from('pix_transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10)
+      
       // Formatar transações recentes
-      if (transactions && transactions.length > 0) {
+      if (pixRecentTransactions && pixRecentTransactions.length > 0) {
         const formatted = await Promise.all(
-          transactions.map(async (t) => {
+          pixRecentTransactions.map(async (t) => {
             const { data: user } = await supabase
               .from('users')
               .select('name, email')
@@ -362,7 +369,7 @@ export function AdminDashboard() {
             return {
               id: t.id,
               user_name: user?.name || user?.email?.split('@')[0] || 'Usuário',
-              type: t.type,
+              type: 'pix', // PIX sempre é tipo pix
               amount: Number(t.amount || 0),
               status: t.status || 'pending',
               created_at: t.created_at,
@@ -370,8 +377,10 @@ export function AdminDashboard() {
           })
         )
         setRecentTransactions(formatted)
+        console.log('📋 Transações Recentes:', formatted.length)
       } else {
         setRecentTransactions([])
+        console.log('📋 Nenhuma transação recente encontrada')
       }
     } catch (error: any) {
       console.error('❌ Erro ao carregar dashboard:', error)
