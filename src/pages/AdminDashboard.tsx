@@ -180,10 +180,17 @@ export function AdminDashboard() {
       }
 
       // ==================================================================
-      // CORREÇÃO: Calcular saldo total CONVERTENDO cripto para BRL
+      // CORREÇÃO: Calcular saldo total DISPONÍVEL APENAS dos clientes
       // ==================================================================
       
-      // 1. Buscar preços atuais das criptomoedas
+      // 1. Identificar o admin/master para excluir sua carteira do cálculo
+      const adminUser = users?.find(u => u.role === 'admin' || u.role === 'master');
+      const adminUserId = adminUser?.id;
+
+      // 2. Filtrar para ter apenas carteiras de clientes
+      const clientWallets = (wallets || []).filter(w => w.user_id !== adminUserId);
+      
+      // 3. Buscar preços atuais das criptomoedas
       const { data: cryptoPricesData, error: pricesError } = await supabase
         .from('crypto_prices')
         .select('cryptocurrency_symbol, price_brl')
@@ -196,32 +203,32 @@ export function AdminDashboard() {
         cryptoPricesData?.map(p => [p.cryptocurrency_symbol, p.price_brl]) || []
       )
       
-      // 2. Calcular saldo total CONVERTENDO cripto para BRL
-      const totalBalance = (wallets || []).reduce((sum, wallet) => {
-        const balance = Number(wallet.balance || 0)
+      // 4. Calcular saldo total DISPONÍVEL APENAS dos clientes, convertendo cripto para BRL
+      const totalBalance = clientWallets.reduce((sum, wallet) => {
+        const available = Number(wallet.available_balance || 0); // Usar available_balance
         if (wallet.currency_code === 'BRL') {
-          return sum + balance
+          return sum + available;
         }
-        
         // Se for cripto, converter para BRL
-        const price = cryptoPrices.get(wallet.currency_code) || 0
-        return sum + (balance * price)
-      }, 0)
+        const price = cryptoPrices.get(wallet.currency_code) || 0;
+        return sum + (available * price);
+      }, 0);
       
-      const lockedBalance = (wallets || []).reduce((sum, wallet) => {
-        const blocked = Number(wallet.blocked_balance || 0)
+      // 5. Calcular saldo bloqueado APENAS dos clientes
+      const lockedBalance = clientWallets.reduce((sum, wallet) => {
+        const blocked = Number(wallet.blocked_balance || 0);
         if (wallet.currency_code === 'BRL') {
-          return sum + blocked
+          return sum + blocked;
         }
-        
-        const price = cryptoPrices.get(wallet.currency_code) || 0
-        return sum + (blocked * price)
-      }, 0)
+        const price = cryptoPrices.get(wallet.currency_code) || 0;
+        return sum + (blocked * price);
+      }, 0);
 
       // Debug: Mostrar dados carregados
       console.log('📊 Dashboard Stats:', {
         users: users?.length,
         wallets: wallets?.length,
+        clientWallets: clientWallets.length,
         totalBalance,
         lockedBalance,
         transactions: allTransactions?.length,
