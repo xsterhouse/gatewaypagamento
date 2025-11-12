@@ -248,14 +248,33 @@ export function AdminDashboard() {
         }))
         console.log('📋 Usuários recentes e datas:', recentUsers)
 
-        // Buscar estatísticas de PIX reais de pix_transactions
-        const { data: allPixTransactions } = await supabase
+        // ==================================================================
+        // CORREÇÃO: Buscar estatísticas de PIX diretamente do banco de dados
+        // ==================================================================
+
+        // ANTES (Ineficiente): Buscava tudo e filtrava no frontend
+        // const { data: allPixTransactions } = await supabase.from('pix_transactions').select('amount, status, created_at')
+        // const pixCompleted = allPixTransactions?.filter(t => t.status === 'completed') || []
+        // const pixReceivedVolume = pixCompleted.reduce((sum, t) => sum + Number(t.amount || 0), 0)
+        // const pixReceivedCount = pixCompleted.length
+
+        // DEPOIS (Corrigido e Eficiente): Calcula diretamente no banco
+        const { count: pixReceivedCount, error: countError } = await supabase
           .from('pix_transactions')
-          .select('amount, status, created_at')
-        
-        const pixCompleted = allPixTransactions?.filter(t => t.status === 'completed') || []
-        const pixReceivedVolume = pixCompleted.reduce((sum, t) => sum + Number(t.amount || 0), 0)
-        const pixReceivedCount = pixCompleted.length
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed')
+          .eq('transaction_type', 'deposit')
+
+        const { data: pixReceivedData, error: volumeError } = await supabase
+          .from('pix_transactions')
+          .select('amount')
+          .eq('status', 'completed')
+          .eq('transaction_type', 'deposit')
+
+        if (countError) console.error('Erro ao contar PIX recebidos:', countError)
+        if (volumeError) console.error('Erro ao somar volume PIX:', volumeError)
+
+        const pixReceivedVolume = pixReceivedData?.reduce((sum, t) => sum + Number(t.amount || 0), 0) || 0
         
         // Para PIX enviados, buscar de wallet_transactions tipo debit
         const pixSent = allTransactions?.filter(t => 
@@ -263,10 +282,10 @@ export function AdminDashboard() {
         ) || []
         const pixSentVolume = pixSent.reduce((sum, t) => sum + Number(t.amount || 0), 0)
         
-        console.log('📊 PIX Stats:', {
-          received: pixReceivedVolume,
+        console.log('📊 PIX Stats (Corrigido):', {
+          receivedVolume: pixReceivedVolume,
           receivedCount: pixReceivedCount,
-          sent: pixSentVolume,
+          sentVolume: pixSentVolume,
           sentCount: pixSent.length
         })
 
@@ -358,7 +377,7 @@ export function AdminDashboard() {
           pixSentVolume,
           pixReceivedVolume,
           pixSentCount: pixSent.length,
-          pixReceivedCount,
+          pixReceivedCount: pixReceivedCount || 0,
           totalFeesCollected,
           newUsersToday,
           transactionsToday,
