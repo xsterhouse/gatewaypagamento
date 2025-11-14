@@ -343,7 +343,7 @@ export function AdminDashboard() {
 
       const { data: pixRecentTransactions } = await supabase
         .from('pix_transactions')
-        .neq('status', 'pending')
+        .not('status', 'eq', 'pending')
         .order('created_at', { ascending: false })
         .limit(10)
       
