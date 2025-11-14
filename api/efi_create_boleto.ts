@@ -21,18 +21,57 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ success: false, error: 'Credenciais ou certificado da EFI não configurados' })
     }
 
-    // Salvar certificado temporariamente
-    const fs = await import('fs')
-    const certificatePath = '/tmp/efi-certificate.p12'
-    const certificateBuffer = Buffer.from(certificateBase64, 'base64')
-    fs.writeFileSync(certificatePath, certificateBuffer)
-
-    const efipay = new EfiPay({ 
-      client_id: clientId, 
-      client_secret: clientSecret, 
-      certificate: certificatePath, 
-      sandbox 
+    // Verificar ambiente
+    console.log('🔧 Ambiente:', {
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      hasCertificate: !!certificateBase64,
+      hasPixKey: !!process.env.EFI_PIX_KEY,
+      sandbox: sandbox,
+      nodeEnv: process.env.NODE_ENV
     })
+
+    if (!clientId || !clientSecret || !certificateBase64) {
+      console.error('❌ Credenciais faltando:', {
+        clientId: !!clientId,
+        clientSecret: !!clientSecret,
+        certificateBase64: !!certificateBase64
+      })
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Credenciais ou certificado da EFI não configurados' 
+      })
+    }
+
+    // Tentar salvar certificado temporariamente
+    let efipay
+    try {
+      const fs = await import('fs')
+      const path = await import('path')
+      
+      // Usar diretório temporário do sistema
+      const os = await import('os')
+      const tmpDir = os.tmpdir()
+      const certificatePath = path.join(tmpDir, 'efi-certificate.p12')
+      
+      console.log('💾 Salvando certificado em:', certificatePath)
+      
+      const certificateBuffer = Buffer.from(certificateBase64, 'base64')
+      fs.writeFileSync(certificatePath, certificateBuffer)
+
+      efipay = new EfiPay({ 
+        client_id: clientId, 
+        client_secret: clientSecret, 
+        certificate: certificatePath, 
+        sandbox 
+      })
+    } catch (certError) {
+      console.error('❌ Erro ao salvar certificado:', certError)
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Erro ao processar certificado da EFI: ' + certError.message 
+      })
+    }
 
     // Dados do cliente (padrão se não informado)
     const customerData = customer || {
@@ -69,9 +108,19 @@ export default async function handler(req: any, res: any) {
       certificatePath: certificatePath 
     })
 
-    // Criar cobrança (boleto)
-    const response = await efipay.pixCreateImmediateCharge([], body)
-    console.log('📡 Resposta EFI:', response)
+    // Criar cobrança (PIX)
+    console.log('📡 Enviando requisição para EFI...')
+    let response
+    try {
+      response = await efipay.pixCreateImmediateCharge([], body)
+      console.log('✅ Resposta EFI recebida:', response)
+    } catch (efiError) {
+      console.error('❌ Erro na chamada EFI:', efiError)
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Erro na comunicação com EFI: ' + efiError.message 
+      })
+    }
 
     if (!response) {
       return res.status(500).json({ success: false, error: 'Resposta inválida da EFI' })
