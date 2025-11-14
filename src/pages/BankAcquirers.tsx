@@ -55,7 +55,10 @@ export function BankAcquirers() {
     webhook_url: '',
     webhook_secret: '',
     webhook_events: [] as string[],
-    webhook_enabled: false
+    webhook_enabled: false,
+    // EFI specific fields
+    certificate_path: '',
+    is_efi: false
   })
 
   useEffect(() => {
@@ -652,13 +655,56 @@ export function BankAcquirers() {
 
                   <div>
                     <Label htmlFor="bank_code">Código do Banco *</Label>
-                    <Input
+                    <SelectNative
                       id="bank_code"
                       value={formData.bank_code}
-                      onChange={(e) => setFormData({ ...formData, bank_code: e.target.value })}
-                      placeholder="Ex: 077"
-                      required
-                    />
+                      onChange={(e) => {
+                        const bankCode = e.target.value
+                        const isEfi = bankCode === 'EFI'
+                        
+                        // Auto-preencher dados da EFI
+                        if (isEfi) {
+                          setFormData({
+                            ...formData,
+                            bank_code: bankCode,
+                            name: 'EFI (Gerencianet)',
+                            api_base_url: bankCode === 'EFI' && formData.environment === 'sandbox' 
+                              ? 'https://pix-h.api.efipay.com.br' 
+                              : 'https://pix.api.efipay.com.br',
+                            api_auth_url: bankCode === 'EFI' && formData.environment === 'sandbox'
+                              ? 'https://pix-h.api.efipay.com.br/oauth/token'
+                              : 'https://pix.api.efipay.com.br/oauth/token',
+                            api_pix_url: bankCode === 'EFI' && formData.environment === 'sandbox'
+                              ? 'https://pix-h.api.efipay.com.br/v2/pix'
+                              : 'https://pix.api.efipay.com.br/v2/pix',
+                            fee_percentage: '0.0099', // 0.99% taxa da EFI
+                            fee_fixed: '0',
+                            transaction_limit: '5000',
+                            daily_limit: '50000',
+                            certificate_path: '/tmp/efi-certificate.p12',
+                            is_efi: true
+                          })
+                        } else {
+                          setFormData({
+                            ...formData,
+                            bank_code: bankCode,
+                            is_efi: false
+                          })
+                        }
+                      }}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="EFI">🏦 EFI (Gerencianet)</option>
+                      <option value="MP">💳 Mercado Pago</option>
+                      <option value="077">🏦 Banco Inter</option>
+                      <option value="237">🏦 Banco Bradesco</option>
+                      <option value="341">🏦 Banco Itaú</option>
+                      <option value="001">🏦 Banco do Brasil</option>
+                      <option value="104">🏦 Caixa Econômica</option>
+                      <option value="260">🏦 Nubank</option>
+                      <option value="336">🏦 Banco C6</option>
+                      <option value="CUSTOM">🔧 Custom/Banco Próprio</option>
+                    </SelectNative>
                   </div>
                 </div>
 
@@ -771,62 +817,137 @@ export function BankAcquirers() {
 
               {/* Aba API */}
               <TabsContent value="api" className="space-y-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>💡 Dica:</strong> Obtenha as credenciais da API no portal de desenvolvedores do banco.
-                    Para o Banco Inter: <a href="https://developers.bancointer.com.br/" target="_blank" rel="noopener noreferrer" className="underline">developers.bancointer.com.br</a>
-                  </p>
-                </div>
+                {/* Alerta específico para EFI */}
+                {formData.is_efi ? (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-green-600 dark:text-green-400 text-sm font-bold">🏦</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                          Configuração API - EFI (Gerencianet)
+                        </h4>
+                        <div className="space-y-2 text-sm text-green-800 dark:text-green-200">
+                          <p>• <strong>Portal:</strong> <a href="https://gerencianet.com.br/" target="_blank" rel="noopener noreferrer" className="underline">gerencianet.com.br</a></p>
+                          <p>• <strong>Documentação:</strong> <a href="https://dev.gerencianet.com.br/" target="_blank" rel="noopener noreferrer" className="underline">dev.gerencianet.com.br</a></p>
+                          <p>• <strong>Certificado:</strong> Arquivo .p12 obrigatório (upload no servidor)</p>
+                          <p>• <strong>Client ID/Secret:</strong> Gerados no portal de desenvolvedores</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>💡 Dica:</strong> Obtenha as credenciais da API no portal de desenvolvedores do banco.
+                      Para o Banco Inter: <a href="https://developers.bancointer.com.br/" target="_blank" rel="noopener noreferrer" className="underline">developers.bancointer.com.br</a>
+                    </p>
+                  </div>
+                )}
 
                 <div>
-                  <Label htmlFor="client_id">Client ID</Label>
+                  <Label htmlFor="client_id">
+                    Client ID {formData.is_efi && <span className="text-red-500">*</span>}
+                  </Label>
                   <Input
                     id="client_id"
                     value={formData.client_id}
                     onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                    placeholder="Client ID da API"
+                    placeholder={formData.is_efi ? "Client_Id_xxxxxxxxxxxxx" : "Client ID da API"}
+                    required={formData.is_efi}
                   />
+                  {formData.is_efi && (
+                    <p className="text-xs text-gray-500 mt-1">Formato: Client_Id_xxxxxxxxxxxxx</p>
+                  )}
                 </div>
 
                 <div>
-                  <Label htmlFor="client_secret">Client Secret</Label>
+                  <Label htmlFor="client_secret">
+                    Client Secret {formData.is_efi && <span className="text-red-500">*</span>}
+                  </Label>
                   <Input
                     id="client_secret"
                     type="password"
                     value={formData.client_secret}
                     onChange={(e) => setFormData({ ...formData, client_secret: e.target.value })}
-                    placeholder="Client Secret da API"
+                    placeholder={formData.is_efi ? "Client_Secret_xxxxxxxxxxxxx" : "Client Secret da API"}
+                    required={formData.is_efi}
                   />
+                  {formData.is_efi && (
+                    <p className="text-xs text-gray-500 mt-1">Formato: Client_Secret_xxxxxxxxxxxxx</p>
+                  )}
                 </div>
 
+                {/* Campo específico para certificado EFI */}
+                {formData.is_efi && (
+                  <div>
+                    <Label htmlFor="certificate_path">
+                      Caminho do Certificado <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="certificate_path"
+                      value={formData.certificate_path}
+                      onChange={(e) => setFormData({ ...formData, certificate_path: e.target.value })}
+                      placeholder="/tmp/efi-certificate.p12"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      <strong>⚠️ Importante:</strong> O certificado .p12 deve ser enviado para o servidor Vercel.
+                      Configure como variável de ambiente: <code className="bg-gray-100 px-1 rounded">EFI_CERTIFICATE_BASE64</code>
+                    </p>
+                  </div>
+                )}
+
                 <div>
-                  <Label htmlFor="api_base_url">URL Base da API</Label>
+                  <Label htmlFor="api_base_url">
+                    URL Base da API {formData.is_efi && <span className="text-green-600">(Pré-configurada)</span>}
+                  </Label>
                   <Input
                     id="api_base_url"
                     value={formData.api_base_url}
                     onChange={(e) => setFormData({ ...formData, api_base_url: e.target.value })}
-                    placeholder="https://api.banco.com.br"
+                    placeholder={formData.is_efi ? "https://pix.api.efipay.com.br" : "https://api.banco.com.br"}
+                    disabled={formData.is_efi}
+                    className={formData.is_efi ? "bg-gray-50" : ""}
                   />
+                  {formData.is_efi && (
+                    <p className="text-xs text-green-600 mt-1">URL automática baseada no ambiente selecionado</p>
+                  )}
                 </div>
 
                 <div>
-                  <Label htmlFor="api_auth_url">URL de Autenticação</Label>
+                  <Label htmlFor="api_auth_url">
+                    URL de Autenticação {formData.is_efi && <span className="text-green-600">(Pré-configurada)</span>}
+                  </Label>
                   <Input
                     id="api_auth_url"
                     value={formData.api_auth_url}
                     onChange={(e) => setFormData({ ...formData, api_auth_url: e.target.value })}
-                    placeholder="https://api.banco.com.br/oauth/token"
+                    placeholder={formData.is_efi ? "https://pix.api.efipay.com.br/oauth/token" : "https://api.banco.com.br/oauth/token"}
+                    disabled={formData.is_efi}
+                    className={formData.is_efi ? "bg-gray-50" : ""}
                   />
+                  {formData.is_efi && (
+                    <p className="text-xs text-green-600 mt-1">URL automática baseada no ambiente selecionado</p>
+                  )}
                 </div>
 
                 <div>
-                  <Label htmlFor="api_pix_url">URL PIX</Label>
+                  <Label htmlFor="api_pix_url">
+                    URL PIX {formData.is_efi && <span className="text-green-600">(Pré-configurada)</span>}
+                  </Label>
                   <Input
                     id="api_pix_url"
                     value={formData.api_pix_url}
                     onChange={(e) => setFormData({ ...formData, api_pix_url: e.target.value })}
-                    placeholder="https://api.banco.com.br/pix"
+                    placeholder={formData.is_efi ? "https://pix.api.efipay.com.br/v2/pix" : "https://api.banco.com.br/pix"}
+                    disabled={formData.is_efi}
+                    className={formData.is_efi ? "bg-gray-50" : ""}
                   />
+                  {formData.is_efi && (
+                    <p className="text-xs text-green-600 mt-1">URL automática baseada no ambiente selecionado</p>
+                  )}
                 </div>
               </TabsContent>
 
