@@ -1,12 +1,7 @@
 export default async function handler(req: any, res: any) {
-  // LOG IMEDIATO - ANTES DE QUALQUER COISA
-  console.log('🚀🚀🚀 EFI WEBHOOK INICIADO - PRIMEIRO LOG')
-  console.log('📋 Timestamp:', new Date().toISOString())
-  console.log('📋 Method:', req.method)
-  console.log('📋 URL:', req.url)
-
   try {
-    // Headers para compatibilidade com EFI
+    console.log('🚀 EFI WEBHOOK INICIADO')
+    
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
@@ -19,11 +14,9 @@ export default async function handler(req: any, res: any) {
       return res.status(405).json({ error: 'Method not allowed' })
     }
 
-    // Validar variáveis de ambiente primeiro
-    console.log('🔍 ENV CHECK:', {
+    console.log('📋 ENV CHECK:', {
       hasUrl: !!process.env.VITE_SUPABASE_URL,
-      hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      url: process.env.VITE_SUPABASE_URL?.substring(0, 20) + '...'
+      hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
     })
 
     if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -34,16 +27,13 @@ export default async function handler(req: any, res: any) {
       })
     }
 
-    // Inicializar Supabase DENTRO do handler
     console.log('📦 Carregando Supabase...')
     const { createClient } = require('@supabase/supabase-js')
-    console.log('✅ Supabase carregado')
-    
     const supabase = createClient(
       process.env.VITE_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     )
-    console.log('✅ Cliente Supabase criado')
+    console.log('✅ Supabase carregado')
 
     console.log('🪝 Webhook EFI recebido:', req.body)
     const { pix } = req.body
@@ -68,7 +58,7 @@ export default async function handler(req: any, res: any) {
         continue
       }
 
-      const { error: updateError } = await supabase
+      await supabase
         .from('pix_transactions')
         .update({
           status: 'completed',
@@ -76,11 +66,6 @@ export default async function handler(req: any, res: any) {
           updated_at: new Date().toISOString()
         })
         .eq('id', transaction.id)
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar transação:', updateError)
-        continue
-      }
 
       const { data: wallet } = await supabase
         .from('wallets')
@@ -111,18 +96,18 @@ export default async function handler(req: any, res: any) {
             reference_id: transaction.id
           })
 
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: transaction.user_id,
+            title: 'PIX Recebido',
+            message: `Seu PIX de R$ ${transaction.amount.toFixed(2)} foi confirmado!`,
+            type: 'success',
+            read: false
+          })
+
         console.log('✅ Saldo creditado:', { user_id: transaction.user_id, amount: transaction.net_amount })
       }
-
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: transaction.user_id,
-          title: 'PIX Recebido',
-          message: `Seu PIX de R$ ${transaction.amount.toFixed(2)} foi confirmado!`,
-          type: 'success',
-          read: false
-        })
     }
 
     console.log('✅ Webhook processado com sucesso')
