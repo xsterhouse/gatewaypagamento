@@ -2,6 +2,12 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 const { createClient } = require('@supabase/supabase-js')
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // LOG IMEDIATO - ANTES DE QUALQUER COISA
+  console.log('🚀🚀🚀 EFI WEBHOOK INICIADO - PRIMEIRO LOG')
+  console.log('📋 Timestamp:', new Date().toISOString())
+  console.log('📋 Method:', req.method)
+  console.log('📋 URL:', req.url)
+
   try {
     // Headers para compatibilidade com EFI
     res.setHeader('Access-Control-Allow-Origin', '*')
