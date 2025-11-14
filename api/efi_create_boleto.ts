@@ -107,6 +107,22 @@ export default async function handler(req: any, res: any) {
     // Data de vencimento (padrão 3 dias se não informada)
     const dueDateCalculated = dueDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
+    // Validar formato do valor
+    const valorFormatado = amount.toFixed(2)
+    const valorRegex = /^[0-9]{1,10}\.[0-9]{2}$/
+    
+    if (!valorRegex.test(valorFormatado)) {
+      console.error('❌ Valor inválido:', valorFormatado)
+      return res.status(400).json({
+        success: false,
+        error: 'Valor inválido. Use formato com 2 casas decimais (ex: 100.00)',
+        debug: {
+          valor: valorFormatado,
+          regex: '^[0-9]{1,10}\.[0-9]{2}$'
+        }
+      })
+    }
+
     // Corpo da requisição para cobrança PIX (não boleto tradicional)
     const body = {
       calendario: {
@@ -117,7 +133,7 @@ export default async function handler(req: any, res: any) {
         cpf: customerData.cpf
       },
       valor: {
-        original: amount.toFixed(2).replace('.', ',')
+        original: valorFormatado
       },
       chave: process.env.EFI_PIX_KEY || 'fe9d3c1f-7830-4152-9faa-d26c26dc8da9',
       solicitacaoPagador: description || 'Pagamento via PIX'
