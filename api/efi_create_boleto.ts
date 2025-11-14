@@ -9,6 +9,11 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
+    console.log('🚀 Iniciando API EFI Create Boleto')
+    console.log('📋 Método:', req.method)
+    console.log('📋 Headers:', req.headers)
+    console.log('📋 Body:', req.body)
+    
     const { amount, description, customer, dueDate } = req.body
     console.log('🧾 Criando Boleto via EFI:', { amount, description, customer, dueDate })
 
@@ -17,32 +22,30 @@ export default async function handler(req: any, res: any) {
     const certificateBase64 = process.env.EFI_CERTIFICATE_BASE64
     const sandbox = process.env.EFI_SANDBOX === 'true'
 
-    if (!clientId || !clientSecret || !certificateBase64) {
-      return res.status(500).json({ success: false, error: 'Credenciais ou certificado da EFI não configurados' })
-    }
-
-    // Verificar ambiente
-    console.log('🔧 Ambiente:', {
+    console.log('🔍 Variáveis de Ambiente:', {
       hasClientId: !!clientId,
       hasClientSecret: !!clientSecret,
       hasCertificate: !!certificateBase64,
+      certificateLength: certificateBase64?.length || 0,
       hasPixKey: !!process.env.EFI_PIX_KEY,
       sandbox: sandbox,
       nodeEnv: process.env.NODE_ENV
     })
 
     if (!clientId || !clientSecret || !certificateBase64) {
-      console.error('❌ Credenciais faltando:', {
-        clientId: !!clientId,
-        clientSecret: !!clientSecret,
-        certificateBase64: !!certificateBase64
-      })
+      console.error('❌ Credenciais faltando!')
       return res.status(500).json({ 
         success: false, 
-        error: 'Credenciais ou certificado da EFI não configurados' 
+        error: 'Credenciais ou certificado da EFI não configurados',
+        debug: {
+          hasClientId: !!clientId,
+          hasClientSecret: !!clientSecret,
+          hasCertificate: !!certificateBase64
+        }
       })
     }
 
+    
     // Tentar salvar certificado temporariamente
     let efipay
     let certificatePath = ''
