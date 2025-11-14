@@ -41,6 +41,14 @@ export default async function handler(req: any, res: any) {
     }
 
     console.log('📦 Enviando para EFI:', { txid, body })
+    console.log('🔧 Config EFI:', { 
+      hasClientId: !!clientId, 
+      hasClientSecret: !!clientSecret, 
+      hasCertificate: !!certificateBase64,
+      sandbox,
+      certificatePath: certificatePath 
+    })
+
     const response = await efipay.pixCreateImmediateCharge([], body)
     console.log('📡 Resposta EFI:', response)
 
