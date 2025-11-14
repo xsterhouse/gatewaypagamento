@@ -4,7 +4,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const envVars = {
+    const envVars: any = {
       EFI_CLIENT_ID: process.env.EFI_CLIENT_ID ? '✅ Configurado' : '❌ Não configurado',
       EFI_CLIENT_SECRET: process.env.EFI_CLIENT_SECRET ? '✅ Configurado' : '❌ Não configurado',
       EFI_CERTIFICATE_BASE64: process.env.EFI_CERTIFICATE_BASE64 ? '✅ Configurado' : '❌ Não configurado',
