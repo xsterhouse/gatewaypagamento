@@ -32,7 +32,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // Salvar certificado temporariamente
-    const fs = require('fs')
+    const fs = await import('fs')
     const certificatePath = '/tmp/efi-certificate.p12'
     const certificateBuffer = Buffer.from(certificateBase64, 'base64')
     fs.writeFileSync(certificatePath, certificateBuffer)
