@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-const { createClient } = require('@supabase/supabase-js')
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // LOG IMEDIATO - ANTES DE QUALQUER COISA
@@ -37,11 +36,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    // Inicializar Supabase
+    // Inicializar Supabase DENTRO do handler
+    console.log('📦 Carregando Supabase...')
+    const { createClient } = require('@supabase/supabase-js')
+    console.log('✅ Supabase carregado')
+    
     const supabase = createClient(
       process.env.VITE_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     )
+    console.log('✅ Cliente Supabase criado')
 
     console.log('🪝 Webhook EFI recebido:', req.body)
     const { pix } = req.body
