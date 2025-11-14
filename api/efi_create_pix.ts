@@ -37,7 +37,7 @@ export default async function handler(req: any, res: any) {
       devedor: { nome: 'Cliente Dimpay', cpf: '12345678909' },
       valor: { original: amount.toFixed(2) },
       chave: pixKey || process.env.EFI_PIX_KEY,
-      solicitacoPagador: description
+      solicitacaoPagador: description
     }
 
     console.log('📦 Enviando para EFI:', { txid, body })
