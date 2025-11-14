@@ -45,6 +45,7 @@ export default async function handler(req: any, res: any) {
 
     // Tentar salvar certificado temporariamente
     let efipay
+    let certificatePath = ''
     try {
       const fs = await import('fs')
       const path = await import('path')
@@ -52,7 +53,7 @@ export default async function handler(req: any, res: any) {
       // Usar diretório temporário do sistema
       const os = await import('os')
       const tmpDir = os.tmpdir()
-      const certificatePath = path.join(tmpDir, 'efi-certificate.p12')
+      certificatePath = path.join(tmpDir, 'efi-certificate.p12')
       
       console.log('💾 Salvando certificado em:', certificatePath)
       
@@ -65,11 +66,11 @@ export default async function handler(req: any, res: any) {
         certificate: certificatePath, 
         sandbox 
       })
-    } catch (certError) {
+    } catch (certError: any) {
       console.error('❌ Erro ao salvar certificado:', certError)
       return res.status(500).json({ 
         success: false, 
-        error: 'Erro ao processar certificado da EFI: ' + certError.message 
+        error: 'Erro ao processar certificado da EFI: ' + (certError?.message || certError?.toString() || 'Erro desconhecido')
       })
     }
 
@@ -114,11 +115,11 @@ export default async function handler(req: any, res: any) {
     try {
       response = await efipay.pixCreateImmediateCharge([], body)
       console.log('✅ Resposta EFI recebida:', response)
-    } catch (efiError) {
+    } catch (efiError: any) {
       console.error('❌ Erro na chamada EFI:', efiError)
       return res.status(500).json({ 
         success: false, 
-        error: 'Erro na comunicação com EFI: ' + efiError.message 
+        error: 'Erro na comunicação com EFI: ' + (efiError?.message || efiError?.toString() || 'Erro desconhecido')
       })
     }
 
