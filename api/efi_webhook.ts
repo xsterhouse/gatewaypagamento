@@ -28,7 +28,7 @@ export default async function handler(req: any, res: any) {
     }
 
     console.log('📦 Carregando Supabase...')
-    const { createClient } = require('@supabase/supabase-js')
+    const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(
       process.env.VITE_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
