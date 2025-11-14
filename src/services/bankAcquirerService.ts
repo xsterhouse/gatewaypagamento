@@ -38,7 +38,8 @@ export interface BankAcquirer {
   webhook_enabled?: boolean
   status: 'active' | 'inactive' | 'maintenance'
   created_at: string
-  updated_at: string
+  updated_at?: string
+  deleted_at?: string
 }
 
 export interface PixTransaction {
@@ -226,21 +227,88 @@ class BankAcquirerService {
   }
   
   /**
-   * Deleta um adquirente
+   * Deleta um adquirente (soft delete)
    */
   async deleteAcquirer(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('bank_acquirers')
-      .delete()
-      .eq('id', id)
+    // Primeiro verifica se há transações associadas
+    const { data: transactions, error: checkError } = await supabase
+      .from('pix_transactions')
+      .select('id')
+      .eq('acquirer_id', id)
+      .limit(1)
     
-    if (error) throw error
+    if (checkError) throw checkError
+    
+    // Se houver transações, faz soft delete
+    if (transactions && transactions.length > 0) {
+      const { error } = await supabase
+        .from('bank_acquirers')
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+      
+      if (error) throw error
+    } else {
+      // Se não houver transações, pode excluir permanentemente
+      const { error } = await supabase
+        .from('bank_acquirers')
+        .delete()
+        .eq('id', id)
+      
+      if (error) throw error
+    }
   }
   
   // ========================================
+  // INTEGRAÇÃO BOLETO
+  // ========================================
+
+  /**
+   * Cria um pagamento via Boleto
+   */
+  async createBoletoPayment(params: CreateBoletoParams): Promise<BoletoResponse> {
+    try {
+      console.log('🧾 Criando boleto via EFI:', params)
+
+      const response = await fetch('/api/efi_create_boleto', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Erro ao criar boleto'
+        }
+      }
+
+      return {
+        success: true,
+        charge: result.charge,
+        payment_codes: result.payment_codes,
+        files: result.files
+      }
+
+    } catch (error: any) {
+      console.error('❌ Erro ao criar boleto:', error)
+      return {
+        success: false,
+        error: error.message || 'Erro ao processar boleto'
+      }
+    }
+  }
+
+  // ========================================
   // INTEGRAÇÃO PIX
   // ========================================
-  
+
   /**
    * Cria um pagamento PIX
    */
