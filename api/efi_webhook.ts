@@ -1,6 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   // LOG IMEDIATO - ANTES DE QUALQUER COISA
   console.log('🚀🚀🚀 EFI WEBHOOK INICIADO - PRIMEIRO LOG')
   console.log('📋 Timestamp:', new Date().toISOString())
