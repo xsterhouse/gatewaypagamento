@@ -98,8 +98,51 @@ export interface PixPaymentResponse {
   success: boolean
   transaction_id?: string
   pix_code?: string
+  qr_code_base64?: string
   pix_qr_code?: string
   expires_at?: string
+  error?: string
+}
+
+// ========================================
+// INTERFACES BOLETO
+// ========================================
+
+export interface CreateBoletoParams {
+  amount: number
+  description: string
+  user_id: string
+  due_date?: string
+  customer?: {
+    name: string
+    cpf: string
+    email: string
+  }
+}
+
+export interface BoletoResponse {
+  success: boolean
+  charge?: {
+    id: string
+    loc_id: string
+    status: string
+    amount: number
+    description: string
+    due_date: string
+    created_at: string
+  }
+  payment_codes?: {
+    barcode: string | null
+    linha_digitavel: string | null
+    pix_code: string | null
+  }
+  files?: {
+    pdf_base64: string | null
+    qr_code?: {
+      qr_code: string
+      qr_code_base64: string
+    }
+  }
   error?: string
 }
 
@@ -266,7 +309,7 @@ class BankAcquirerService {
   // ========================================
 
   /**
-   * Cria um pagamento via Boleto
+   * Cria um pagamento via Boleto EFI
    */
   async createBoletoPayment(params: CreateBoletoParams): Promise<BoletoResponse> {
     try {

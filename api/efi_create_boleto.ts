@@ -44,22 +44,20 @@ export default async function handler(req: any, res: any) {
     // Data de vencimento (padrão 3 dias se não informada)
     const dueDateCalculated = dueDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    // Corpo da requisição para boleto
+    // Corpo da requisição para cobrança PIX (não boleto tradicional)
     const body = {
       calendario: {
-        dataDeVencimento: dueDateCalculated,
-        validadeAposVencimento: 30
+        expiracao: 86400 // 24 horas em segundos
       },
       devedor: {
         nome: customerData.name,
-        cpf: customerData.cpf,
-        email: customerData.email
+        cpf: customerData.cpf
       },
       valor: {
         original: amount.toFixed(2).replace('.', ',')
       },
       chave: process.env.EFI_PIX_KEY || 'fe9d3c1f-7830-4152-9faa-d26c26dc8da9',
-      solicitacaoPagador: description || 'Pagamento de Boleto'
+      solicitacaoPagador: description || 'Pagamento via PIX'
     }
 
     console.log('📦 Enviando para EFI:', body)
@@ -79,17 +77,7 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ success: false, error: 'Resposta inválida da EFI' })
     }
 
-    // Gerar PDF do boleto
-    let pdfBase64 = null
-    try {
-      const pdfResponse = await efipay.pdfCharge({ id: response.loc.id })
-      pdfBase64 = pdfResponse
-    } catch (pdfError) {
-      console.error('⚠️ Erro ao gerar PDF:', pdfError)
-      // Continuar sem PDF
-    }
-
-    // Gerar QR Code para pagamento via PIX do boleto
+    // Gerar QR Code para pagamento via PIX
     let qrCodeData = null
     try {
       const qrResponse = await efipay.pixGenerateQRCode({ id: response.loc.id })
@@ -114,12 +102,12 @@ export default async function handler(req: any, res: any) {
         created_at: new Date().toISOString()
       },
       payment_codes: {
-        barcode: response.codigoBarras || null,
-        linha_digitavel: response.linhaDigitavel || null,
+        barcode: null, // EFI não gera código de barras para PIX
+        linha_digitavel: null, // EFI não gera linha digitável para PIX
         pix_code: response.pixCopiaECola || null
       },
       files: {
-        pdf_base64: pdfBase64,
+        pdf_base64: null, // EFI não gera PDF para PIX
         qr_code: qrCodeData
       },
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
