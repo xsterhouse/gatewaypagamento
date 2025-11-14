@@ -10,16 +10,22 @@ export default async function handler(req: any, res: any) {
 
   try {
     const { amount, pixKey, pixKeyType, description, transactionId } = req.body
-    console.log('💸 Enviando PIX via EFI:', { amount, pixKey, pixKeyType })
+    console.log(' Enviando PIX via EFI:', { amount, pixKey, pixKeyType })
 
     const clientId = process.env.EFI_CLIENT_ID
     const clientSecret = process.env.EFI_CLIENT_SECRET
-    const certificatePath = process.env.EFI_CERTIFICATE_PATH || '/tmp/efi-certificate.p12'
+    const certificateBase64 = process.env.EFI_CERTIFICATE_BASE64
     const sandbox = process.env.EFI_SANDBOX === 'true'
 
-    if (!clientId || !clientSecret) {
-      return res.status(500).json({ success: false, error: 'Credenciais da EFI não configuradas' })
+    if (!clientId || !clientSecret || !certificateBase64) {
+      return res.status(500).json({ success: false, error: 'Credenciais ou certificado da EFI não configurados' })
     }
+
+    // Salvar certificado temporariamente
+    const fs = await import('fs')
+    const certificatePath = '/tmp/efi-certificate.p12'
+    const certificateBuffer = Buffer.from(certificateBase64, 'base64')
+    fs.writeFileSync(certificatePath, certificateBuffer)
 
     const efipay = new EfiPay({ client_id: clientId, client_secret: clientSecret, certificate: certificatePath, sandbox })
     const idEnvio = transactionId || `E${Date.now()}${Math.random().toString(36).substring(7)}`
