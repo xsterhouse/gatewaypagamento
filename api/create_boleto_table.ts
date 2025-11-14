@@ -33,18 +33,35 @@ export default async function handler(req: any, res: any) {
       CREATE INDEX IF NOT EXISTS idx_boleto_charge_id ON boleto_transactions(charge_id);
     `
 
-    const { error } = await supabase.rpc('exec_sql', { sql_query: createTableSQL })
+    // Usar SQL direto via supabase admin
+    const { data, error } = await supabase
+      .from('pg_tables')
+      .select('tablename')
+      .eq('schemaname', 'public')
+      .eq('tablename', 'boleto_transactions')
 
     if (error) {
-      console.error('❌ Erro ao criar tabela:', error)
-      return res.status(500).json({ error: 'Failed to create table' })
+      console.error('❌ Erro ao verificar tabela:', error)
+      return res.status(500).json({ error: 'Failed to check table' })
     }
 
-    console.log('✅ Tabela boleto_transactions criada com sucesso!')
+    // Se tabela não existe, retorna instruções para criar manualmente
+    if (!data || data.length === 0) {
+      console.log('⚠️ Tabela não encontrada. Execute SQL manualmente:')
+      console.log(createTableSQL)
+      
+      return res.status(200).json({
+        success: false,
+        message: 'Tabela não encontrada. Execute SQL manualmente no painel Supabase.',
+        sql: createTableSQL
+      })
+    }
+
+    console.log('✅ Tabela boleto_transactions já existe!')
 
     return res.status(200).json({
       success: true,
-      message: 'Tabela boleto_transactions criada com sucesso!'
+      message: 'Tabela boleto_transactions já existe!'
     })
 
   } catch (error: any) {
