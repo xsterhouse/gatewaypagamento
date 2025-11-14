@@ -71,9 +71,29 @@ export default async function handler(req: any, res: any) {
       })
     } catch (certError: any) {
       console.error('❌ Erro ao salvar certificado:', certError)
+      console.error('❌ Detalhes do erro cert:', {
+        name: certError?.name,
+        message: certError?.message,
+        code: certError?.code,
+        errno: certError?.errno,
+        syscall: certError?.syscall,
+        path: certError?.path,
+        fullError: JSON.stringify(certError, null, 2)
+      })
+      
+      const errorMessage = certError?.message || 
+                          certError?.code || 
+                          JSON.stringify(certError)
+      
       return res.status(500).json({ 
         success: false, 
-        error: 'Erro ao processar certificado da EFI: ' + (certError?.message || certError?.toString() || 'Erro desconhecido')
+        error: 'Erro ao processar certificado da EFI: ' + errorMessage,
+        debug: {
+          name: certError?.name,
+          code: certError?.code,
+          errno: certError?.errno,
+          syscall: certError?.syscall
+        }
       })
     }
 
@@ -120,9 +140,30 @@ export default async function handler(req: any, res: any) {
       console.log('✅ Resposta EFI recebida:', response)
     } catch (efiError: any) {
       console.error('❌ Erro na chamada EFI:', efiError)
+      console.error('❌ Detalhes do erro:', {
+        name: efiError?.name,
+        message: efiError?.message,
+        code: efiError?.code,
+        status: efiError?.status,
+        statusCode: efiError?.statusCode,
+        body: efiError?.response?.data || efiError?.data,
+        fullError: JSON.stringify(efiError, null, 2)
+      })
+      
+      const errorMessage = efiError?.message || 
+                          efiError?.response?.data?.message || 
+                          efiError?.data?.message || 
+                          JSON.stringify(efiError?.response?.data || efiError?.data || efiError)
+      
       return res.status(500).json({ 
         success: false, 
-        error: 'Erro na comunicação com EFI: ' + (efiError?.message || efiError?.toString() || 'Erro desconhecido')
+        error: 'Erro na comunicação com EFI: ' + errorMessage,
+        debug: {
+          name: efiError?.name,
+          code: efiError?.code,
+          status: efiError?.status,
+          statusCode: efiError?.statusCode
+        }
       })
     }
 
