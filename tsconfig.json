@@ -26,7 +26,7 @@
     },
 
     /* Add Node.js types for serverless functions */
-    "types": ["vite/client", "node"]
+    "types": ["node"]
   },
   "include": ["src", "api", "vite.config.ts", "vite-api-plugin.ts", "test-email.js", "check-email-status.js", "testar-subdominio.js", "force-deploy-final.js", "debug-dashboard.js"]
 }

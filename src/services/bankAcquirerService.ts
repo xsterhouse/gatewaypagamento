@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { createPixPayment as createMercadoPagoPixPayment } from '@/lib/mercadopago-direct'
-import { createPixPayment as createEfiPixPayment, sendPix as sendEfiPix } from '@/lib/efi-client'
+import { createPixPayment as createEfiPixPayment } from '@/lib/efi-client'
 
 // ========================================
 // TIPOS E INTERFACES

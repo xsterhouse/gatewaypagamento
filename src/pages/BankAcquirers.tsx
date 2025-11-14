@@ -133,7 +133,10 @@ export function BankAcquirers() {
         webhook_url: acquirer.webhook_url || '',
         webhook_secret: acquirer.webhook_secret || '',
         webhook_events: acquirer.webhook_events || [],
-        webhook_enabled: acquirer.webhook_enabled || false
+        webhook_enabled: acquirer.webhook_enabled || false,
+        // EFI specific fields
+        certificate_path: acquirer.certificate || '',
+        is_efi: acquirer.bank_code === 'EFI'
       })
     } else {
       setEditMode(false)
@@ -163,7 +166,10 @@ export function BankAcquirers() {
         webhook_url: '',
         webhook_secret: '',
         webhook_events: [],
-        webhook_enabled: false
+        webhook_enabled: false,
+        // EFI specific fields
+        certificate_path: '',
+        is_efi: false
       })
     }
     setActiveTab('basic') // Resetar para primeira aba
