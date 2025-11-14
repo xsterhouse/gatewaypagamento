@@ -20,6 +20,7 @@ import {
   XCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 interface DashboardStats {
   totalUsers: number
@@ -87,6 +88,7 @@ export function AdminDashboard() {
   })
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pendingMEDs, setPendingMEDs] = useState(0)
   const [totalMEDAmount, setTotalMEDAmount] = useState(0)
@@ -341,7 +343,6 @@ export function AdminDashboard() {
 
       const { data: pixRecentTransactions } = await supabase
         .from('pix_transactions')
-        .select('*')
         .neq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(10)
@@ -377,7 +378,15 @@ export function AdminDashboard() {
     } finally {
       console.log('✅ Loading finalizado')
       setLoading(false)
+      setRefreshing(false)
     }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    toast.info('Atualizando dados do dashboard...')
+    await loadDashboardData()
+    toast.success('Dashboard atualizado!')
   }
 
   const getStatusBadge = (status: string) => {
@@ -540,9 +549,20 @@ export function AdminDashboard() {
           </h1>
           <p className="text-muted-foreground text-xs sm:text-sm">Visão geral do sistema em tempo real</p>
         </div>
-        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary/10 rounded-lg border border-primary/20 self-start sm:self-auto">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Sistema Online</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary/10 rounded-lg border border-primary/20 self-start sm:self-auto">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Sistema Online</span>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
         </div>
       </div>
 

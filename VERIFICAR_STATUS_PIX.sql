@@ -1,92 +1,50 @@
--- ============================================
--- VERIFICAR STATUS PERMITIDOS E LIMPAR PIX
--- ============================================
+-- =================================================================
+-- VERIFICAR STATUS DE TRANSAÇÕES PIX
+-- =================================================================
 
--- PASSO 1: Ver constraint de status
--- ============================================
-
--- Verificar constraint na tabela
-SELECT conname, consrc
-FROM pg_constraint
-WHERE conrelid = 'pix_transactions'::regclass
-AND conname LIKE '%status%';
-
--- Ou verificar todos os check constraints
+-- 1. Contar transações pendentes
 SELECT 
-  conname,
-  consrc,
-  contype
-FROM pg_constraint 
-WHERE conrelid = 'pix_transactions'::regclass
-AND contype = 'c';
+  COUNT(*) as total_pendentes
+FROM public.pix_transactions
+WHERE status = 'pending';
 
-
--- PASSO 2: Ver status existentes
--- ============================================
-
-SELECT DISTINCT status
-FROM pix_transactions
-ORDER BY status;
-
-
--- PASSO 3: Ver PIX pendentes
--- ============================================
-
+-- 2. Listar transações pendentes (últimas 10)
 SELECT 
   id,
+  user_id,
   amount,
   status,
   created_at,
-  EXTRACT(EPOCH FROM (NOW() - created_at))/3600 as horas_pendente
-FROM pix_transactions
+  expires_at
+FROM public.pix_transactions
 WHERE status = 'pending'
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT 10;
 
+-- 3. Contar transações falhadas
+SELECT 
+  COUNT(*) as total_falhas
+FROM public.pix_transactions
+WHERE status = 'failed';
 
--- PASSO 4: Usar status permitido (provavelmente 'failed')
--- ============================================
-
--- ATUALIZAR para 'failed' em vez de 'expired'
-UPDATE pix_transactions
-SET status = 'failed'
-WHERE status = 'pending'
-AND created_at < NOW() - INTERVAL '30 minutes';
-
--- Ver resultado
-SELECT COUNT(*) as atualizados_para_failed
-FROM pix_transactions
+-- 4. Listar transações falhadas (últimas 10)
+SELECT 
+  id,
+  user_id,
+  amount,
+  status,
+  error_message,
+  created_at
+FROM public.pix_transactions
 WHERE status = 'failed'
-AND created_at < NOW() - INTERVAL '30 minutes';
+ORDER BY created_at DESC
+LIMIT 10;
 
-
--- PASSO 5: Verificar resultado final
--- ============================================
-
--- Contar por status
+-- 5. Resumo geral de status
 SELECT 
   status,
-  COUNT(*) as quantidade,
-  SUM(amount) as valor_total
-FROM pix_transactions
+  COUNT(*) as total,
+  SUM(amount) as volume
+FROM public.pix_transactions
 GROUP BY status
-ORDER BY status DESC;
-
-
--- ============================================
--- RESUMO:
--- ============================================
-
-/*
-Se 'expired' não for permitido, use:
-- 'failed' (provavelmente permitido)
-- Ou verifique qual status é permitido na constraint
-
-OPÇÕES COMUNS:
-- 'pending'
-- 'completed' 
-- 'failed'
-- 'cancelled'
-- 'refunded'
-
-Execute PASSO 1 para ver os valores exatos permitidos.
-*/
+ORDER BY total DESC;
