@@ -1073,13 +1073,13 @@ export function AdminDashboard() {
       <PixPendingModal 
         open={showPixPendingModal}
         onOpenChange={setShowPixPendingModal}
-        onRefresh={loadStats}
+        onRefresh={loadDashboardData}
       />
 
       <InvoicesManagementModal 
         open={showInvoicesModal}
         onOpenChange={setShowInvoicesModal}
-        onRefresh={loadStats}
+        onRefresh={loadDashboardData}
       />
 
       <style>{`
