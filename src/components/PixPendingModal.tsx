@@ -49,16 +49,33 @@ export function PixPendingModal({ open, onOpenChange, onRefresh }: PixPendingMod
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
 
+      console.log('📡 Resposta do Supabase PIX:', { data, error })
+
       if (error) {
         console.error('Erro ao carregar PIX pendentes:', error)
-        toast.error('Erro ao carregar PIX pendentes')
+        
+        // Mensagens de erro mais específicas
+        if (error.code === 'PGRST116') {
+          toast.error('Tabela pix_transactions não encontrada. Execute o script SQL no Supabase.')
+        } else if (error.code === '42501') {
+          toast.error('Sem permissão para acessar transações PIX. Verifique as políticas RLS.')
+        } else {
+          toast.error(`Erro ao carregar PIX pendentes: ${error.message}`)
+        }
         return
       }
 
       setPixTransactions(data || [])
-    } catch (error) {
+      
+      if (data && data.length > 0) {
+        toast.success(`Carregados ${data.length} PIX pendentes`)
+      } else {
+        toast.info('Nenhuma transação PIX pendente encontrada')
+      }
+      
+    } catch (error: any) {
       console.error('Erro ao carregar PIX pendentes:', error)
-      toast.error('Erro ao carregar PIX pendentes')
+      toast.error(`Erro inesperado: ${error.message || 'Erro ao carregar dados'}`)
     } finally {
       setLoading(false)
     }

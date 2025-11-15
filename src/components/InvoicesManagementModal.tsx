@@ -70,16 +70,33 @@ export function InvoicesManagementModal({ open, onOpenChange, onRefresh }: Invoi
 
       const { data, error } = await query
 
+      console.log('📡 Resposta do Supabase Invoices:', { data, error })
+
       if (error) {
         console.error('Erro ao carregar faturas:', error)
-        toast.error('Erro ao carregar faturas')
+        
+        // Mensagens de erro mais específicas
+        if (error.code === 'PGRST116') {
+          toast.error('Tabela invoices não encontrada. Execute o script SQL no Supabase.')
+        } else if (error.code === '42501') {
+          toast.error('Sem permissão para acessar faturas. Verifique as políticas RLS.')
+        } else {
+          toast.error(`Erro ao carregar faturas: ${error.message}`)
+        }
         return
       }
 
       setInvoices(data || [])
-    } catch (error) {
+      
+      if (data && data.length > 0) {
+        toast.success(`Carregadas ${data.length} faturas`)
+      } else {
+        toast.info('Nenhuma fatura encontrada')
+      }
+      
+    } catch (error: any) {
       console.error('Erro ao carregar faturas:', error)
-      toast.error('Erro ao carregar faturas')
+      toast.error(`Erro inesperado: ${error.message || 'Erro ao carregar dados'}`)
     } finally {
       setLoading(false)
     }
