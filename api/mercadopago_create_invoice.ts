@@ -16,6 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     console.log('🧾 Criando Fatura via MercadoPago')
+    console.log('📋 Request body:', req.body)
     
     const { 
       amount, 
@@ -42,15 +43,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
+    // Validar amount
+    const amountNum = Number(amount)
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Valor deve ser um número maior que 0' 
+      })
+    }
+
     // Dados do cliente
     const customerData = customer || {
       nome: 'Cliente Gateway',
-      cpf: '12345678909'
+      cpf: '12345678909',
+      email: 'cliente@exemplo.com'
     }
+
+    console.log('👤 Customer data:', customerData)
+    console.log('💰 Amount:', amountNum)
+    console.log('📝 Description:', description)
 
     // Criar pagamento PIX via MercadoPago
     const paymentData = {
-      transaction_amount: Number(amount),
+      transaction_amount: amountNum,
       description: description || 'Pagamento de fatura',
       payment_method_id: 'pix',
       payer: {

@@ -172,24 +172,25 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
         return
       }
 
-      console.log('🧾 Fatura criada, gerando pagamento via EFI...')
+      console.log('🧾 Fatura criada, gerando pagamento via MercadoPago...')
 
-      // Gerar QR code e código de barras via API EFI
+      // Gerar QR code e código de barras via API MercadoPago
       const paymentResult = await generateInvoicePayment({
         amount: amountValue,
         description: data.description,
         invoiceId: invoice.id,
         customerName: customer.name,
         customerCpf: customer.cpf,
+        customerEmail: customer.email,
         dueDate: data.due_date.toISOString().split('T')[0]
       })
 
       if (!paymentResult.success) {
-        toast.error('Erro ao gerar pagamento: ' + (paymentResult.error || 'Erro na API EFI'))
+        toast.error('Erro ao gerar pagamento: ' + (paymentResult.error || 'Erro na API MercadoPago'))
         return
       }
 
-      console.log('✅ Pagamento gerado via EFI:', paymentResult)
+      console.log('✅ Pagamento gerado via MercadoPago:', paymentResult)
 
       toast.success('Fatura criada com QR code e código de barras reais!')
       onSuccess?.()
