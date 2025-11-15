@@ -15,11 +15,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { amount, description, transactionId } = req.body
+    console.log('🚀 Criando PIX via MercadoPago')
+    console.log('📋 Request body:', req.body)
+    
+    const { amount, description, transactionId, customer } = req.body
 
-    console.log('🚀 Criando PIX via backend:', { amount, description, transactionId })
-
-    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.VITE_MERCADO_PAGO_ACCESS_TOKEN
+    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN
 
     if (!accessToken) {
       console.error('❌ Token não configurado')
@@ -29,15 +30,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
+    // Validar dados obrigatórios
+    if (!amount || !description) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Valor e descrição são obrigatórios' 
+      })
+    }
+
+    // Validar amount
+    const amountNum = Number(amount)
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Valor deve ser um número maior que 0' 
+      })
+    }
+
+    // Dados do cliente
+    const customerData = customer || {
+      nome: 'Cliente Gateway',
+      cpf: '12345678909',
+      email: 'cliente@dimpay.com.br'
+    }
+
+    console.log('👤 Customer data:', customerData)
+    console.log('💰 Amount:', amountNum)
+    console.log('📝 Description:', description)
+
     const body = {
-      transaction_amount: amount,
-      description: description,
+      transaction_amount: amountNum,
+      description: description || 'Pagamento PIX',
       payment_method_id: 'pix',
       payer: {
-        email: 'cliente@dimpay.com.br'
+        email: customerData.email || 'cliente@dimpay.com.br',
+        first_name: customerData.nome?.split(' ')[0] || 'Cliente',
+        last_name: customerData.nome?.split(' ').slice(1).join(' ') || 'Gateway',
+        identification: {
+          type: 'CPF',
+          number: customerData.cpf?.replace(/\D/g, '') || '12345678909'
+        }
       },
       external_reference: transactionId,
-      notification_url: `${process.env.VERCEL_URL || req.headers.host}/api/mercadopago/webhook`
+      notification_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.dimpay.com.br'}/api/mercadopago`
     }
 
     console.log('📦 Enviando para Mercado Pago:', body)
