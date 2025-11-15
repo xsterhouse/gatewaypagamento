@@ -1,12 +1,13 @@
 import { supabase } from '@/lib/supabase'
 
 export interface InvoicePaymentData {
+  invoiceId: string
   amount: number
   description: string
-  invoiceId: string
   customerName: string
   customerCpf: string
-  dueDate: string
+  customerEmail?: string
+  dueDate?: string
 }
 
 export interface InvoicePaymentResult {
@@ -23,14 +24,14 @@ export interface InvoicePaymentResult {
 }
 
 /**
- * Gera QR code e código de barras para fatura via API EFI
+ * Gera QR code e código de barras para fatura via API MercadoPago
  */
 export async function generateInvoicePayment(data: InvoicePaymentData): Promise<InvoicePaymentResult> {
   try {
     console.log('🧾 Gerando pagamento para fatura:', data)
 
-    // Gerar fatura completa (boleto + PIX) via EFI
-    const response = await fetch('/api/efi_create_invoice', {
+    // Gerar fatura completa (boleto + PIX) via MercadoPago
+    const response = await fetch('/api/mercadopago_create_invoice', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -40,7 +41,8 @@ export async function generateInvoicePayment(data: InvoicePaymentData): Promise<
         description: data.description,
         customer: {
           nome: data.customerName,
-          cpf: data.customerCpf
+          cpf: data.customerCpf,
+          email: data.customerEmail
         },
         dueDate: data.dueDate,
         invoiceId: data.invoiceId
@@ -50,10 +52,10 @@ export async function generateInvoicePayment(data: InvoicePaymentData): Promise<
     console.log('📡 Resposta bruta da API:', response.status, response.statusText)
     
     const result = await response.json()
-    console.log('✅ Resposta EFI Invoice:', result)
+    console.log('✅ Resposta MercadoPago Invoice:', result)
 
     if (!response.ok || !result.success) {
-      console.error('❌ Erro ao gerar fatura EFI:', {
+      console.error('❌ Erro ao gerar fatura MercadoPago:', {
         status: response.status,
         statusText: response.statusText,
         error: result.error,
