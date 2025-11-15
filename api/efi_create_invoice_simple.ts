@@ -9,7 +9,7 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    console.log('🧾 Criando Fatura/Boleto via EFI')
+    console.log('🧾 Criando Fatura Simplificada via EFI (PIX apenas)')
     
     const { 
       amount, 
@@ -52,70 +52,36 @@ export default async function handler(req: any, res: any) {
     // Dados do cliente
     const customerData = customer || {
       nome: 'Cliente Dimpay',
-      cpf: '12345678909',
-      email: 'cliente@dimpay.com.br'
+      cpf: '12345678909'
     }
 
-    // Data de vencimento
-    const dueDateCalculated = dueDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-
-    // Nosso número (identificação)
-    const nossoNumero = invoiceId ? invoiceId.replace(/-/g, '').substring(0, 10) : 
-                       `${Date.now()}${Math.random().toString(36).substring(7)}`.substring(0, 10)
-
-    // Corpo da requisição para carnê (boleto tradicional)
-    const body = {
-      valor: amount.toFixed(2),
-      nome: customerData.nome,
-      cpf: customerData.cpf,
-      dataVencimento: dueDateCalculated,
-      numero: nossoNumero,
-      descricao: description || 'Pagamento de fatura',
-      multa: {
-        valor: 0,
-        tipo: 'percentual'
+    // Gerar PIX via EFI (método que já funciona)
+    const pixBody = {
+      calendario: { expiracao: 86400 },
+      devedor: { 
+        nome: customerData.nome, 
+        cpf: customerData.cpf 
       },
-      juros: {
-        valor: 0,
-        tipo: 'percentual'
-      },
-      desconto: {
-        valor: 0,
-        tipo: 'percentual'
-      }
-    }
-
-    console.log('📦 Enviando para EFI:', body)
-
-    // Gerar cobrança via EFI (usando método existente que funciona)
-    const chargeBody = {
-      calendario: {
-        expiracao: 86400 // 24 horas
-      },
-      devedor: {
-        nome: customerData.nome,
-        cpf: customerData.cpf
-      },
-      valor: {
-        original: amount.toFixed(2)
+      valor: { 
+        original: amount.toFixed(2) 
       },
       chave: process.env.EFI_PIX_KEY || 'fe9d3c1f-7830-4152-9faa-d26c26dc8da9',
       solicitacaoPagador: description || 'Pagamento de fatura'
     }
 
-    console.log('📦 Enviando cobrança para EFI:', chargeBody)
-    const chargeResponse = await efipay.pixCreateImmediateCharge([], chargeBody)
-    console.log('✅ Resposta EFI Charge:', chargeResponse)
+    console.log('📦 Enviando PIX para EFI:', pixBody)
+    const pixResponse = await efipay.pixCreateImmediateCharge([], pixBody)
+    console.log('✅ Resposta EFI PIX:', pixResponse)
 
-    if (!chargeResponse || !chargeResponse.loc) {
+    if (!pixResponse || !pixResponse.loc) {
       return res.status(500).json({ 
         success: false, 
-        error: 'Resposta inválida da EFI ao gerar cobrança' 
+        error: 'Resposta inválida da EFI ao gerar PIX' 
       })
     }
 
     // Gerar QR Code
-    const qrResponse = await efipay.pixGenerateQRCode({ id: chargeResponse.loc.id })
+    const qrResponse = await efipay.pixGenerateQRCode({ id: pixResponse.loc.id })
     
     // Gerar código de barras simulado (padrão brasileiro)
     const barcode = generateBarcode(invoiceId, amount)
@@ -128,20 +94,20 @@ export default async function handler(req: any, res: any) {
         linha_digitavel: linhaDigitavel,
         nosso_numero: invoiceId.replace(/-/g, '').substring(0, 10),
         url_pdf: null,
-        data_vencimento: dueDateCalculated,
+        data_vencimento: dueDate,
         valor: amount.toFixed(2)
       },
       pix: {
-        qr_code: chargeResponse.pixCopiaECola,
+        qr_code: pixResponse.pixCopiaECola,
         qr_code_base64: qrResponse.imagemQrcode,
-        loc_id: chargeResponse.loc.id,
-        transaction_id: chargeResponse.txid
+        loc_id: pixResponse.loc.id,
+        transaction_id: pixResponse.txid
       },
       expires_at: new Date(Date.now() + 86400000).toISOString()
     })
 
   } catch (error: any) {
-    console.error('❌ Erro ao criar fatura via EFI:', error)
+    console.error('❌ Erro ao criar fatura simplificada via EFI:', error)
     console.error('❌ Detalhes completos do erro:', {
       name: error?.name,
       message: error?.message,

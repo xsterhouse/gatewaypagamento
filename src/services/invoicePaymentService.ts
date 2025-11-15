@@ -30,7 +30,7 @@ export async function generateInvoicePayment(data: InvoicePaymentData): Promise<
     console.log('🧾 Gerando pagamento para fatura:', data)
 
     // Gerar fatura completa (boleto + PIX) via EFI
-    const response = await fetch('/api/efi_create_invoice', {
+    const response = await fetch('/api/efi_create_invoice_simple', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -47,14 +47,22 @@ export async function generateInvoicePayment(data: InvoicePaymentData): Promise<
       })
     })
 
+    console.log('📡 Resposta bruta da API:', response.status, response.statusText)
+    
     const result = await response.json()
     console.log('✅ Resposta EFI Invoice:', result)
 
     if (!response.ok || !result.success) {
-      console.error('❌ Erro ao gerar fatura EFI:', result.error)
+      console.error('❌ Erro ao gerar fatura EFI:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: result.error,
+        debug: result.debug,
+        fullResult: result
+      })
       return {
         success: false,
-        error: result.error || 'Erro ao gerar pagamento da fatura'
+        error: result.error || `Erro ${response.status}: ${response.statusText}`
       }
     }
 
