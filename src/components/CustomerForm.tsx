@@ -137,7 +137,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
       // Primeiro, obter o cliente recém-criado
       const { data: customer, error: customerError } = await supabase
         .from('customers')
-        .select('id, name, cpf')
+        .select('id, name, cpf, email')
         .eq('user_id', effectiveUserId)
         .order('created_at', { ascending: false })
         .limit(1)
