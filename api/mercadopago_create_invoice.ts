@@ -63,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       },
       external_reference: invoiceId,
-      notification_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://seu-dominio.com'}/api/webhook-mercadopago`
+      notification_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://seu-dominio.com'}/api/mercadopago`
     }
 
     console.log('📦 Enviando pagamento para MercadoPago:', paymentData)
