@@ -125,16 +125,18 @@ export async function generateInvoicePDF({ customer, invoice }: InvoicePDFProps)
     const barcodeY = yPosition
     const barcodeHeight = 30
     const barcodeWidth = pageWidth - 2 * margin
-    const barWidth = barcodeWidth / invoice.barcode.length
+    const barWidth = barcodeWidth / (invoice.barcode?.length || 44)
     
-    for (let i = 0; i < invoice.barcode.length; i++) {
-      if (invoice.barcode[i] % 2 === 0) {
+    for (let i = 0; i < (invoice.barcode?.length || 44); i++) {
+      const char = invoice.barcode?.[i] || '0'
+      const charNum = parseInt(char, 10)
+      if (!isNaN(charNum) && charNum % 2 === 0) {
         doc.rect(barcodeX + (i * barWidth), barcodeY, barWidth, barcodeHeight, 'F')
       }
     }
     
     yPosition += barcodeHeight + 10
-    addText(invoice.barcode, pageWidth / 2, yPosition, 8, true)
+    addText(invoice.barcode || '', pageWidth / 2, yPosition, 8, true)
     yPosition += 15
   }
   
@@ -153,7 +155,7 @@ export async function generateInvoicePDF({ customer, invoice }: InvoicePDFProps)
     cancelled: [128, 128, 128] // Cinza
   }[invoice.status] || [0, 0, 0]
   
-  doc.setTextColor(...statusColor)
+  doc.setTextColor(statusColor[0], statusColor[1], statusColor[2])
   addText(`Status: ${statusText}`, pageWidth - margin - 40, pageHeight - margin, 12, true)
   doc.setTextColor(0, 0, 0)
   
@@ -193,7 +195,7 @@ export function generateBarcodeNumber() {
 }
 
 // Função para gerar dados do QR Code PIX
-export function generatePIXData(invoice: Invoice, customer: Customer) {
+export function generatePIXData(invoice: Invoice, _customer: Customer) {
   const payload = {
     chave: 'cpf_do_cobrador', // Você precisa configurar a chave PIX
     nome: 'Nome do Cobrador', // Você precisa configurar o nome

@@ -371,7 +371,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {invoiceForm.getValues('due_date') ? (
-                        format(invoiceForm.getValues('due_date'), "dd/MM/yyyy", { locale: ptBR })
+                        format(invoiceForm.getValues('due_date')!, "dd/MM/yyyy", { locale: ptBR })
                       ) : (
                         "Selecione uma data"
                       )}
@@ -381,7 +381,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
                     <Calendar
                       mode="single"
                       selected={invoiceForm.getValues('due_date')}
-                      onSelect={(date) => invoiceForm.setValue('due_date', date)}
+                      onSelect={(date) => date && invoiceForm.setValue('due_date', date)}
                       initialFocus
                     />
                   </PopoverContent>

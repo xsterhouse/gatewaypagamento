@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Download, Send, FileText, Plus, Eye } from 'lucide-react'
+import { Download, Send, FileText, Plus } from 'lucide-react'
 import { CustomerForm } from './CustomerForm'
-import { generateInvoicePDF, generatePIXData } from './InvoicePDF'
+import { generateInvoicePDF } from './InvoicePDF'
 import { InvoiceWithCustomer } from '@/types/invoice'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -82,7 +82,7 @@ export function InvoiceModal({ open, onOpenChange }: InvoiceModalProps) {
     }
   }
 
-  const handleSendInvoice = async (invoice: InvoiceWithCustomer) => {
+  const handleSendInvoice = async (_invoice: InvoiceWithCustomer) => {
     try {
       // Aqui você implementaria o envio por email
       toast.success('Funcionalidade de envio por email em desenvolvimento')
@@ -132,7 +132,7 @@ export function InvoiceModal({ open, onOpenChange }: InvoiceModalProps) {
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="list" className="w-full">
+        <Tabs defaultValue="list" value="list" onValueChange={() => {}} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="list">Minhas Faturas</TabsTrigger>
             <TabsTrigger value="new">Nova Fatura</TabsTrigger>
