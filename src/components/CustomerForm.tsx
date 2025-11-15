@@ -381,8 +381,17 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
                     <Calendar
                       mode="single"
                       selected={invoiceForm.getValues('due_date')}
-                      onSelect={(date) => date && invoiceForm.setValue('due_date', date)}
+                      onSelect={(date) => {
+                        if (date) {
+                          invoiceForm.setValue('due_date', date)
+                        }
+                      }}
+                      locale={ptBR}
                       initialFocus
+                      className="rounded-md border"
+                      formatters={{
+                        formatWeekdayName: (date) => format(date, 'EEEEEE', { locale: ptBR }),
+                      }}
                     />
                   </PopoverContent>
                 </Popover>
