@@ -30,7 +30,7 @@ export async function generateInvoicePayment(data: InvoicePaymentData): Promise<
     console.log('🧾 Gerando pagamento para fatura:', data)
 
     // Gerar fatura completa (boleto + PIX) via EFI
-    const response = await fetch('/api/efi_create_invoice_simple', {
+    const response = await fetch('/api/efi_create_invoice', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

@@ -315,7 +315,7 @@ class BankAcquirerService {
     try {
       console.log('🧾 Criando boleto via EFI:', params)
 
-      const response = await fetch('/api/efi_create_boleto', {
+      const response = await fetch('/api/efi_create_pix', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -71,7 +71,7 @@ export function GerarBoletoModal({ open, onOpenChange }: GerarBoletoModalProps) 
       const defaultDueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       const selectedDueDate = dueDate || defaultDueDate
 
-      const response = await fetch('/api/efi_create_boleto', {
+      const response = await fetch('/api/efi_create_pix', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
