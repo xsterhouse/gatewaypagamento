@@ -14,6 +14,7 @@ import { CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { generateInvoicePayment } from '@/services/invoicePaymentService'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -136,7 +137,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
       // Primeiro, obter o cliente recém-criado
       const { data: customer, error: customerError } = await supabase
         .from('customers')
-        .select('id')
+        .select('id, name, cpf')
         .eq('user_id', effectiveUserId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -150,13 +151,8 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
       // Converter valor para número
       const amountValue = parseFloat(data.amount.replace(/[R$\s.]/g, '').replace(',', '.'))
 
-      // Gerar código de barras (simplificado)
-      const barcode = generateBarcode()
-
-      // Gerar dados para QR code (simplificado)
-      const qrCodeData = generateQRCodeData(data, amountValue)
-
-      const { error } = await supabase
+      // Criar fatura no banco primeiro
+      const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
           customer_id: customer.id,
@@ -166,16 +162,36 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
           due_date: data.due_date.toISOString().split('T')[0],
           has_interest: data.has_interest,
           interest_rate: data.has_interest ? parseFloat(data.interest_rate || '0') : 0,
-          barcode,
-          qr_code_data: qrCodeData,
+          status: 'pending'
         })
+        .select()
+        .single()
 
-      if (error) {
-        toast.error('Erro ao criar fatura: ' + error.message)
+      if (invoiceError || !invoice) {
+        toast.error('Erro ao criar fatura: ' + (invoiceError?.message || 'Erro desconhecido'))
         return
       }
 
-      toast.success('Fatura criada com sucesso!')
+      console.log('🧾 Fatura criada, gerando pagamento via EFI...')
+
+      // Gerar QR code e código de barras via API EFI
+      const paymentResult = await generateInvoicePayment({
+        amount: amountValue,
+        description: data.description,
+        invoiceId: invoice.id,
+        customerName: customer.name,
+        customerCpf: customer.cpf,
+        dueDate: data.due_date.toISOString().split('T')[0]
+      })
+
+      if (!paymentResult.success) {
+        toast.error('Erro ao gerar pagamento: ' + (paymentResult.error || 'Erro na API EFI'))
+        return
+      }
+
+      console.log('✅ Pagamento gerado via EFI:', paymentResult)
+
+      toast.success('Fatura criada com QR code e código de barras reais!')
       onSuccess?.()
     } catch (error) {
       console.error('Erro ao criar fatura:', error)
@@ -185,19 +201,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
     }
   }
 
-  const generateBarcode = () => {
-    const numbers = '0123456789'
-    let barcode = ''
-    for (let i = 0; i < 44; i++) {
-      barcode += numbers.charAt(Math.floor(Math.random() * numbers.length))
-    }
-    return barcode
-  }
-
-  const generateQRCodeData = (data: InvoiceFormData, amount: number) => {
-    return `pix://payment?amount=${amount}&description=${encodeURIComponent(data.description)}`
-  }
-
+  
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>

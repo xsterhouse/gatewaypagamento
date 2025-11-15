@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
 import { Customer, Invoice } from '@/types/invoice'
+import { generateLinhaDigitavel } from '@/services/invoicePaymentService'
 
 interface InvoicePDFProps {
   customer: Customer
@@ -119,8 +120,17 @@ export async function generateInvoicePDF({ customer, invoice }: InvoicePDFProps)
   addText('Código de Barras', margin, yPosition, 12, true)
   yPosition += 10
   
-  // Gerar código de barras simplificado (linhas verticais)
+  // Gerar linha digitável
   if (invoice.barcode) {
+    const linhaDigitavel = generateLinhaDigitavel(invoice.barcode)
+    
+    // Linha digitável
+    addText('Linha Digitável:', margin, yPosition, 10, true)
+    yPosition += 7
+    addText(linhaDigitavel, margin, yPosition, 9)
+    yPosition += 15
+    
+    // Código de barras visual
     const barcodeX = margin
     const barcodeY = yPosition
     const barcodeHeight = 30
