@@ -91,15 +91,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('📡 Resposta Mercado Pago:', {
       status: response.status,
+      statusText: response.statusText,
       id: data.id,
-      status_payment: data.status
+      status_payment: data.status,
+      message: data.message,
+      error_detail: data.error || data.cause || data.details
     })
 
     if (!response.ok) {
-      console.error('❌ Erro Mercado Pago:', data)
+      console.error('❌ Erro completo Mercado Pago:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: data,
+        headers: Object.fromEntries(response.headers.entries())
+      })
+      
+      // Extrair mensagem de erro mais detalhada
+      let errorMessage = 'Erro ao criar pagamento'
+      if (data.message) {
+        errorMessage = data.message
+      } else if (data.cause && Array.isArray(data.cause) && data.cause.length > 0) {
+        errorMessage = data.cause[0].description || data.cause[0].message || errorMessage
+      } else if (data.error) {
+        errorMessage = data.error
+      }
+      
       return res.status(response.status).json({
         success: false,
-        error: data.message || 'Erro ao criar pagamento'
+        error: errorMessage,
+        debug: {
+          status: response.status,
+          mercado_pago_data: data
+        }
       })
     }
 
