@@ -23,7 +23,7 @@ git push origin main
 **Problema:** URL configurada no MercadoPago está errada.
 
 **Solução:**
-- URL correta: `https://seu-projeto.vercel.app/api/mercadopago_webhook`
+- URL correta: `https://seu-projeto.vercel.app/api/webhook-mercadopago`
 - Substitua `seu-projeto` pelo seu domínio real na Vercel
 
 ### 3. Webhook Não Existe
@@ -51,13 +51,13 @@ res.setHeader('Access-Control-Allow-Origin', '*')
 pnpm dev
 
 # Testar em outro terminal
-curl -X GET http://localhost:3000/api/mercadopago_webhook
+curl -X GET http://localhost:3000/api/webhook-mercadopago
 ```
 
 ### 2. Teste Produção
 ```bash
 # Substitua pelo seu domínio real
-curl -X GET https://seu-projeto.vercel.app/api/mercadopago_webhook
+curl -X GET https://seu-projeto.vercel.app/api/webhook-mercadopago
 ```
 
 **Resposta esperada:**
@@ -72,7 +72,7 @@ curl -X GET https://seu-projeto.vercel.app/api/mercadopago_webhook
 
 ### 1. URL do Webhook
 ```
-https://seu-projeto.vercel.app/api/mercadopago_webhook
+https://seu-projeto.vercel.app/api/webhook-mercadopago
 ```
 
 ### 2. Eventos para Receber
