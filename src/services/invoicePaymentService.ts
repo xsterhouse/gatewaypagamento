@@ -1,4 +1,3 @@
-import { createPixPayment } from '@/lib/efi-client'
 import { supabase } from '@/lib/supabase'
 
 export interface InvoicePaymentData {
@@ -91,69 +90,6 @@ export async function generateInvoicePayment(data: InvoicePaymentData): Promise<
   }
 }
 
-/**
- * Gera código de barras no padrão brasileiro
- */
-function generateBarcode(invoiceId: string, amount: number): string {
-  // Formato simplificado de código de barras para fatura
-  // Em produção, isso viria da API EFI de boletos
-  const bankCode = '237' // Banco Bradesco (exemplo)
-  const currencyCode = '9' // Real
-  const checkDigit = '2'
-  const expirationFactor = calculateExpirationFactor()
-  const amountFormatted = amount.toFixed(2).replace('.', '').padStart(10, '0')
-  const ourNumber = generateOurNumber(invoiceId)
-  
-  // Montar código de barras (44 dígitos)
-  const barcode = `${bankCode}${currencyCode}${checkDigit}${expirationFactor}${amountFormatted}${ourNumber}`
-  
-  // Calcular dígito verificador
-  const calculatedCheckDigit = calculateBarcodeCheckDigit(barcode)
-  
-  return barcode.substring(0, 4) + calculatedCheckDigit + barcode.substring(5)
-}
-
-/**
- * Calcula fator de vencimento (dias desde 07/10/1997)
- */
-function calculateExpirationFactor(): string {
-  const baseDate = new Date('1997-10-07')
-  const today = new Date()
-  const daysDiff = Math.floor((today.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24))
-  return daysDiff.toString().padStart(4, '0')
-}
-
-/**
- * Gera nosso número (identificação da fatura)
- */
-function generateOurNumber(invoiceId: string): string {
-  // Usar os primeiros caracteres do UUID e completar com zeros
-  const cleanId = invoiceId.replace(/-/g, '').substring(0, 10)
-  return cleanId.padEnd(17, '0')
-}
-
-/**
- * Calcula dígito verificador do código de barras (módulo 11)
- */
-function calculateBarcodeCheckDigit(barcode: string): string {
-  const weights = [2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4]
-  
-  let sum = 0
-  for (let i = 0; i < barcode.length; i++) {
-    const digit = parseInt(barcode[i])
-    const weight = weights[weights.length - 1 - (i % weights.length)]
-    sum += digit * weight
-  }
-  
-  const remainder = sum % 11
-  const checkDigit = 11 - remainder
-  
-  if (checkDigit === 0 || checkDigit === 1 || checkDigit === 10) {
-    return '1'
-  }
-  
-  return checkDigit.toString()
-}
 
 /**
  * Atualiza fatura no banco com dados de pagamento

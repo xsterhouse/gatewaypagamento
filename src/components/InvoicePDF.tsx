@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
 import { Customer, Invoice } from '@/types/invoice'
-import { generateLinhaDigitavel } from '@/services/invoicePaymentService'
 
 interface InvoicePDFProps {
   customer: Customer

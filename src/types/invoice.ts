@@ -24,6 +24,11 @@ export interface Invoice {
   barcode: string
   qr_code_data: string
   pdf_url?: string
+  loc_id?: string
+  transaction_id?: string
+  linha_digitavel?: string
+  nosso_numero?: string
+  url_pdf?: string
   created_at: string
   updated_at: string
 }
