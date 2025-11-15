@@ -7,17 +7,25 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Adicionar logs para debug
+  console.log('🔔 Webhook accessed at:', new Date().toISOString())
+  console.log('🔔 Method:', req.method)
+  console.log('🔔 URL:', req.url)
+  console.log('🔔 User-Agent:', req.headers['user-agent'])
+  
   // Mercado Pago testa o webhook com GET primeiro
   if (req.method === 'GET') {
     console.log('✅ Webhook GET test from Mercado Pago')
     return res.status(200).json({ 
       status: 'ok',
-      message: 'Webhook endpoint is ready' 
+      message: 'Webhook endpoint is ready',
+      timestamp: new Date().toISOString()
     })
   }
 
   // Processar notificações POST
   if (req.method !== 'POST') {
+    console.log('❌ Method not allowed:', req.method)
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
