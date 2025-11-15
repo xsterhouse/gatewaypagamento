@@ -15,6 +15,8 @@ export interface InvoicePaymentResult {
   qrCode?: string
   qrCodeBase64?: string
   barcode?: string
+  linhaDigitavel?: string
+  nossoNumero?: string
   locId?: string
   transactionId?: string
   expiresAt?: string
@@ -28,41 +30,56 @@ export async function generateInvoicePayment(data: InvoicePaymentData): Promise<
   try {
     console.log('🧾 Gerando pagamento para fatura:', data)
 
-    // Gerar PIX via EFI
-    const pixResult = await createPixPayment({
-      amount: data.amount,
-      description: data.description,
-      transactionId: `invoice-${data.invoiceId}`
+    // Gerar fatura completa (boleto + PIX) via EFI
+    const response = await fetch('/api/efi_create_invoice', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        amount: data.amount,
+        description: data.description,
+        customer: {
+          nome: data.customerName,
+          cpf: data.customerCpf
+        },
+        dueDate: data.dueDate,
+        invoiceId: data.invoiceId
+      })
     })
 
-    if (!pixResult.success) {
-      console.error('❌ Erro ao gerar PIX da fatura:', pixResult.error)
+    const result = await response.json()
+    console.log('✅ Resposta EFI Invoice:', result)
+
+    if (!response.ok || !result.success) {
+      console.error('❌ Erro ao gerar fatura EFI:', result.error)
       return {
         success: false,
-        error: pixResult.error || 'Erro ao gerar pagamento da fatura'
+        error: result.error || 'Erro ao gerar pagamento da fatura'
       }
     }
 
-    // Gerar código de barras (simulado - pode ser implementado com boleto EFI se necessário)
-    const barcode = generateBarcode(data.invoiceId, data.amount)
-
     // Atualizar fatura no banco com os dados de pagamento
     await updateInvoiceWithPaymentData(data.invoiceId, {
-      qr_code_data: pixResult.qr_code,
-      barcode: barcode,
-      loc_id: pixResult.loc_id,
-      transaction_id: pixResult.id,
-      linha_digitavel: generateLinhaDigitavel(barcode)
+      qr_code_data: result.pix?.qr_code,
+      barcode: result.boleto?.codigo_barras,
+      loc_id: result.pix?.loc_id,
+      transaction_id: result.pix?.transaction_id,
+      linha_digitavel: result.boleto?.linha_digitavel,
+      nosso_numero: result.boleto?.nosso_numero,
+      url_pdf: result.boleto?.url_pdf
     })
 
     return {
       success: true,
-      qrCode: pixResult.qr_code,
-      qrCodeBase64: pixResult.qr_code_base64,
-      barcode: barcode,
-      locId: pixResult.loc_id,
-      transactionId: pixResult.id,
-      expiresAt: pixResult.expires_at
+      qrCode: result.pix?.qr_code,
+      qrCodeBase64: result.pix?.qr_code_base64,
+      barcode: result.boleto?.codigo_barras,
+      linhaDigitavel: result.boleto?.linha_digitavel,
+      nossoNumero: result.boleto?.nosso_numero,
+      locId: result.pix?.loc_id,
+      transactionId: result.pix?.transaction_id,
+      expiresAt: result.expires_at
     }
 
   } catch (error: any) {
@@ -147,6 +164,8 @@ async function updateInvoiceWithPaymentData(invoiceId: string, paymentData: {
   loc_id?: string
   transaction_id?: string
   linha_digitavel?: string
+  nosso_numero?: string
+  url_pdf?: string
 }) {
   try {
     const { error } = await supabase
@@ -157,6 +176,8 @@ async function updateInvoiceWithPaymentData(invoiceId: string, paymentData: {
         loc_id: paymentData.loc_id,
         transaction_id: paymentData.transaction_id,
         linha_digitavel: paymentData.linha_digitavel,
+        nosso_numero: paymentData.nosso_numero,
+        url_pdf: paymentData.url_pdf,
         updated_at: new Date().toISOString()
       })
       .eq('id', invoiceId)

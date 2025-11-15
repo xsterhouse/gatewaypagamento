@@ -120,17 +120,22 @@ export async function generateInvoicePDF({ customer, invoice }: InvoicePDFProps)
   addText('Código de Barras', margin, yPosition, 12, true)
   yPosition += 10
   
-  // Gerar linha digitável
-  if (invoice.barcode) {
-    const linhaDigitavel = generateLinhaDigitavel(invoice.barcode)
-    
-    // Linha digitável
+  // Linha digitável (se existir)
+  if (invoice.linha_digitavel) {
     addText('Linha Digitável:', margin, yPosition, 10, true)
     yPosition += 7
-    addText(linhaDigitavel, margin, yPosition, 9)
+    addText(invoice.linha_digitavel, margin, yPosition, 9)
     yPosition += 15
-    
-    // Código de barras visual
+  }
+  
+  // Nosso número (se existir)
+  if (invoice.nosso_numero) {
+    addText(`Nosso Número: ${invoice.nosso_numero}`, margin, yPosition, 10, true)
+    yPosition += 12
+  }
+  
+  // Código de barras visual
+  if (invoice.barcode) {
     const barcodeX = margin
     const barcodeY = yPosition
     const barcodeHeight = 30
