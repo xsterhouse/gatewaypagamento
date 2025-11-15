@@ -17,10 +17,13 @@ import {
   Trash2,
   Eye,
   Edit,
-  XCircle
+  XCircle,
+  FileText
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { PixPendingModal } from '@/components/PixPendingModal'
+import { InvoicesManagementModal } from '@/components/InvoicesManagementModal'
 
 interface DashboardStats {
   totalUsers: number
@@ -100,6 +103,10 @@ export function AdminDashboard() {
   const [transactionToCancel, setTransactionToCancel] = useState<RecentTransaction | null>(null)
   const [showViewModal, setShowViewModal] = useState(false)
   const [transactionToView, setTransactionToView] = useState<RecentTransaction | null>(null)
+  
+  // New Modals State
+  const [showPixPendingModal, setShowPixPendingModal] = useState(false)
+  const [showInvoicesModal, setShowInvoicesModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
 
 
@@ -620,7 +627,30 @@ export function AdminDashboard() {
                   Aguardando aprovação
                 </p>
               </div>
-              <Clock className="text-yellow-500" size={28} />
+              <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center">
+                <AlertCircle className="text-yellow-500" size={20} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Gerenciar Faturas */}
+        <Card 
+          className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
+          onClick={() => setShowInvoicesModal(true)}
+        >
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-xs">Gerenciar Faturas</p>
+                <p className="text-lg sm:text-xl font-bold text-blue-500">Painel</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cliente
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                <FileText className="text-blue-500" size={20} />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -764,7 +794,10 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/30 transition-all hover:shadow-lg hover:scale-105">
+        <Card 
+          className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/30 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
+          onClick={() => setShowPixPendingModal(true)}
+        >
           <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
@@ -775,7 +808,7 @@ export function AdminDashboard() {
                 <p className="text-base sm:text-xl font-bold text-orange-500">
                   {stats.pendingPixTransactions}
                 </p>
-                <p className="text-xs text-muted-foreground">Aguardando processamento</p>
+                <p className="text-xs text-muted-foreground">Clique para gerenciar</p>
               </div>
             </div>
           </CardContent>
@@ -1035,6 +1068,19 @@ export function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modals */}
+      <PixPendingModal 
+        open={showPixPendingModal}
+        onOpenChange={setShowPixPendingModal}
+        onRefresh={loadStats}
+      />
+
+      <InvoicesManagementModal 
+        open={showInvoicesModal}
+        onOpenChange={setShowInvoicesModal}
+        onRefresh={loadStats}
+      />
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
