@@ -21,6 +21,42 @@
       "destination": "/api/debug_pix"
     },
     {
+      "source": "/api/mercadopago",
+      "destination": "/api/mercadopago"
+    },
+    {
+      "source": "/api/mercadopago_create_invoice",
+      "destination": "/api/mercadopago_create_invoice"
+    },
+    {
+      "source": "/api/test_mercadopago",
+      "destination": "/api/test_mercadopago"
+    },
+    {
+      "source": "/api/credit_wallet",
+      "destination": "/api/credit_wallet"
+    },
+    {
+      "source": "/api/efi_create_pix",
+      "destination": "/api/efi_create_pix"
+    },
+    {
+      "source": "/api/efi_send_pix",
+      "destination": "/api/efi_send_pix"
+    },
+    {
+      "source": "/api/efi_webhook",
+      "destination": "/api/efi_webhook"
+    },
+    {
+      "source": "/api/list_pix_transactions",
+      "destination": "/api/list_pix_transactions"
+    },
+    {
+      "source": "/api/update_pix_status",
+      "destination": "/api/update_pix_status"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
