@@ -1,64 +1,48 @@
 {
   "rewrites": [
     {
-      "source": "/api/resend/emails",
-      "destination": "/api/resend-emails"
-    },
-    {
-      "source": "/api/mercadopago/create-payment",
-      "destination": "/api/mercadopago_create_payment"
-    },
-    {
       "source": "/api/mercadopago_create_pix",
-      "destination": "/api/mercadopago_create_pix"
-    },
-    {
-      "source": "/api/mercadopago/webhook",
-      "destination": "/api/mercadopago_webhook"
-    },
-    {
-      "source": "/api/debug_pix",
-      "destination": "/api/debug_pix"
-    },
-    {
-      "source": "/api/mercadopago",
-      "destination": "/api/mercadopago"
+      "destination": "/api/mercadopago_ops?operation=create_pix"
     },
     {
       "source": "/api/mercadopago_create_invoice",
-      "destination": "/api/mercadopago_create_invoice"
+      "destination": "/api/mercadopago_ops?operation=create_invoice"
+    },
+    {
+      "source": "/api/mercadopago_webhook",
+      "destination": "/api/mercadopago_ops?operation=webhook"
     },
     {
       "source": "/api/test_mercadopago",
-      "destination": "/api/test_mercadopago"
+      "destination": "/api/mercadopago_ops?operation=test"
     },
     {
-      "source": "/api/credit_wallet",
-      "destination": "/api/credit_wallet"
-    },
-    {
-      "source": "/api/efi_create_pix",
-      "destination": "/api/efi_create_pix"
-    },
-    {
-      "source": "/api/efi_send_pix",
-      "destination": "/api/efi_send_pix"
-    },
-    {
-      "source": "/api/efi_webhook",
-      "destination": "/api/efi_webhook"
-    },
-    {
-      "source": "/api/list_pix_transactions",
-      "destination": "/api/list_pix_transactions"
-    },
-    {
-      "source": "/api/update_pix_status",
-      "destination": "/api/update_pix_status"
+      "source": "/api/debug_pix",
+      "destination": "/api/mercadopago_ops?operation=test"
     },
     {
       "source": "/api/check_pix_status",
-      "destination": "/api/check_pix_status"
+      "destination": "/api/pix_operations?operation=check_status"
+    },
+    {
+      "source": "/api/update_pix_status",
+      "destination": "/api/pix_operations?operation=update_status"
+    },
+    {
+      "source": "/api/list_pix_transactions",
+      "destination": "/api/pix_operations?operation=list_transactions"
+    },
+    {
+      "source": "/api/efi_create_pix",
+      "destination": "/api/efi_ops?operation=create_pix"
+    },
+    {
+      "source": "/api/efi_send_pix",
+      "destination": "/api/efi_ops?operation=send_pix"
+    },
+    {
+      "source": "/api/efi_webhook",
+      "destination": "/api/efi_ops?operation=webhook"
     },
     {
       "source": "/((?!api/).*)",
