@@ -1,20 +1,7 @@
 {
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "rewrites": [
     {
-      "source": "/api/mercadopago_create_pix",
-      "destination": "/api/mercadopago_ops?operation=create_pix"
-    },
-    {
-      "source": "/api/mercadopago_webhook",
-      "destination": "/api/mercadopago_ops?operation=webhook"
-    },
-    {
-      "source": "/((?!api/).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
