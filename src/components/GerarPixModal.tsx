@@ -77,15 +77,18 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
           
           if (newStatus === 'paid') {
             toast.success('Pagamento recebido com sucesso! 💰')
+            
             // Limpar polling
             if (intervalRef.current) {
               clearInterval(intervalRef.current)
               intervalRef.current = null
             }
-            // Fechar modal após 3 segundos
+            
+            // Fechar modal e recarregar após 2 segundos
             setTimeout(() => {
               handleClose()
-            }, 3000)
+              window.location.reload()
+            }, 2000)
           } else if (newStatus === 'expired') {
             toast.error('QR Code expirado. Por favor, gere um novo.')
             if (intervalRef.current) {
