@@ -46,15 +46,28 @@ Deno.serve(async (req: Request) => {
       // Tentar múltiplas formas de buscar
       console.log('🔍 Buscando transação com payment_id:', paymentId)
       
-      // Busca 1: Por metadata
-      let { data: transactions, error: searchError } = await supabaseClient
+      // Busca 1: Por pix_txid (campo direto)
+      let { data: transactions } = await supabaseClient
         .from('pix_transactions')
         .select('*')
-        .contains('metadata', { mercadopago_payment_id: paymentId })
+        .eq('pix_txid', paymentId.toString())
 
-      console.log('📊 Busca por metadata:', transactions?.length || 0, 'resultados')
+      console.log('📊 Busca por pix_txid:', transactions?.length || 0, 'resultados')
       
-      // Busca 2: Se não encontrou, buscar por ID direto (caso seja o ID da transação)
+      // Busca 2: Por metadata se não encontrou
+      if (!transactions || transactions.length === 0) {
+        const { data: metadataTransactions } = await supabaseClient
+          .from('pix_transactions')
+          .select('*')
+          .contains('metadata', { mercadopago_payment_id: paymentId })
+        
+        if (metadataTransactions && metadataTransactions.length > 0) {
+          transactions = metadataTransactions
+          console.log('📊 Encontrado por metadata:', transactions.length)
+        }
+      }
+      
+      // Busca 3: Se não encontrou, buscar por ID direto (caso seja o ID da transação)
       if (!transactions || transactions.length === 0) {
         const { data: directTransaction } = await supabaseClient
           .from('pix_transactions')
