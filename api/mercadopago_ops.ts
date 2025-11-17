@@ -10,7 +10,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end()
   }
 
-  const { operation } = req.query
+  // Obter operation da query ou do body
+  let operation = req.query.operation as string
+  
+  // Se não tiver na query e for POST, tentar obter do body
+  if (!operation && req.method === 'POST' && req.body) {
+    operation = req.body.operation
+  }
+
+  // Se ainda não tiver, verificar se é o debug_pix (GET sem operation)
+  if (!operation && req.method === 'GET') {
+    operation = 'test'
+  }
+
+  console.log('🔧 Operação solicitada:', operation)
 
   try {
     switch (operation) {
@@ -23,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'test':
         return await handleTest(req, res)
       default:
-        return res.status(400).json({ error: 'Operação inválida' })
+        return res.status(400).json({ error: 'Operação inválida', operation })
     }
   } catch (error) {
     console.error('❌ Erro na operação Mercado Pago:', error)

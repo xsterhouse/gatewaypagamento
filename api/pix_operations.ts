@@ -10,7 +10,15 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end()
   }
 
-  const { operation } = req.query
+  // Obter operation da query ou do body
+  let operation = req.query.operation
+  
+  // Se não tiver na query e for POST, tentar obter do body
+  if (!operation && req.method === 'POST' && req.body) {
+    operation = req.body.operation
+  }
+
+  console.log('🔧 Operação PIX solicitada:', operation)
 
   try {
     switch (operation) {
@@ -21,7 +29,7 @@ export default async function handler(req: any, res: any) {
       case 'list_transactions':
         return await handleListTransactions(req, res)
       default:
-        return res.status(400).json({ error: 'Operação inválida' })
+        return res.status(400).json({ error: 'Operação inválida', operation })
     }
   } catch (error) {
     console.error('❌ Erro na operação PIX:', error)

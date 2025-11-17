@@ -18,7 +18,7 @@
     },
     {
       "source": "/api/debug_pix",
-      "destination": "/api/mercadopago_ops?operation=test"
+      "destination": "/api/mercadopago_ops"
     },
     {
       "source": "/api/check_pix_status",
