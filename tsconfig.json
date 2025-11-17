@@ -20,12 +20,13 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* Path mapping */
-    "baseUrl": ".",
+    /* Alias */
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+
+    /* Add Node.js types for serverless functions */
+    "types": ["node"]
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src", "api", "vite.config.ts", "vite-api-plugin.ts", "test-email.js", "check-email-status.js", "testar-subdominio.js", "force-deploy-final.js", "debug-dashboard.js"]
 }

@@ -7,6 +7,11 @@ export interface CreatePixPaymentParams {
   amount: number
   description: string
   transactionId: string
+  customer?: {
+    nome: string
+    cpf: string
+    email: string
+  }
 }
 
 export interface PixPaymentResult {
@@ -29,7 +34,8 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
     const body = {
       amount: params.amount,
       description: params.description,
-      transactionId: params.transactionId
+      transactionId: params.transactionId,
+      customer: params.customer
     }
 
     console.log('📦 Request body:', body)

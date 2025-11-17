@@ -45,20 +45,20 @@
 
 | Tabela | RLS Ativo | Políticas | Status |
 |--------|-----------|-----------|--------|
-| users | ✅ | 16 | ✅ Funcionando |
-| wallets | ✅ | 15 | ✅ Funcionando |
+| users | ✅ | 11 | ✅ Funcionando |
+| wallets | ✅ | 19 | ✅ Funcionando |
 | transactions | ✅ | 9 | ✅ Funcionando |
 | invoices | ✅ | 14 | ✅ Funcionando |
-| support_tickets | ✅ | 2 | ✅ Funcionando |
+| support_tickets | ✅ | 5 | ✅ Funcionando |
 | ticket_responses | ✅ | 2 | ✅ Funcionando |
 | med_requests | ✅ | 5 | ✅ Funcionando |
-| activity_logs | ✅ | 6 | ✅ Funcionando |
-| balance_locks | ✅ | 0 | ⚠️ Sem políticas |
-| manager_clients | ✅ | 0 | ⚠️ Sem políticas |
-| user_sessions | ✅ | 0 | ⚠️ Sem políticas |
+| activity_logs | ✅ | 8 | ✅ Funcionando |
+| balance_locks | ✅ | 2 | ✅ Funcionando |
+| manager_clients | ✅ | 2 | ✅ Funcionando |
+| user_sessions | ✅ | 2 | ✅ Funcionando |
 
 **Total:** 11 tabelas críticas com RLS ativo  
-**Políticas Ativas:** 58 políticas funcionando
+**Políticas Ativas:** 79 políticas funcionando
 
 ---
 

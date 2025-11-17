@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
-import { Plus, CheckCircle, Clock, XCircle, RefreshCw } from 'lucide-react'
+import { Plus, CheckCircle, Clock, XCircle, RefreshCw, FileText, Receipt } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { GerarPixModal } from '@/components/GerarPixModal'
+import { GerarBoletoModal } from '@/components/GerarBoletoModal'
+import { InvoiceModal } from '@/components/InvoiceModal'
 
 interface Deposit {
   id: string
@@ -21,6 +23,8 @@ export function Deposits() {
   const [deposits, setDeposits] = useState<Deposit[]>([])
   const [loading, setLoading] = useState(true)
   const [isPixModalOpen, setIsPixModalOpen] = useState(false)
+  const [isBoletoModalOpen, setIsBoletoModalOpen] = useState(false)
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
@@ -118,7 +122,15 @@ export function Deposits() {
           </Button>
           <Button onClick={() => setIsPixModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Novo Depósito
+            PIX
+          </Button>
+          <Button onClick={() => setIsBoletoModalOpen(true)} variant="outline">
+            <FileText className="h-4 w-4 mr-2" />
+            Boleto
+          </Button>
+          <Button onClick={() => setIsInvoiceModalOpen(true)} variant="default">
+            <Receipt className="h-4 w-4 mr-2" />
+            Faturas
           </Button>
         </div>
       </div>
@@ -207,6 +219,18 @@ export function Deposits() {
       <GerarPixModal
         open={isPixModalOpen}
         onOpenChange={setIsPixModalOpen}
+      />
+      
+      {/* Modal de Boleto */}
+      <GerarBoletoModal
+        open={isBoletoModalOpen}
+        onOpenChange={setIsBoletoModalOpen}
+      />
+
+      {/* Modal de Faturas */}
+      <InvoiceModal
+        open={isInvoiceModalOpen}
+        onOpenChange={setIsInvoiceModalOpen}
       />
     </div>
   )

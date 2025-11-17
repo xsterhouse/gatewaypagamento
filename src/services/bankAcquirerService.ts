@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { createPixPayment as createMercadoPagoPixPayment } from '@/lib/mercadopago-direct'
+import { createPixPayment as createEfiPixPayment } from '@/lib/efi-client'
 
 // ========================================
 // TIPOS E INTERFACES
@@ -37,7 +38,8 @@ export interface BankAcquirer {
   webhook_enabled?: boolean
   status: 'active' | 'inactive' | 'maintenance'
   created_at: string
-  updated_at: string
+  updated_at?: string
+  deleted_at?: string
 }
 
 export interface PixTransaction {
@@ -96,8 +98,51 @@ export interface PixPaymentResponse {
   success: boolean
   transaction_id?: string
   pix_code?: string
+  qr_code_base64?: string
   pix_qr_code?: string
   expires_at?: string
+  error?: string
+}
+
+// ========================================
+// INTERFACES BOLETO
+// ========================================
+
+export interface CreateBoletoParams {
+  amount: number
+  description: string
+  user_id: string
+  due_date?: string
+  customer?: {
+    name: string
+    cpf: string
+    email: string
+  }
+}
+
+export interface BoletoResponse {
+  success: boolean
+  charge?: {
+    id: string
+    loc_id: string
+    status: string
+    amount: number
+    description: string
+    due_date: string
+    created_at: string
+  }
+  payment_codes?: {
+    barcode: string | null
+    linha_digitavel: string | null
+    pix_code: string | null
+  }
+  files?: {
+    pdf_base64: string | null
+    qr_code?: {
+      qr_code: string
+      qr_code_base64: string
+    }
+  }
   error?: string
 }
 
@@ -225,21 +270,88 @@ class BankAcquirerService {
   }
   
   /**
-   * Deleta um adquirente
+   * Deleta um adquirente (soft delete)
    */
   async deleteAcquirer(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('bank_acquirers')
-      .delete()
-      .eq('id', id)
+    // Primeiro verifica se há transações associadas
+    const { data: transactions, error: checkError } = await supabase
+      .from('pix_transactions')
+      .select('id')
+      .eq('acquirer_id', id)
+      .limit(1)
     
-    if (error) throw error
+    if (checkError) throw checkError
+    
+    // Se houver transações, faz soft delete
+    if (transactions && transactions.length > 0) {
+      const { error } = await supabase
+        .from('bank_acquirers')
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+      
+      if (error) throw error
+    } else {
+      // Se não houver transações, pode excluir permanentemente
+      const { error } = await supabase
+        .from('bank_acquirers')
+        .delete()
+        .eq('id', id)
+      
+      if (error) throw error
+    }
   }
   
   // ========================================
+  // INTEGRAÇÃO BOLETO
+  // ========================================
+
+  /**
+   * Cria um pagamento via Boleto EFI
+   */
+  async createBoletoPayment(params: CreateBoletoParams): Promise<BoletoResponse> {
+    try {
+      console.log('🧾 Criando boleto via EFI:', params)
+
+      const response = await fetch('/api/efi_create_pix', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Erro ao criar boleto'
+        }
+      }
+
+      return {
+        success: true,
+        charge: result.charge,
+        payment_codes: result.payment_codes,
+        files: result.files
+      }
+
+    } catch (error: any) {
+      console.error('❌ Erro ao criar boleto:', error)
+      return {
+        success: false,
+        error: error.message || 'Erro ao processar boleto'
+      }
+    }
+  }
+
+  // ========================================
   // INTEGRAÇÃO PIX
   // ========================================
-  
+
   /**
    * Cria um pagamento PIX
    */
@@ -276,7 +388,77 @@ class BankAcquirerService {
       const expiresAt = new Date()
       expiresAt.setMinutes(expiresAt.getMinutes() + expiresInMinutes)
       
-      // 5. Se for Mercado Pago, chamar API PRIMEIRO para obter código PIX real
+      // 5. Se for EFI, chamar API da EFI
+      if (acquirer.bank_code === 'EFI') {
+        try {
+          console.log('🟢 Chamando EFI para gerar PIX real...')
+          
+          const tempTxId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`
+          
+          const efiResult = await createEfiPixPayment({
+            amount: params.amount,
+            description: params.description,
+            transactionId: tempTxId,
+            pixKey: acquirer.pix_key
+          })
+
+          if (efiResult.success && efiResult.qr_code) {
+            console.log('✅ EFI - PIX criado com sucesso!')
+            
+            const transaction: Partial<PixTransaction> = {
+              user_id: params.user_id,
+              acquirer_id: acquirer.id,
+              transaction_type: 'deposit',
+              amount: params.amount,
+              fee_amount: feeAmount,
+              net_amount: netAmount,
+              pix_code: efiResult.qr_code,
+              pix_qr_code: efiResult.qr_code_base64 || efiResult.qr_code,
+              pix_key: acquirer.pix_key,
+              pix_key_type: acquirer.pix_key_type,
+              pix_txid: efiResult.id,
+              status: 'pending',
+              description: params.description,
+              expires_at: efiResult.expires_at || expiresAt.toISOString(),
+              metadata: {
+                acquirer_name: acquirer.name,
+                bank_code: acquirer.bank_code,
+                efi_loc_id: efiResult.loc_id
+              }
+            }
+            
+            const { data, error } = await supabase
+              .from('pix_transactions')
+              .insert(transaction)
+              .select()
+              .single()
+            
+            if (error) throw error
+            
+            return {
+              success: true,
+              transaction_id: data.id,
+              pix_code: efiResult.qr_code,
+              pix_qr_code: efiResult.qr_code_base64 || efiResult.qr_code,
+              expires_at: efiResult.expires_at || expiresAt.toISOString()
+            }
+          } else {
+            console.error('❌ EFI falhou:', efiResult.error)
+            return {
+              success: false,
+              error: efiResult.error || 'Erro ao gerar PIX na EFI'
+            }
+          }
+        } catch (efiError: any) {
+          console.error('❌ Erro ao chamar EFI:', efiError)
+          return {
+            success: false,
+            error: efiError.message || 'Erro ao conectar com EFI'
+          }
+        }
+      }
+      
+      // 6. Se for Mercado Pago, chamar API PRIMEIRO para obter código PIX real
       if (acquirer.bank_code === 'MP') {
         try {
           console.log('🔵 Chamando Mercado Pago para gerar PIX real...')
@@ -347,11 +529,11 @@ class BankAcquirerService {
         }
       }
       
-      // 6. Para outros bancos: gerar código PIX simulado
+      // 7. Para outros bancos: gerar código PIX simulado
       const pixCode = this.generatePixCode(params.amount, acquirer)
       const pixQrCode = await this.generateQRCode(pixCode)
       
-      // 7. Criar transação no banco com código simulado
+      // 8. Criar transação no banco com código simulado
       const transaction: Partial<PixTransaction> = {
         user_id: params.user_id,
         acquirer_id: acquirer.id,
@@ -380,7 +562,7 @@ class BankAcquirerService {
       
       if (error) throw error
       
-      // 8. Se for ambiente de produção de outros bancos, fazer chamada real à API
+      // 9. Se for ambiente de produção de outros bancos, fazer chamada real à API
       if (acquirer.environment === 'production' && acquirer.api_base_url) {
         await this.callBankAPI(acquirer, data)
       }

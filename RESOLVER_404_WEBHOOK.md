@@ -15,7 +15,7 @@ ID: gru1::zv2rd-1762956747502-5917b9890eb6
 npm run build
 ```
 
-Aguarde finalizar. Deve criar a pasta `dist/`.
+Aguarde finalizar. Deve criar la pasta `dist/`.
 
 ### Passo 2: Deploy no Vercel
 

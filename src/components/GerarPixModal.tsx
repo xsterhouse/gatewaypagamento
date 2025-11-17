@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { QrCode, Plus, Copy, Share2, Check } from 'lucide-react'
+import { QrCode, Plus, Copy, Share2, Check, RefreshCw, Clock, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '@/lib/supabase'
@@ -21,6 +21,10 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
   const [pixCode, setPixCode] = useState('')
   const [showQRCode, setShowQRCode] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [transactionId, setTransactionId] = useState('')
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'expired'>('pending')
+  const [isChecking, setIsChecking] = useState(false)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const quickValues = [
     { label: '+R$ 10,00', value: 10 },
@@ -47,6 +51,82 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
     const formatted = formatCurrency(e.target.value)
     setValor(formatted)
   }
+
+  // Função para verificar status do pagamento
+  const checkPaymentStatus = async () => {
+    if (!transactionId) return
+
+    try {
+      setIsChecking(true)
+      const response = await fetch('/api/check_pix_status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transactionId }),
+      })
+
+      const result = await response.json()
+
+      if (result.success && result.transaction) {
+        const newStatus = result.transaction.status
+        
+        if (newStatus !== paymentStatus) {
+          setPaymentStatus(newStatus)
+          
+          if (newStatus === 'paid') {
+            toast.success('Pagamento recebido com sucesso! 💰')
+            // Limpar polling
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current)
+              intervalRef.current = null
+            }
+            // Fechar modal após 3 segundos
+            setTimeout(() => {
+              handleClose()
+            }, 3000)
+          } else if (newStatus === 'expired') {
+            toast.error('QR Code expirado. Por favor, gere um novo.')
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current)
+              intervalRef.current = null
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status:', error)
+    } finally {
+      setIsChecking(false)
+    }
+  }
+
+  // Iniciar polling quando QR Code é gerado
+  useEffect(() => {
+    if (showQRCode && transactionId && paymentStatus === 'pending') {
+      // Verificar imediatamente
+      checkPaymentStatus()
+      
+      // Configurar polling a cada 10 segundos
+      intervalRef.current = setInterval(checkPaymentStatus, 10000)
+      
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
+        }
+      }
+    }
+  }, [showQRCode, transactionId, paymentStatus])
+
+  // Limpar polling ao desmontar
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [])
 
   const addQuickValue = (value: number) => {
     const currentValue = Number(valor.replace(/\./g, '').replace(',', '.')) || 0
@@ -96,6 +176,8 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
       }
 
       setPixCode(result.pix_code || '')
+      setTransactionId(result.transaction_id || '')
+      setPaymentStatus('pending')
       setShowQRCode(true)
       toast.success('QR Code gerado com sucesso!')
       console.log('💵 Pagamento PIX criado via adquirente:', result.transaction_id)
@@ -143,11 +225,19 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
   }
 
   const handleClose = () => {
+    // Limpar polling
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    
     onOpenChange(false)
     setTimeout(() => {
       setValor('')
       setDescricao('')
       setPixCode('')
+      setTransactionId('')
+      setPaymentStatus('pending')
       setShowQRCode(false)
       setCopied(false)
     }, 300)
@@ -260,14 +350,46 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
                 </div>
               </div>
 
-              {/* QR Code */}
-              <div className="flex justify-center bg-white p-6 rounded-lg">
-                <QRCodeSVG
-                  value={pixCode}
-                  size={200}
-                  level="H"
-                  includeMargin={true}
-                />
+              {/* Status do Pagamento */}
+              <div className="flex flex-col items-center space-y-3">
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
+                  paymentStatus === 'paid' 
+                    ? 'bg-green-100 text-green-800' 
+                    : paymentStatus === 'expired'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {paymentStatus === 'paid' ? (
+                    <>
+                      <CheckCircle size={16} />
+                      <span className="text-sm font-medium">Pago ✅</span>
+                    </>
+                  ) : paymentStatus === 'expired' ? (
+                    <>
+                      <Clock size={16} />
+                      <span className="text-sm font-medium">Expirado</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock size={16} className={isChecking ? 'animate-spin' : ''} />
+                      <span className="text-sm font-medium">
+                        {isChecking ? 'Verificando...' : 'Aguardando pagamento'}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* QR Code */}
+                <div className={`bg-white p-6 rounded-lg ${
+                  paymentStatus === 'paid' ? 'opacity-50' : ''
+                }`}>
+                  <QRCodeSVG
+                    value={pixCode}
+                    size={200}
+                    level="H"
+                    includeMargin={true}
+                  />
+                </div>
               </div>
 
               {/* Código PIX Copia e Cola */}
@@ -323,6 +445,28 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
                 </Button>
               </div>
 
+              {/* Botão de Verificação Manual */}
+              {paymentStatus === 'pending' && (
+                <Button
+                  onClick={checkPaymentStatus}
+                  disabled={isChecking}
+                  variant="outline"
+                  className="w-full border-border hover:border-primary"
+                >
+                  {isChecking ? (
+                    <>
+                      <RefreshCw size={18} className="mr-2 animate-spin" />
+                      Verificando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw size={18} className="mr-2" />
+                      Verificar Pagamento
+                    </>
+                  )}
+                </Button>
+              )}
+              
               {/* Botão Novo PIX */}
               <Button
                 onClick={() => {
@@ -330,6 +474,8 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
                   setValor('')
                   setDescricao('')
                   setPixCode('')
+                  setTransactionId('')
+                  setPaymentStatus('pending')
                 }}
                 className="w-full bg-muted hover:bg-muted/80 text-foreground"
               >

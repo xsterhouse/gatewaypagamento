@@ -14,8 +14,16 @@ import {
   Ban,
   RefreshCw,
   ArrowRight,
-  Trash2
+  Trash2,
+  Eye,
+  Edit,
+  XCircle,
+  FileText
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import { PixPendingModal } from '@/components/PixPendingModal'
+import { InvoicesManagementModal } from '@/components/InvoicesManagementModal'
 
 interface DashboardStats {
   totalUsers: number
@@ -50,6 +58,8 @@ interface RecentTransaction {
   amount: number
   status: string
   created_at: string
+  description?: string
+  payment_method?: string
 }
 
 export function AdminDashboard() {
@@ -81,18 +91,29 @@ export function AdminDashboard() {
   })
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pendingMEDs, setPendingMEDs] = useState(0)
   const [totalMEDAmount, setTotalMEDAmount] = useState(0)
-  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null)
+  
+  // Modals State
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; status: string } | null>(null)
+  const [transactionToDelete, setTransactionToDelete] = useState<RecentTransaction | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [transactionToCancel, setTransactionToCancel] = useState<RecentTransaction | null>(null)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [transactionToView, setTransactionToView] = useState<RecentTransaction | null>(null)
+  
+  // New Modals State
+  const [showPixPendingModal, setShowPixPendingModal] = useState(false)
+  const [showInvoicesModal, setShowInvoicesModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+
 
   useEffect(() => {
     console.log('🔵 AdminDashboard montado')
     console.log('authLoading:', authLoading, 'user:', !!user)
     
-    // Timeout de segurança para evitar tela preta infinita
     const safetyTimeout = setTimeout(() => {
       if (loading) {
         console.warn('⚠️ Timeout de segurança atingido, forçando carregamento')
@@ -102,9 +123,8 @@ export function AdminDashboard() {
           setLoading(false)
         }
       }
-    }, 3000) // 3 segundos de timeout
+    }, 3000)
     
-    // Só tenta carregar quando authLoading terminar E user existir
     if (!authLoading && user) {
       console.log('✅ Auth pronto, carregando dados do dashboard...')
       loadDashboardData()
@@ -118,30 +138,20 @@ export function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0]
-
-      // Carregar estatísticas de usuários (sem cache)
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('id, status, kyc_status, created_at, name, email, role')
         .order('created_at', { ascending: false })
 
-      if (usersError) {
-        console.error('Erro ao carregar usuários:', usersError)
-      }
+      if (usersError) console.error('Erro ao carregar usuários:', usersError)
 
-      // Carregar todas as carteiras para calcular saldos
       const { data: wallets, error: walletsError } = await supabase
         .from('wallets')
-        .select('user_id, currency_code, balance, available_balance, blocked_balance, is_active')
+        .select('user_id, currency_code, balance, available_balance, blocked_balance, is_active, wallet_name')
         .eq('is_active', true)
 
-      if (walletsError) {
-        console.error('Erro ao carregar carteiras:', walletsError)
-      }
-
+      if (walletsError) console.error('Erro ao carregar carteiras:', walletsError)
       
-      // Carregar todas as transações para estatísticas (se a tabela existir)
       const { data: allTransactions, error: allTransError } = await supabase
         .from('transactions')
         .select('*')
@@ -151,7 +161,6 @@ export function AdminDashboard() {
         console.error('Erro ao carregar transações:', allTransError)
       }
       
-      // Carregar MEDs pendentes
       const { data: medRequests, error: medError } = await supabase
         .from('med_requests')
         .select('id, amount, status')
@@ -167,9 +176,6 @@ export function AdminDashboard() {
       setPendingMEDs(pendingMEDsCount)
       setTotalMEDAmount(totalMED)
       
-      console.log('🔄 MEDs Pendentes:', pendingMEDsCount, 'Valor total:', totalMED)
-
-      // Carregar tickets abertos (se a tabela existir)
       const { data: tickets, error: ticketsError } = await supabase
         .from('support_tickets')
         .select('id')
@@ -178,168 +184,138 @@ export function AdminDashboard() {
       if (ticketsError && !ticketsError.message.includes('does not exist')) {
         console.error('Erro ao carregar tickets:', ticketsError)
       }
+      
+      const clientWallets = (wallets || []).filter(w => w.wallet_name !== 'Conta Mãe - Taxas Gateway');
+      
+      const { data: cryptoPricesData, error: pricesError } = await supabase
+        .from('crypto_prices')
+        .select('cryptocurrency_symbol, price_brl')
 
-      // Calcular saldo total em BRL das carteiras
-      const brlWallets = wallets?.filter(w => w.currency_code === 'BRL') || []
-      const totalBalance = brlWallets.reduce((sum, w) => sum + Number(w.balance || 0), 0)
-      const lockedBalance = brlWallets.reduce((sum, w) => sum + Number(w.blocked_balance || 0), 0)
-
-      // Debug: Mostrar dados carregados
-      console.log('📊 Dashboard Stats:', {
-        users: users?.length,
-        wallets: wallets?.length,
-        brlWallets: brlWallets.length,
-        totalBalance,
-        lockedBalance,
-        transactions: allTransactions?.length,
-        tickets: tickets?.length
-      })
+      if (pricesError) console.error('Erro ao buscar preços de cripto:', pricesError)
+      
+      const cryptoPrices = new Map(
+        cryptoPricesData?.map(p => [p.cryptocurrency_symbol, p.price_brl]) || []
+      )
+      
+      const totalBalance = clientWallets.reduce((sum, wallet) => {
+        const available = Number(wallet.available_balance || 0);
+        if (wallet.currency_code === 'BRL') {
+          return sum + available;
+        }
+        const price = cryptoPrices.get(wallet.currency_code) || 0;
+        return sum + (available * price);
+      }, 0);
+      
+      const lockedBalance = clientWallets.reduce((sum, wallet) => {
+        const blocked = Number(wallet.blocked_balance || 0);
+        if (wallet.currency_code === 'BRL') {
+          return sum + blocked;
+        }
+        const price = cryptoPrices.get(wallet.currency_code) || 0;
+        return sum + (blocked * price);
+      }, 0);
 
       if (users) {
-        // Filtrar apenas clientes (excluir admin e manager)
         const clientUsers = users.filter(u => u.role === 'user')
-        
-        // Debug: Mostrar status KYC de todos os clientes
-        console.log('📋 Total de clientes:', clientUsers.length)
-        console.log('📋 Status KYC dos clientes:', clientUsers.map(u => ({
-          name: u.name,
-          email: u.email,
-          kyc_status: u.kyc_status
-        })))
-        
-        // Filtrar clientes com KYC pendente (apenas role = 'user')
         const usersWithPendingKYC = clientUsers.filter(u => 
           u.kyc_status === 'pending' || u.kyc_status === 'awaiting_verification'
         )
-        console.log('⚠️ Clientes com KYC PENDENTE:', usersWithPendingKYC.map(u => ({
-          name: u.name,
-          email: u.email,
-          kyc_status: u.kyc_status
-        })))
-        
-        // Contar usuários por status (excluindo admins e managers)
         const nonAdminUsers = clientUsers.filter(u => u.id)
         const activeUsers = clientUsers.filter(u => u.status === 'active').length
         const suspendedUsers = clientUsers.filter(u => u.status === 'suspended').length
         const pendingKYC = usersWithPendingKYC.length
         
-        console.log('🔢 Total KYC Pendentes (apenas clientes):', pendingKYC)
-        
         const newUsersToday = users.filter(u => {
           if (!u.created_at) return false
-          
-          // Handle different date formats and timezones
           const userDate = new Date(u.created_at)
           const todayLocal = new Date()
-          
-          // Compare dates in local timezone
           return userDate.toDateString() === todayLocal.toDateString()
         }).length
         
-        console.log('🆕 Novos usuários hoje:', newUsersToday, 'de', users.length, 'total')
-        console.log('📅 Data de hoje (local):', new Date().toDateString())
-        console.log('📅 Data de hoje (ISO):', today)
-        
-        // Debug: Show recent user creation dates
-        const recentUsers = users.slice(0, 5).map(u => ({
-          name: u.name,
-          created_at: u.created_at,
-          date_string: u.created_at ? new Date(u.created_at).toDateString() : 'null'
-        }))
-        console.log('📋 Usuários recentes e datas:', recentUsers)
-
-        // Buscar estatísticas de PIX reais de pix_transactions
-        const { data: allPixTransactions } = await supabase
+        // ==================================================================
+        // CORREÇÃO: Buscar estatísticas de PIX de forma eficiente
+        // ==================================================================
+        const { count: pixReceivedCount, error: receivedCountError } = await supabase
           .from('pix_transactions')
-          .select('amount, status, created_at')
-        
-        const pixCompleted = allPixTransactions?.filter(t => t.status === 'completed') || []
-        const pixReceivedVolume = pixCompleted.reduce((sum, t) => sum + Number(t.amount || 0), 0)
-        const pixReceivedCount = pixCompleted.length
-        
-        // Para PIX enviados, buscar de wallet_transactions tipo debit
-        const pixSent = allTransactions?.filter(t => 
-          t.transaction_type === 'debit'
-        ) || []
-        const pixSentVolume = pixSent.reduce((sum, t) => sum + Number(t.amount || 0), 0)
-        
-        console.log('📊 PIX Stats:', {
-          received: pixReceivedVolume,
-          receivedCount: pixReceivedCount,
-          sent: pixSentVolume,
-          sentCount: pixSent.length
-        })
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed')
+          .eq('transaction_type', 'deposit')
 
-        // Transações de hoje - improved date handling
+        const { data: pixReceivedData, error: receivedVolumeError } = await supabase
+          .from('pix_transactions')
+          .select('amount')
+          .eq('status', 'completed')
+          .eq('transaction_type', 'deposit')
+        
+        const pixReceivedVolume = pixReceivedData?.reduce((sum, t) => sum + Number(t.amount || 0), 0) || 0
+
+        const { count: pixSentCount, error: sentCountError } = await supabase
+          .from('pix_transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed')
+          .eq('transaction_type', 'withdrawal')
+
+        const { data: pixSentData, error: sentVolumeError } = await supabase
+          .from('pix_transactions')
+          .select('amount')
+          .eq('status', 'completed')
+          .eq('transaction_type', 'withdrawal')
+        
+        const pixSentVolume = pixSentData?.reduce((sum, t) => sum + Number(t.amount || 0), 0) || 0
+
+        const { count: pendingPixTransactions, error: pendingError } = await supabase
+          .from('pix_transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending')
+
+        const { count: failedPixTransactions, error: failedError } = await supabase
+          .from('pix_transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'failed')
+
+        const { count: totalPixCount, error: totalError } = await supabase
+          .from('pix_transactions')
+          .select('*', { count: 'exact', head: true })
+
+        if (receivedCountError) console.error('Erro ao contar PIX recebidos:', receivedCountError)
+        if (receivedVolumeError) console.error('Erro ao somar volume PIX recebido:', receivedVolumeError)
+        if (sentCountError) console.error('Erro ao contar PIX enviados:', sentCountError)
+        if (sentVolumeError) console.error('Erro ao somar volume PIX enviado:', sentVolumeError)
+        if (pendingError) console.error('Erro ao contar PIX pendentes:', pendingError)
+        if (failedError) console.error('Erro ao contar PIX falhados:', failedError)
+        if (totalError) console.error('Erro ao contar total de PIX:', totalError)
+
+        const completedPixCount = (pixReceivedCount || 0) + (pixSentCount || 0)
+        const successRate = (totalPixCount || 0) > 0 
+          ? (completedPixCount / (totalPixCount || 1)) * 100 
+          : 0
+        
         const transactionsToday = allTransactions?.filter(t => {
           if (!t.created_at) return false
-          
-          // Handle different date formats and timezones
           const transDate = new Date(t.created_at)
           const todayLocal = new Date()
-          
-          // Compare dates in local timezone
           return transDate.toDateString() === todayLocal.toDateString()
         }).length || 0
 
-        console.log('📈 Transações hoje:', transactionsToday, 'de', allTransactions?.length || 0, 'total')
-        
-        // Debug: Show recent transaction dates
-        const recentTransactions = allTransactions?.slice(0, 5).map(t => ({
-          id: t.id,
-          amount: t.amount,
-          created_at: t.created_at,
-          date_string: t.created_at ? new Date(t.created_at).toDateString() : 'null'
-        }))
-        console.log('📋 Transações recentes e datas:', recentTransactions)
-
-        // Buscar taxas reais da carteira Conta Mãe
-        const { data: adminWallet, error: adminWalletError } = await supabase
+        const { data: adminWallet } = await supabase
           .from('wallets')
           .select('balance, id')
           .eq('wallet_name', 'Conta Mãe - Taxas Gateway')
           .single()
         
-        console.log('💰 Admin Wallet:', adminWallet, adminWalletError)
-        
         const totalFeesCollected = adminWallet?.balance || 0
 
-        // Calcular métricas de Gateway
-        // Buscar taxas de hoje da carteira admin (últimas 24h)
         const now = new Date()
         const yesterday = new Date(now)
         yesterday.setDate(yesterday.getDate() - 1)
         
-        const { data: adminTodayTransactions, error: adminTodayError } = await supabase
+        const { data: adminTodayTransactions } = await supabase
           .from('wallet_transactions')
           .select('amount, created_at')
           .eq('wallet_id', adminWallet?.id)
           .gte('created_at', yesterday.toISOString())
         
-        console.log('📅 Admin Today Transactions:', adminTodayTransactions, adminTodayError)
-        console.log('📅 Today filter (últimas 24h):', yesterday.toISOString())
-        
         const todayFees = (adminTodayTransactions || []).reduce((sum, t) => sum + Number(t.amount || 0), 0)
-        
-        // Buscar estatísticas de pix_transactions
-        const { data: pixTransactions } = await supabase
-          .from('pix_transactions')
-          .select('status')
-        
-        const pendingTransactions = pixTransactions?.filter(t => t.status === 'pending').length || 0
-        const failedTransactions = pixTransactions?.filter(t => t.status === 'failed').length || 0
-        const completedTransactions = pixTransactions?.filter(t => t.status === 'completed').length || 0
-        
-        const totalPixCount = pixTransactions?.length || 0
-        const successRate = totalPixCount > 0 
-          ? (completedTransactions / totalPixCount) * 100 
-          : 0
-        
-        console.log('📊 Taxa de Sucesso:', {
-          completed: completedTransactions,
-          total: totalPixCount,
-          rate: successRate
-        })
         
         const totalTxCount = allTransactions?.length || 0
         const averageTicket = totalTxCount > 0
@@ -357,30 +333,28 @@ export function AdminDashboard() {
           lockedBalance,
           pixSentVolume,
           pixReceivedVolume,
-          pixSentCount: pixSent.length,
-          pixReceivedCount,
+          pixSentCount: pixSentCount || 0,
+          pixReceivedCount: pixReceivedCount || 0,
           totalFeesCollected,
           newUsersToday,
           transactionsToday,
-          // Gateway específicos:
           gatewayBalance: adminWallet?.balance || 0,
           gatewayAvailableBalance: adminWallet?.balance || 0,
           gatewayFeesToday: todayFees,
-          pendingPixTransactions: pendingTransactions,
-          failedPixTransactions: failedTransactions,
+          pendingPixTransactions: pendingPixTransactions || 0,
+          failedPixTransactions: failedPixTransactions || 0,
           averageTicket,
           successRate
         })
       }
 
-      // Buscar transações recentes de PIX
       const { data: pixRecentTransactions } = await supabase
         .from('pix_transactions')
         .select('*')
+        .neq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(10)
       
-      // Formatar transações recentes
       if (pixRecentTransactions && pixRecentTransactions.length > 0) {
         const formatted = await Promise.all(
           pixRecentTransactions.map(async (t) => {
@@ -393,18 +367,18 @@ export function AdminDashboard() {
             return {
               id: t.id,
               user_name: user?.name || user?.email?.split('@')[0] || 'Usuário',
-              type: 'pix', // PIX sempre é tipo pix
+              type: t.transaction_type === 'deposit' ? 'credit' : 'debit',
               amount: Number(t.amount || 0),
               status: t.status || 'pending',
               created_at: t.created_at,
+              description: t.description || undefined,
+              payment_method: 'pix'
             }
           })
         )
         setRecentTransactions(formatted)
-        console.log('📋 Transações Recentes:', formatted.length)
       } else {
         setRecentTransactions([])
-        console.log('📋 Nenhuma transação recente encontrada')
       }
     } catch (error: any) {
       console.error('❌ Erro ao carregar dashboard:', error)
@@ -412,7 +386,15 @@ export function AdminDashboard() {
     } finally {
       console.log('✅ Loading finalizado')
       setLoading(false)
+      setRefreshing(false)
     }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    toast.info('Atualizando dados do dashboard...')
+    await loadDashboardData()
+    toast.success('Dashboard atualizado!')
   }
 
   const getStatusBadge = (status: string) => {
@@ -423,6 +405,8 @@ export function AdminDashboard() {
         return <span className="text-yellow-500 text-xs">⏳ Pendente</span>
       case 'failed':
         return <span className="text-red-500 text-xs">✗ Falhou</span>
+      case 'cancelled':
+        return <span className="text-gray-500 text-xs">🚫 Cancelada</span>
       default:
         return <span className="text-gray-500 text-xs">{status}</span>
     }
@@ -445,152 +429,60 @@ export function AdminDashboard() {
     }).format(value)
   }
 
-  const handleDeleteTransaction = (transactionId: string, status: string) => {
-    console.log('🗑️ Tentando deletar transação:', { transactionId, status })
-    
-    // Só permite deletar transações falhadas
-    if (status !== 'failed') {
-      console.warn('⚠️ Tentativa de deletar transação não falhada')
-      alert('Apenas transações falhadas podem ser excluídas!')
-      return
-    }
-
-    // Abrir modal de confirmação
-    setTransactionToDelete({ id: transactionId, status })
+  const handleOpenDeleteModal = (transaction: RecentTransaction) => {
+    setTransactionToDelete(transaction)
     setShowDeleteModal(true)
   }
 
   const confirmDeleteTransaction = async () => {
-    if (!transactionToDelete) {
-      console.error('❌ Nenhuma transação selecionada para deletar')
-      return
-    }
-
+    if (!transactionToDelete) return
     const { id: transactionId } = transactionToDelete
-    
-    console.log('🔄 Confirmação recebida! Iniciando exclusão da transação:', transactionId)
-    
-    setDeletingTransactionId(transactionId)
     setShowDeleteModal(false)
 
     try {
-      console.log('📡 Método 1: Tentando DELETE direto no Supabase...')
-      console.log('Tabela: pix_transactions')
-      console.log('ID:', transactionId)
-      
-      // Primeiro, verificar se a transação existe
-      const { data: existingTransaction, error: existError } = await supabase
-        .from('pix_transactions')
-        .select('*')
-        .eq('id', transactionId)
-        .single()
-
-      console.log('🔍 Verificação da transação:', { existingTransaction, existError })
-
-      if (existError || !existingTransaction) {
-        console.error('❌ Transação não encontrada:', existError)
-        alert('Erro: Transação não encontrada no banco de dados.')
-        return
-      }
-
-      console.log('✅ Transação encontrada:', existingTransaction)
-      console.log('Status:', existingTransaction.status)
-      
-      // Tentar deletar
-      const { error, data, count } = await supabase
+      const { error } = await supabase
         .from('pix_transactions')
         .delete()
         .eq('id', transactionId)
-        .select()
 
-      console.log('📥 Resposta completa do DELETE:', { 
-        error, 
-        data, 
-        count,
-        hasError: !!error,
-        dataLength: data?.length 
-      })
+      if (error) throw error
 
-      if (error) {
-        console.error('❌ Erro ao deletar transação (Método 1):', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        })
-        
-        // Se falhar, tentar método alternativo usando SQL direto
-        console.log('🔄 Tentando Método 2: SQL direto via RPC...')
-        
-        const { data: rpcData, error: rpcError } = await supabase.rpc('delete_failed_transaction', {
-          transaction_id: transactionId
-        })
-        
-        if (rpcError) {
-          console.error('❌ Método 2 também falhou:', rpcError)
-          alert(`Erro ao deletar transação: ${error.message}\n\nPermissões insuficientes. Execute o SQL: FIX_DELETE_PERMISSIONS_URGENT.sql`)
-          return
-        }
-        
-        console.log('✅ Método 2 funcionou!', rpcData)
-      }
-
-      if (!error && (!data || data.length === 0)) {
-        console.warn('⚠️ Nenhum registro foi deletado. Problema de permissão RLS.')
-        alert('Aviso: Nenhum registro foi deletado. Execute o SQL: FIX_DELETE_PERMISSIONS_URGENT.sql no Supabase.')
-        return
-      }
-
-      // Remover da lista local IMEDIATAMENTE
-      setRecentTransactions(prev => {
-        const filtered = prev.filter(t => t.id !== transactionId)
-        console.log('📋 Lista atualizada:', {
-          antes: prev.length,
-          depois: filtered.length,
-          removido: transactionId
-        })
-        return filtered
-      })
-      
-      console.log('✅ Transação deletada com sucesso!', data)
-      
-      // Verificar se realmente foi deletada do banco
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('pix_transactions')
-        .select('id')
-        .eq('id', transactionId)
-        .maybeSingle()
-      
-      console.log('🔍 Verificação pós-exclusão:', { verifyData, verifyError })
-      
-      if (verifyData) {
-        console.error('❌ ERRO: Transação ainda existe no banco!', verifyData)
-        alert('❌ Erro: A transação não foi excluída do banco de dados. Verifique as permissões RLS.')
-        // Recarregar para mostrar o estado real
-        await loadDashboardData()
-        return
-      }
-      
-      console.log('✅ Confirmado: Transação removida do banco de dados!')
+      setRecentTransactions(prev => prev.filter(t => t.id !== transactionId))
       alert('✅ Transação excluída com sucesso!')
-      
-      // NÃO recarregar automaticamente para evitar que a transação "volte"
-      // await loadDashboardData()
     } catch (error: any) {
-      console.error('❌ Exceção ao deletar transação:', {
-        error,
-        message: error?.message,
-        stack: error?.stack
-      })
       alert('Erro ao deletar transação: ' + (error?.message || 'Erro desconhecido'))
     } finally {
-      setDeletingTransactionId(null)
       setTransactionToDelete(null)
-      console.log('🏁 Processo de exclusão finalizado')
     }
   }
 
-  // Aguardar tanto a autenticação quanto o carregamento dos dados
+  const handleOpenCancelModal = (transaction: RecentTransaction) => {
+    if (transaction.status === 'completed' || transaction.status === 'cancelled') {
+      alert('Apenas transações pendentes ou em processamento podem ser canceladas.');
+      return;
+    }
+    setTransactionToCancel(transaction);
+    setShowCancelModal(true);
+  }
+
+  const confirmCancelTransaction = async () => {
+    if (!transactionToCancel) return;
+    try {
+      const { error } = await supabase
+        .from('pix_transactions')
+        .update({ status: 'cancelled' })
+        .eq('id', transactionToCancel.id);
+      if (error) throw error;
+      alert('Transação cancelada com sucesso!');
+      loadDashboardData();
+    } catch (error) {
+      alert('Erro ao cancelar transação.');
+    } finally {
+      setShowCancelModal(false);
+      setTransactionToCancel(null);
+    }
+  }
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -617,7 +509,6 @@ export function AdminDashboard() {
     )
   }
 
-  // Se não tem usuário após loading, algo está errado
   if (!user) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -666,9 +557,20 @@ export function AdminDashboard() {
           </h1>
           <p className="text-muted-foreground text-xs sm:text-sm">Visão geral do sistema em tempo real</p>
         </div>
-        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary/10 rounded-lg border border-primary/20 self-start sm:self-auto">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Sistema Online</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary/10 rounded-lg border border-primary/20 self-start sm:self-auto">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Sistema Online</span>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
         </div>
       </div>
 
@@ -725,7 +627,30 @@ export function AdminDashboard() {
                   Aguardando aprovação
                 </p>
               </div>
-              <Clock className="text-yellow-500" size={28} />
+              <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center">
+                <AlertCircle className="text-yellow-500" size={20} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Gerenciar Faturas */}
+        <Card 
+          className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
+          onClick={() => setShowInvoicesModal(true)}
+        >
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-xs">Gerenciar Faturas</p>
+                <p className="text-lg sm:text-xl font-bold text-blue-500">Painel</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cliente
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                <FileText className="text-blue-500" size={20} />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -869,7 +794,10 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/30 transition-all hover:shadow-lg hover:scale-105">
+        <Card 
+          className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/30 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
+          onClick={() => setShowPixPendingModal(true)}
+        >
           <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
@@ -880,7 +808,7 @@ export function AdminDashboard() {
                 <p className="text-base sm:text-xl font-bold text-orange-500">
                   {stats.pendingPixTransactions}
                 </p>
-                <p className="text-xs text-muted-foreground">Aguardando processamento</p>
+                <p className="text-xs text-muted-foreground">Clique para gerenciar</p>
               </div>
             </div>
           </CardContent>
@@ -976,7 +904,6 @@ export function AdminDashboard() {
           </span>
         </CardHeader>
         <CardContent>
-          {/* Container com scroll e altura máxima */}
           <div className="max-h-[500px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
             {recentTransactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
@@ -1022,34 +949,26 @@ export function AdminDashboard() {
                       </div>
                     </div>
                     
-                    {/* Botão de exclusão - apenas para transações falhadas */}
-                    {transaction.status === 'failed' && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          console.log('🖱️ Botão de exclusão clicado para:', transaction.id)
-                          handleDeleteTransaction(transaction.id, transaction.status)
-                        }}
-                        disabled={deletingTransactionId === transaction.id}
-                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110"
-                        title="Excluir transação falhada"
-                        type="button"
-                      >
-                        {deletingTransactionId === transaction.id ? (
-                          <RefreshCw className="animate-spin" size={16} />
-                        ) : (
-                          <Trash2 size={16} />
-                        )}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Ver" onClick={() => { setTransactionToView(transaction); setShowViewModal(true); }}>
+                        <Eye size={16} />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Editar" onClick={() => { setShowEditModal(true); }}>
+                        <Edit size={16} />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Cancelar" onClick={() => handleOpenCancelModal(transaction)}>
+                        <XCircle size={16} />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" title="Excluir" onClick={() => handleOpenDeleteModal(transaction)}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))
             )}
           </div>
           
-          {/* Indicador de scroll */}
           {recentTransactions.length > 5 && (
             <div className="mt-3 pt-3 border-t border-border text-center">
               <p className="text-xs text-muted-foreground">
@@ -1070,7 +989,7 @@ export function AdminDashboard() {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Excluir Transação Falhada?
+                  Excluir Transação?
                 </h3>
                 <p className="text-muted-foreground text-sm mb-6">
                   Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
@@ -1098,6 +1017,70 @@ export function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal de Confirmação de Cancelamento */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowCancelModal(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold">Cancelar Transação?</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              Tem certeza que deseja cancelar esta transação?
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setShowCancelModal(false)}>Não</Button>
+              <Button variant="destructive" onClick={confirmCancelTransaction}>Sim, Cancelar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Visualização */}
+      {showViewModal && transactionToView && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold">Detalhes da Transação</h3>
+            <div className="mt-4 space-y-2 text-sm">
+              <p><strong>ID:</strong> {transactionToView.id}</p>
+              <p><strong>Usuário:</strong> {transactionToView.user_name}</p>
+              <p><strong>Valor:</strong> {formatCurrency(transactionToView.amount)}</p>
+              <p><strong>Status:</strong> {transactionToView.status}</p>
+              <p><strong>Data:</strong> {new Date(transactionToView.created_at).toLocaleString('pt-BR')}</p>
+              <p><strong>Descrição:</strong> {transactionToView.description || 'N/A'}</p>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" onClick={() => setShowViewModal(false)}>Fechar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowEditModal(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold">Editar Transação</h3>
+            <p className="text-sm text-muted-foreground mt-4">
+              Funcionalidade de edição em desenvolvimento.
+            </p>
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" onClick={() => setShowEditModal(false)}>Fechar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      <PixPendingModal 
+        open={showPixPendingModal}
+        onOpenChange={setShowPixPendingModal}
+        onRefresh={loadDashboardData}
+      />
+
+      <InvoicesManagementModal 
+        open={showInvoicesModal}
+        onOpenChange={setShowInvoicesModal}
+        onRefresh={loadDashboardData}
+      />
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {

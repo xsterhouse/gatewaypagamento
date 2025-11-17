@@ -30,6 +30,10 @@ interface Transaction {
   tax?: number
   previous_balance?: number
   new_balance?: number
+  transaction_type?: 'pix' | 'boleto' | 'wallet' | 'deposit' | 'withdrawal'
+  pix_key?: string
+  due_date?: string
+  paid_at?: string
 }
 
 interface ExtratoMetrics {
@@ -79,56 +83,152 @@ export function Extrato() {
         return
       }
 
-      let query = supabase
-        .from('transactions')
+      // Buscar transações PIX
+      const pixQuery = supabase
+        .from('pix_transactions')
         .select('*', { count: 'exact' })
         .eq('user_id', effectiveUserId)
         .order('created_at', { ascending: false })
-        .range(offset, offset + pageSize - 1)
+
+      // Buscar transações de Boleto
+      const boletoQuery = supabase
+        .from('boleto_transactions')
+        .select('*', { count: 'exact' })
+        .eq('user_id', effectiveUserId)
+        .order('created_at', { ascending: false })
+
+      // Buscar transações de Carteira
+      const walletQuery = supabase
+        .from('wallet_transactions')
+        .select('*', { count: 'exact' })
+        .eq('user_id', effectiveUserId)
+        .order('created_at', { ascending: false })
+
+      // Executar todas as queries
+      const [pixResult, boletoResult, walletResult] = await Promise.all([
+        pixQuery,
+        boletoQuery,
+        walletQuery
+      ])
+
+      if (pixResult.error) throw pixResult.error
+      if (boletoResult.error) throw boletoResult.error
+      if (walletResult.error) throw walletResult.error
+
+      // Combinar e formatar todas as transações
+      const allTransactions: Transaction[] = []
+
+      // Adicionar transações PIX
+      if (pixResult.data) {
+        pixResult.data.forEach((tx: any) => {
+          allTransactions.push({
+            id: tx.id,
+            amount: tx.amount,
+            status: tx.status,
+            payment_method: 'PIX',
+            description: tx.description || 'Transação PIX',
+            created_at: tx.created_at,
+            end_to_end_id: tx.e2e_id,
+            transaction_type: 'pix',
+            pix_key: tx.pix_key,
+            paid_at: tx.paid_at
+          })
+        })
+      }
+
+      // Adicionar transações de Boleto
+      if (boletoResult.data) {
+        boletoResult.data.forEach((tx: any) => {
+          allTransactions.push({
+            id: tx.id,
+            amount: tx.amount,
+            status: tx.status,
+            payment_method: 'Boleto',
+            description: tx.description || 'Pagamento de Boleto',
+            created_at: tx.created_at,
+            transaction_type: 'boleto',
+            due_date: tx.due_date,
+            paid_at: tx.paid_at
+          })
+        })
+      }
+
+      // Adicionar transações de Carteira
+      if (walletResult.data) {
+        walletResult.data.forEach((tx: any) => {
+          allTransactions.push({
+            id: tx.id,
+            amount: tx.amount,
+            status: tx.status,
+            payment_method: 'Carteira',
+            description: tx.description || 'Movimentação de Carteira',
+            created_at: tx.created_at,
+            transaction_type: 'wallet',
+            previous_balance: tx.previous_balance,
+            new_balance: tx.new_balance
+          })
+        })
+      }
+
+      // Ordenar por data (mais recente primeiro)
+      allTransactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
       // Aplicar filtros
+      let filteredTransactions = allTransactions
+
       if (filters.status !== 'all') {
-        query = query.eq('status', filters.status)
+        filteredTransactions = filteredTransactions.filter(t => t.status === filters.status)
       }
 
       if (filters.dateFrom) {
-        query = query.gte('created_at', filters.dateFrom)
+        filteredTransactions = filteredTransactions.filter(t => t.created_at >= filters.dateFrom)
       }
 
       if (filters.dateTo) {
-        query = query.lte('created_at', filters.dateTo)
+        filteredTransactions = filteredTransactions.filter(t => t.created_at <= filters.dateTo)
       }
 
       if (filters.minValue) {
-        query = query.gte('amount', Number(filters.minValue))
+        filteredTransactions = filteredTransactions.filter(t => t.amount >= Number(filters.minValue))
       }
 
       if (filters.maxValue) {
-        query = query.lte('amount', Number(filters.maxValue))
+        filteredTransactions = filteredTransactions.filter(t => t.amount <= Number(filters.maxValue))
       }
 
       // Aplicar pesquisa
       if (searchTerm) {
-        query = query.or(`description.ilike.%${searchTerm}%,payment_method.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`)
+        filteredTransactions = filteredTransactions.filter(t => 
+          t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.payment_method.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.id.toLowerCase().includes(searchTerm.toLowerCase())
+        )
       }
 
-      const { data, error, count } = await query
+      // Paginação
+      const totalCount = filteredTransactions.length
+      const paginatedTransactions = filteredTransactions.slice(offset, offset + pageSize)
 
-      if (error) throw error
-
-      setTransactions(data || [])
-      setTotal(count || 0)
+      setTransactions(paginatedTransactions)
+      setTotal(totalCount)
 
       // Calcular métricas
-      if (data) {
-        const totalProcessed = data.reduce((sum, t) => sum + Number(t.amount), 0)
-        const totalTaxes = data.reduce((sum, t) => sum + (Number(t.amount) * 0.035), 0)
+      if (filteredTransactions.length > 0) {
+        const totalProcessed = filteredTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
+        const totalTaxes = filteredTransactions.reduce((sum, t) => sum + (Number(t.amount) * 0.035), 0)
         
         setMetrics({
-          totalTransactions: count || 0,
+          totalTransactions: totalCount,
           totalProcessed,
           totalTaxes,
-          averageTicket: data.length > 0 ? totalProcessed / data.length : 0,
+          averageTicket: totalProcessed / filteredTransactions.length
+        })
+      } else {
+        setMetrics({
+          totalTransactions: 0,
+          totalProcessed: 0,
+          totalTaxes: 0,
+          averageTicket: 0
         })
       }
     } catch (error) {
@@ -331,10 +431,29 @@ export function Extrato() {
                               {formatCurrency(tax)}
                             </td>
                             <td className="py-3 px-4 text-sm text-gray-300">
-                              {getPaymentMethodLabel(transaction.payment_method)}
+                              <div className="flex flex-col">
+                                <span>{getPaymentMethodLabel(transaction.payment_method)}</span>
+                                {transaction.transaction_type && (
+                                  <span className="text-xs text-gray-400 capitalize">
+                                    {transaction.transaction_type}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-3 px-4 text-sm text-gray-300 font-mono">
-                              {transaction.end_to_end_id || transaction.id.slice(0, 8)}
+                              <div className="flex flex-col">
+                                <span>{transaction.end_to_end_id || transaction.id.slice(0, 8)}</span>
+                                {transaction.pix_key && (
+                                  <span className="text-xs text-gray-400 truncate max-w-[120px]">
+                                    {transaction.pix_key}
+                                  </span>
+                                )}
+                                {transaction.due_date && (
+                                  <span className="text-xs text-yellow-400">
+                                    Venc: {new Date(transaction.due_date).toLocaleDateString('pt-BR')}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-3 px-4">{getStatusBadge(transaction.status)}</td>
                             <td className="py-3 px-4 text-sm text-gray-300">

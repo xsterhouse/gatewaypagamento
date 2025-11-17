@@ -59,8 +59,7 @@ export function AdminPanel() {
       const { data: usersData, error } = await supabase
         .from('users')
         .select('*')
-        .neq('role', 'admin')
-        .neq('role', 'manager')
+        .not('role', 'in', '("admin", "manager")')
         .order('created_at', { ascending: false })
 
       if (error) throw error
