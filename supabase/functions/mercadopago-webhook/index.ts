@@ -43,11 +43,30 @@ Deno.serve(async (req: Request) => {
       )
 
       // Buscar transação pelo payment_id do Mercado Pago
-      // O payment_id está salvo em metadata->mercadopago_payment_id
-      const { data: transactions } = await supabaseClient
+      // Tentar múltiplas formas de buscar
+      console.log('🔍 Buscando transação com payment_id:', paymentId)
+      
+      // Busca 1: Por metadata
+      let { data: transactions, error: searchError } = await supabaseClient
         .from('pix_transactions')
         .select('*')
         .contains('metadata', { mercadopago_payment_id: paymentId })
+
+      console.log('📊 Busca por metadata:', transactions?.length || 0, 'resultados')
+      
+      // Busca 2: Se não encontrou, buscar por ID direto (caso seja o ID da transação)
+      if (!transactions || transactions.length === 0) {
+        const { data: directTransaction } = await supabaseClient
+          .from('pix_transactions')
+          .select('*')
+          .eq('id', paymentId.toString())
+          .single()
+        
+        if (directTransaction) {
+          transactions = [directTransaction]
+          console.log('📊 Encontrado por ID direto')
+        }
+      }
 
       const transaction = transactions && transactions.length > 0 ? transactions[0] : null
 
@@ -62,9 +81,9 @@ Deno.serve(async (req: Request) => {
           newStatus = 'expired'
         }
 
-        console.log(`🔄 Atualizando transação ${transaction.id} para status: ${newStatus}`)
+        console.log(`🔄 Atualizando transação ${transaction.id} de ${transaction.status} para ${newStatus}`)
 
-        await supabaseClient
+        const { error: updateError } = await supabaseClient
           .from('pix_transactions')
           .update({ 
             status: newStatus,
@@ -72,9 +91,15 @@ Deno.serve(async (req: Request) => {
           })
           .eq('id', transaction.id)
 
-        console.log('✅ Status atualizado com sucesso!')
+        if (updateError) {
+          console.error('❌ Erro ao atualizar:', updateError)
+        } else {
+          console.log('✅ Status atualizado com sucesso!')
+        }
       } else {
         console.log('⚠️ Transação não encontrada no banco')
+        console.log('🔍 Payment ID recebido:', paymentId)
+        console.log('🔍 Tipo:', typeof paymentId)
       }
     }
 
