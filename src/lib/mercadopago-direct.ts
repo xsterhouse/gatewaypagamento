@@ -29,7 +29,7 @@ export interface PixPaymentResult {
  */
 export async function createPixPayment(params: CreatePixPaymentParams): Promise<PixPaymentResult> {
   try {
-    console.log('🚀 Criando PIX via backend:', params)
+    console.log('🚀 Criando PIX via Supabase Edge Function:', params)
 
     const body = {
       amount: params.amount,
@@ -40,11 +40,13 @@ export async function createPixPayment(params: CreatePixPaymentParams): Promise<
 
     console.log('📦 Request body:', body)
 
-    // Chamar endpoint do backend em vez da API diretamente
-    const response = await fetch('/api/mercadopago_create_pix', {
+    // Usar Supabase Edge Function
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const response = await fetch(`${supabaseUrl}/functions/v1/mercadopago-create-pix`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
       },
       body: JSON.stringify(body)
     })

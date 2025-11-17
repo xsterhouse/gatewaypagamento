@@ -57,10 +57,12 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
 
     try {
       setIsChecking(true)
-      const response = await fetch('/api/check_pix_status', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const response = await fetch(`${supabaseUrl}/functions/v1/check-pix-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({ transactionId }),
       })
