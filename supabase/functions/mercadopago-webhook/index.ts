@@ -108,6 +108,46 @@ Deno.serve(async (req: Request) => {
           console.error('❌ Erro ao atualizar:', updateError)
         } else {
           console.log('✅ Status atualizado com sucesso!')
+          
+          // Se foi aprovado, creditar na carteira
+          if (newStatus === 'paid' && transaction.status !== 'paid') {
+            console.log('💰 Creditando valor na carteira...')
+            
+            // Buscar carteira BRL do usuário
+            const { data: wallet } = await supabaseClient
+              .from('wallets')
+              .select('*')
+              .eq('user_id', transaction.user_id)
+              .eq('currency_code', 'BRL')
+              .eq('is_active', true)
+              .single()
+
+            if (wallet) {
+              const amount = parseFloat(transaction.amount)
+              const feeAmount = parseFloat(transaction.fee_amount || '0')
+              const netAmount = amount - feeAmount
+
+              console.log(`💵 Valor: R$ ${amount}, Taxa: R$ ${feeAmount}, Líquido: R$ ${netAmount}`)
+
+              // Atualizar saldo
+              const { error: walletError } = await supabaseClient
+                .from('wallets')
+                .update({
+                  balance: parseFloat(wallet.balance) + netAmount,
+                  available_balance: parseFloat(wallet.available_balance) + netAmount,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', wallet.id)
+
+              if (walletError) {
+                console.error('❌ Erro ao atualizar carteira:', walletError)
+              } else {
+                console.log('✅ Saldo creditado com sucesso!')
+              }
+            } else {
+              console.log('⚠️ Carteira não encontrada para o usuário')
+            }
+          }
         }
       } else {
         console.log('⚠️ Transação não encontrada no banco')
