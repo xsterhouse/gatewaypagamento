@@ -1,10 +1,11 @@
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { registerServiceWorker } from './registerSW'
+// import { registerServiceWorker } from './registerSW'
 
 // Registrar Service Worker para PWA
-registerServiceWorker()
+// TEMPORARIAMENTE DESABILITADO - causando erro de script evaluation
+// registerServiceWorker()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <App />
