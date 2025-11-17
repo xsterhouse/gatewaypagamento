@@ -1,26 +1,31 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export default async function handler(req: any, res: any) {
-  // Permitir CORS
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
-
-  // Obter operation da query ou do body
-  let operation = req.query.operation
-  
-  // Se não tiver na query e for POST, tentar obter do body
-  if (!operation && req.method === 'POST' && req.body) {
-    operation = req.body.operation
-  }
-
-  console.log('🔧 Operação PIX solicitada:', operation)
-
   try {
+    // Permitir CORS
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end()
+    }
+
+    // Obter operation da query ou do body
+    let operation = req.query.operation
+    
+    // Se não tiver na query e for POST, tentar obter do body
+    if (!operation && req.method === 'POST' && req.body) {
+      operation = req.body.operation
+    }
+
+    console.log('🔧 Operação PIX solicitada:', operation)
+
     switch (operation) {
       case 'check_status':
         return await handleCheckStatus(req, res)
@@ -32,8 +37,11 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'Operação inválida', operation })
     }
   } catch (error) {
-    console.error('❌ Erro na operação PIX:', error)
-    return res.status(500).json({ error: 'Erro interno do servidor' })
+    console.error('❌ Erro geral no handler:', error)
+    return res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    })
   }
 }
 

@@ -1,31 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Permitir CORS
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
-
-  // Obter operation da query ou do body
-  let operation = req.query.operation as string
-  
-  // Se não tiver na query e for POST, tentar obter do body
-  if (!operation && req.method === 'POST' && req.body) {
-    operation = req.body.operation
-  }
-
-  // Se ainda não tiver, verificar se é o debug_pix (GET sem operation)
-  if (!operation && req.method === 'GET') {
-    operation = 'test'
-  }
-
-  console.log('🔧 Operação solicitada:', operation)
-
   try {
+    // Permitir CORS
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end()
+    }
+
+    // Obter operation da query ou do body
+    let operation = req.query.operation as string
+    
+    // Se não tiver na query e for POST, tentar obter do body
+    if (!operation && req.method === 'POST' && req.body) {
+      operation = req.body.operation
+    }
+
+    // Se ainda não tiver, verificar se é o debug_pix (GET sem operation)
+    if (!operation && req.method === 'GET') {
+      operation = 'test'
+    }
+
+    console.log('🔧 Operação solicitada:', operation)
+
     switch (operation) {
       case 'create_pix':
         return await handleCreatePix(req, res)
@@ -39,8 +39,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Operação inválida', operation })
     }
   } catch (error) {
-    console.error('❌ Erro na operação Mercado Pago:', error)
-    return res.status(500).json({ error: 'Erro interno do servidor' })
+    console.error('❌ Erro geral no handler Mercado Pago:', error)
+    return res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    })
   }
 }
 
