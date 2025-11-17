@@ -3,7 +3,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-Deno.serve(async (req) => {
+// @ts-ignore: Deno types
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -11,6 +12,7 @@ Deno.serve(async (req) => {
   try {
     const { amount, description, transactionId, customer } = await req.json()
 
+    // @ts-ignore: Deno types
     const accessToken = Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN')
 
     if (!accessToken) {
@@ -32,7 +34,10 @@ Deno.serve(async (req) => {
           number: customer.cpf
         } : undefined
       },
-      notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/mercadopago-webhook`
+      notification_url: `${
+        // @ts-ignore: Deno types
+        Deno.env.get('SUPABASE_URL')
+      }/functions/v1/mercadopago-webhook`
     }
 
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -85,6 +90,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     return new Response(
+      // @ts-ignore: error type
       JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
