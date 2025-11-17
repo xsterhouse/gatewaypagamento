@@ -95,27 +95,6 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
         return
       }
 
-      // Criar também o registro de depósito para compatibilidade
-      const tax = calculateTax()
-      const { error } = await supabase
-        .from('deposits')
-        .insert({
-          user_id: effectiveUserId,
-          amount: amount,
-          method: 'pix',
-          status: 'pending',
-          description: descricao,
-          tax: tax,
-          pix_code: result.pix_code,
-          pix_qr_code: result.pix_qr_code,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Erro ao criar depósito:', error)
-      }
-
       setPixCode(result.pix_code || '')
       setShowQRCode(true)
       toast.success('QR Code gerado com sucesso!')
