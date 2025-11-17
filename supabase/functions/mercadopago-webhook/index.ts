@@ -43,11 +43,13 @@ Deno.serve(async (req: Request) => {
       )
 
       // Buscar transação pelo payment_id do Mercado Pago
-      const { data: transaction } = await supabaseClient
+      // O payment_id está salvo em metadata->mercadopago_payment_id
+      const { data: transactions } = await supabaseClient
         .from('pix_transactions')
         .select('*')
-        .eq('payment_id', paymentId.toString())
-        .single()
+        .contains('metadata', { mercadopago_payment_id: paymentId })
+
+      const transaction = transactions && transactions.length > 0 ? transactions[0] : null
 
       if (transaction) {
         let newStatus = 'pending'
