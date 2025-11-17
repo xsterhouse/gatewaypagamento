@@ -1,8 +1,6 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   try {
-    // Permitir CORS
+    // CORS
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
@@ -11,64 +9,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).end()
     }
 
-    // Obter operation da query ou do body
-    let operation = req.query.operation as string
+    // Obter operation
+    let operation = req.query.operation
     
-    // Se não tiver na query e for POST, tentar obter do body
     if (!operation && req.method === 'POST' && req.body) {
       operation = req.body.operation
     }
 
-    // Se ainda não tiver, verificar se é o debug_pix (GET sem operation)
     if (!operation && req.method === 'GET') {
       operation = 'test'
     }
 
-    console.log('🔧 Operação solicitada:', operation)
+    console.log('🔧 Operação:', operation)
 
     switch (operation) {
       case 'create_pix':
         return await handleCreatePix(req, res)
-      case 'create_invoice':
-        return await handleCreateInvoice(req, res)
       case 'webhook':
         return await handleWebhook(req, res)
       case 'test':
         return await handleTest(req, res)
       default:
-        return res.status(400).json({ error: 'Operação inválida', operation })
+        return res.status(400).json({ error: 'Operação inválida' })
     }
   } catch (error) {
-    console.error('❌ Erro geral no handler Mercado Pago:', error)
+    console.error('❌ Erro:', error)
     return res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      details: error instanceof Error ? error.message : 'Erro desconhecido'
+      error: 'Erro interno',
+      details: error.message
     })
   }
 }
 
-async function handleCreatePix(req: VercelRequest, res: VercelResponse) {
+async function handleCreatePix(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    console.log('🚀 Criando PIX via MercadoPago')
-    console.log('📋 Request body:', req.body)
+    console.log('🚀 Criando PIX')
     
     const { amount, description, transactionId, customer } = req.body
-
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN
 
     if (!accessToken) {
-      console.error('❌ Token não configurado')
       return res.status(500).json({ 
         success: false,
-        error: 'Token do Mercado Pago não configurado no servidor' 
+        error: 'Token não configurado' 
       })
     }
 
-    // Criar pagamento PIX
     const body = {
       transaction_amount: amount,
       description: description,
@@ -84,8 +74,6 @@ async function handleCreatePix(req: VercelRequest, res: VercelResponse) {
       notification_url: 'https://app.dimpay.com.br/api/mercadopago_ops?operation=webhook'
     }
 
-    console.log('📦 Enviando para Mercado Pago:', body)
-
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
@@ -98,14 +86,8 @@ async function handleCreatePix(req: VercelRequest, res: VercelResponse) {
 
     const data = await response.json()
 
-    console.log('📡 Resposta Mercado Pago:', {
-      status: response.status,
-      id: data.id,
-      status_payment: data.status
-    })
-
     if (!response.ok) {
-      console.error('❌ Erro Mercado Pago:', data)
+      console.error('❌ Erro MP:', data)
       
       let errorMessage = 'Erro ao criar pagamento'
       if (data.message) {
@@ -120,14 +102,13 @@ async function handleCreatePix(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    // Extrair dados do QR Code
     const qrCode = data.point_of_interaction?.transaction_data?.qr_code
     const qrCodeBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64
 
     if (!qrCode) {
       return res.status(500).json({
         success: false,
-        error: 'QR Code não retornado pelo Mercado Pago'
+        error: 'QR Code não retornado'
       })
     }
 
@@ -141,48 +122,26 @@ async function handleCreatePix(req: VercelRequest, res: VercelResponse) {
     })
 
   } catch (error) {
-    console.error('❌ Erro ao criar PIX:', error)
+    console.error('❌ Erro:', error)
     return res.status(500).json({
       success: false,
-      error: 'Erro interno do servidor'
+      error: 'Erro interno'
     })
   }
 }
 
-async function handleCreateInvoice(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  // Lógica de criação de invoice (copiada do arquivo original)
-  // ... implementar se necessário
-  return res.status(200).json({ success: true, message: 'Invoice criado' })
-}
-
-async function handleWebhook(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  // Lógica de webhook (copiada do arquivo original)
-  // ... implementar se necessário
+async function handleWebhook(req, res) {
+  console.log('📨 Webhook recebido')
   return res.status(200).json({ success: true })
 }
 
-async function handleTest(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
+async function handleTest(req, res) {
   const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN
 
   if (!accessToken) {
     return res.status(500).json({ 
       success: false,
-      error: 'Token do Mercado Pago não configurado',
-      debug: {
-        MERCADO_PAGO_ACCESS_TOKEN: false
-      }
+      error: 'Token não configurado'
     })
   }
 
@@ -199,28 +158,23 @@ async function handleTest(req: VercelRequest, res: VercelResponse) {
     if (!testResponse.ok) {
       return res.status(400).json({
         success: false,
-        error: 'Token inválido ou expirado'
+        error: 'Token inválido'
       })
     }
 
     return res.status(200).json({
       success: true,
       message: 'Configuração OK',
-      debug: {
-        token_configured: true,
-        api_status: 'connected',
-        user_data: {
-          id: userData.id,
-          email: userData.email,
-          site_id: userData.site_id
-        }
+      user: {
+        id: userData.id,
+        email: userData.email
       }
     })
 
   } catch (error) {
     return res.status(500).json({
       success: false,
-      error: 'Erro ao testar conexão'
+      error: 'Erro ao testar'
     })
   }
 }
