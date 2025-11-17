@@ -52,7 +52,7 @@ export default async function handler(req: any, res: any) {
         console.log('⏰ Transação expirada')
         
         // Atualizar status para expirado
-        const { data: updatedTransaction, error: updateError } = await supabase
+        const { error: updateError } = await supabase
           .from('pix_transactions')
           .update({ 
             status: 'expired',
