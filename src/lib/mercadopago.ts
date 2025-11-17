@@ -235,34 +235,25 @@ export async function processWithdrawal({
         })
         .eq('id', userWallet.id)
 
-      // Creditar taxa ao admin
-      const { data: adminUser } = await supabase
-        .from('users')
-        .select('id')
-        .in('role', ['admin', 'master'])
-        .limit(1)
+      // Creditar taxa na carteira admin
+      const { data: adminWallet } = await supabase
+        .from('wallets')
+        .select('id, user_id, available_balance, balance')
+        .eq('wallet_name', 'Conta Mãe - Taxas Gateway')
         .single()
 
-      if (adminUser) {
-        const { data: adminWallet } = await supabase
-          .from('wallets')
-          .select('id, available_balance')
-          .eq('user_id', adminUser.id)
-          .eq('currency_code', 'BRL')
-          .eq('is_active', true)
-          .single()
+      if (adminWallet) {
+        const adminBalanceBefore = Number(adminWallet.available_balance) || 0
+        const adminBalanceAfter = adminBalanceBefore + fee
 
-        if (adminWallet) {
-          const adminBalanceBefore = Number(adminWallet.available_balance) || 0
-          const adminBalanceAfter = adminBalanceBefore + fee
-
-          await supabase
-            .from('wallet_transactions')
-            .insert({
-              wallet_id: adminWallet.id,
-              user_id: adminUser.id,
-              transaction_type: 'credit',
-              amount: fee,
+        // Registrar transação de taxa
+        await supabase
+          .from('wallet_transactions')
+          .insert({
+            wallet_id: adminWallet.id,
+            user_id: adminWallet.user_id,
+            transaction_type: 'credit',
+            amount: fee,
               balance_before: adminBalanceBefore,
               balance_after: adminBalanceAfter,
               description: `Taxa PIX - Saque de cliente`,
