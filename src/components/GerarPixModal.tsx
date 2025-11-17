@@ -444,28 +444,7 @@ export function GerarPixModal({ open, onOpenChange }: GerarPixModalProps) {
                 </Button>
               </div>
 
-              {/* Botão de Verificação Manual */}
-              {paymentStatus === 'pending' && (
-                <Button
-                  onClick={checkPaymentStatus}
-                  disabled={isChecking}
-                  variant="outline"
-                  className="w-full border-border hover:border-primary"
-                >
-                  {isChecking ? (
-                    <>
-                      <RefreshCw size={18} className="mr-2 animate-spin" />
-                      Verificando...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw size={18} className="mr-2" />
-                      Verificar Pagamento
-                    </>
-                  )}
-                </Button>
-              )}
-              
+                            
               {/* Botão Novo PIX */}
               <Button
                 onClick={() => {
