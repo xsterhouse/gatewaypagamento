@@ -254,24 +254,23 @@ export async function processWithdrawal({
             user_id: adminWallet.user_id,
             transaction_type: 'credit',
             amount: fee,
-              balance_before: adminBalanceBefore,
-              balance_after: adminBalanceAfter,
-              description: `Taxa PIX - Saque de cliente`,
-              metadata: {
-                pix_transaction_id: transaction.id,
-                source_user_id: userId,
-                fee_type: 'pix_withdrawal'
-              }
-            })
+            balance_before: adminBalanceBefore,
+            balance_after: adminBalanceAfter,
+            description: `Taxa PIX - Saque de cliente`,
+            metadata: {
+              pix_transaction_id: transaction.id,
+              source_user_id: userId,
+              fee_type: 'pix_withdrawal'
+            }
+          })
 
-          await supabase
-            .from('wallets')
-            .update({
-              available_balance: adminBalanceAfter,
-              balance: adminBalanceAfter
-            })
-            .eq('id', adminWallet.id)
-        }
+        await supabase
+          .from('wallets')
+          .update({
+            available_balance: adminBalanceAfter,
+            balance: adminBalanceAfter
+          })
+          .eq('id', adminWallet.id)
       }
     }
 
