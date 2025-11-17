@@ -5,7 +5,6 @@ import { Input } from './ui/input'
 import { QrCode, Plus, Copy, Share2, Check, RefreshCw, Clock, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { QRCodeSVG } from 'qrcode.react'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { bankAcquirerService } from '@/services/bankAcquirerService'
 
