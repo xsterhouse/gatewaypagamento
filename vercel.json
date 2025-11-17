@@ -17,6 +17,10 @@
       "destination": "/api/mercadopago_webhook"
     },
     {
+      "source": "/api/debug_pix",
+      "destination": "/api/debug_pix"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
