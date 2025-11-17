@@ -1,31 +1,17 @@
 // Service Worker para Dimpay Pagamentos PWA
 const CACHE_NAME = 'dimpay-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon.svg'
-];
 
 // Instalar Service Worker
 self.addEventListener('install', (event) => {
   console.log('🔧 Service Worker: Instalando...');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('✅ Service Worker: Cache aberto');
-        return cache.addAll(urlsToCache);
-      })
-      .catch((error) => {
-        console.error('❌ Erro ao cachear:', error);
-      })
-  );
+  // Pular a espera e ativar imediatamente
   self.skipWaiting();
 });
 
 // Ativar Service Worker
 self.addEventListener('activate', (event) => {
   console.log('✅ Service Worker: Ativado');
+  // Limpar caches antigos
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -38,37 +24,53 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  // Tomar controle imediatamente
   return self.clients.claim();
 });
 
 // Interceptar requisições
 self.addEventListener('fetch', (event) => {
+  // Apenas fazer cache de requisições GET
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Ignorar requisições de API
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Cache hit - retornar resposta do cache
+        // Retornar do cache se existir
         if (response) {
           return response;
         }
-        // Fazer requisição de rede
+        
+        // Caso contrário, buscar da rede
         return fetch(event.request)
           .then((response) => {
             // Verificar se é uma resposta válida
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
-            // Clonar resposta
+
+            // Clonar a resposta
             const responseToCache = response.clone();
+
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
               });
+
             return response;
+          })
+          .catch((error) => {
+            console.error('❌ Erro ao buscar:', error);
+            // Retornar uma resposta offline se disponível
+            return caches.match('/index.html');
           });
-      })
-      .catch(() => {
-        // Retornar página offline se disponível
-        return caches.match('/index.html');
       })
   );
 });
