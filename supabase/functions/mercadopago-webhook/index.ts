@@ -174,10 +174,12 @@ Deno.serve(async (req: Request) => {
                         .from('wallet_transactions')
                         .insert({
                           wallet_id: adminWallet.id,
+                          user_id: adminWallet.user_id,
+                          transaction_type: 'credit',
                           amount: feeAmount,
-                          type: 'credit',
+                          balance_before: parseFloat(adminWallet.balance),
+                          balance_after: parseFloat(adminWallet.balance) + feeAmount,
                           description: `Taxa PIX - Transação ${transaction.id}`,
-                          status: 'completed',
                           created_at: new Date().toISOString()
                         })
                     }
