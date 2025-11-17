@@ -143,6 +143,48 @@ Deno.serve(async (req: Request) => {
                 console.error('❌ Erro ao atualizar carteira:', walletError)
               } else {
                 console.log('✅ Saldo creditado com sucesso!')
+                
+                // Creditar taxa na carteira admin
+                if (feeAmount > 0) {
+                  console.log('💼 Creditando taxa na carteira admin...')
+                  
+                  const { data: adminWallet } = await supabaseClient
+                    .from('wallets')
+                    .select('*')
+                    .eq('wallet_name', 'Conta Mãe - Taxas Gateway')
+                    .single()
+
+                  if (adminWallet) {
+                    const { error: adminWalletError } = await supabaseClient
+                      .from('wallets')
+                      .update({
+                        balance: parseFloat(adminWallet.balance) + feeAmount,
+                        available_balance: parseFloat(adminWallet.available_balance) + feeAmount,
+                        updated_at: new Date().toISOString()
+                      })
+                      .eq('id', adminWallet.id)
+
+                    if (adminWalletError) {
+                      console.error('❌ Erro ao creditar taxa admin:', adminWalletError)
+                    } else {
+                      console.log('✅ Taxa creditada na carteira admin!')
+                      
+                      // Registrar transação de taxa
+                      await supabaseClient
+                        .from('wallet_transactions')
+                        .insert({
+                          wallet_id: adminWallet.id,
+                          amount: feeAmount,
+                          type: 'credit',
+                          description: `Taxa PIX - Transação ${transaction.id}`,
+                          status: 'completed',
+                          created_at: new Date().toISOString()
+                        })
+                    }
+                  } else {
+                    console.log('⚠️ Carteira admin não encontrada')
+                  }
+                }
               }
             } else {
               console.log('⚠️ Carteira não encontrada para o usuário')
