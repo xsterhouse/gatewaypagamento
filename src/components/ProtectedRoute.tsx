@@ -1,102 +1,39 @@
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const [loading, setLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const location = useLocation()
+  const [session, setSession] = useState<any>(null)
+  const [authLoaded, setAuthLoaded] = useState(false)
 
   useEffect(() => {
     let mounted = true
-    
-    const checkAuth = async () => {
-      try {
-        console.log('🔐 ProtectedRoute: Verificando autenticação...')
-        
-        // Verificar sessão do Supabase Auth
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (!mounted) return
-        
-        if (!session?.user) {
-          console.log('❌ Sem sessão, redirecionando para login')
-          setIsAuthenticated(false)
-          setLoading(false)
-          return
-        }
 
-        console.log('✅ Sessão encontrada:', session.user.email)
-        setIsAuthenticated(true)
+    console.log("🔐 ProtectedRoute: Inicializando...")
 
-        // Verificar se é admin ou manager e se está bloqueado
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role, is_blocked')
-          .eq('id', session.user.id)
-          .single()
+    // 1 — Aguarda a sessão inicial carregada pelo Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("🔄 Auth state changed:", event, !!session)
 
         if (!mounted) return
+        setSession(session)
 
-        // Verificar se o usuário está bloqueado
-        if (userData?.is_blocked && location.pathname !== '/account-blocked') {
-          console.log('🔒 Usuário bloqueado, redirecionando...')
-          window.location.href = '/account-blocked'
-          return
+        // O evento INITIAL_SESSION garante que o supabase terminou de carregar localStorage
+        if (event === "INITIAL_SESSION") {
+          setAuthLoaded(true)
         }
 
-        const userIsAdmin = userData?.role === 'admin'
-        const userIsManager = userData?.role === 'manager'
-        const isAdminOrManager = userIsAdmin || userIsManager
-        
-        console.log('👤 Tipo de usuário:', userIsAdmin ? 'Admin' : userIsManager ? 'Gerente' : 'Cliente')
-
-        // Verificar se há impersonation ativa
-        const impersonationData = localStorage.getItem('impersonation')
-        const isImpersonating = !!impersonationData
-
-        // Rotas de cliente que admin/manager não devem acessar sem impersonation
-        const clientRoutes = ['/', '/gerente', '/financeiro', '/relatorios', '/premiacoes', '/checkout', '/wallets', '/exchange', '/deposits', '/extrato']
-        const isClientRoute = clientRoutes.includes(location.pathname)
-
-        // Se é admin/manager, não está impersonando e está tentando acessar rota de cliente
-        if (isAdminOrManager && !isImpersonating && isClientRoute) {
-          console.log('🔀 Admin/Gerente acessando rota cliente, redirecionando...')
-          // Redirecionar imediatamente sem esperar o estado
-          window.location.href = '/admin/dashboard'
-          return
-        }
-
-        console.log('✅ ProtectedRoute: Autenticação completa')
-        setLoading(false)
-      } catch (error) {
-        console.error('❌ Erro ao verificar autenticação:', error)
-        if (mounted) {
-          setLoading(false)
+        if (event === "SIGNED_OUT") {
+          setAuthLoaded(true)
         }
       }
-    }
+    )
 
-    checkAuth()
-
-    // Escutar mudanças na autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth state changed:', event, !!session)
-      if (!mounted) return
-      
-      // Só atualizar se realmente mudou
-      const newAuthState = !!session
-      setIsAuthenticated(prev => {
-        if (prev !== newAuthState) {
-          console.log('🔄 Atualizando estado de autenticação:', prev, '->', newAuthState)
-          return newAuthState
-        }
-        return prev
-      })
-      
-      // Se fez logout, marcar para não carregar
-      if (event === 'SIGNED_OUT') {
-        setLoading(false)
+    // 2 — Verifica sessão imediatamente (opcional, mas deixa mais rápido)
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) {
+        setSession(data.session)
       }
     })
 
@@ -104,9 +41,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [location.pathname])
+  }, [])
 
-  if (loading) {
+  // 🟡 Enquanto o Supabase ainda não carregou a sessão do LOCAL STORAGE
+  if (!authLoaded) {
     return (
       <div className="flex items-center justify-center h-screen bg-[#0a0e13]">
         <div className="text-center">
@@ -117,9 +55,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!isAuthenticated) {
+  // 🔴 Sessão carregou → mas é nula
+  if (!session) {
     return <Navigate to="/login" replace />
   }
 
+  // 🟢 Sessão válida
   return <>{children}</>
 }
