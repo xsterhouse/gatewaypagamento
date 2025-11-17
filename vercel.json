@@ -9,10 +9,6 @@
       "destination": "/api/mercadopago_ops?operation=webhook"
     },
     {
-      "source": "/api/check_pix_status",
-      "destination": "/api/check_pix_status"
-    },
-    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
