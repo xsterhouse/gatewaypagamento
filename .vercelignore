@@ -7,3 +7,4 @@
 !api/**/*.ts
 node_modules/
 .git/
+supabase/
