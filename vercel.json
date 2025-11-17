@@ -25,6 +25,10 @@
       "destination": "/api/check_pix_status"
     },
     {
+      "source": "/api/test_endpoint",
+      "destination": "/api/test_endpoint"
+    },
+    {
       "source": "/api/update_pix_status",
       "destination": "/api/pix_operations?operation=update_status"
     },
