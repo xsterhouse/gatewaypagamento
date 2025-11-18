@@ -39,77 +39,53 @@ export interface BoletoResult {
 class BoletoService {
   
   /**
-   * Criar boleto no Mercado Pago
+   * Criar boleto no Mercado Pago (via Edge Function)
    */
   async createBoleto(params: CreateBoletoParams): Promise<BoletoResult> {
     try {
       console.log('📄 Criando boleto...', params)
 
-      // 1. Buscar configuração do Mercado Pago
-      const { data: acquirer, error: acquirerError } = await supabase
-        .from('bank_acquirers')
-        .select('*')
-        .eq('name', 'Mercado Pago')
-        .eq('is_active', true)
-        .single()
-
-      if (acquirerError || !acquirer) {
-        console.error('Erro ao buscar Mercado Pago:', acquirerError)
-        throw new Error('Mercado Pago não configurado')
-      }
-
-      // 2. Calcular taxa
+      // 1. Calcular taxa
       const feeAmount = await this.calculateFee(params.amount, 'boleto')
       const netAmount = params.amount - feeAmount
 
-      // 3. Calcular data de vencimento (padrão: 3 dias)
+      // 2. Calcular data de vencimento (padrão: 3 dias)
       const dueDate = params.due_date || new Date()
       if (!params.due_date) {
         dueDate.setDate(dueDate.getDate() + 3)
       }
 
-      // 4. Criar boleto via API do Mercado Pago
-      const response = await fetch(`${acquirer.api_base_url}/v1/payments`, {
+      // 3. Chamar Edge Function do Supabase para criar o boleto no Mercado Pago
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/mercadopago-create-boleto`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${acquirer.client_secret}`,
           'Content-Type': 'application/json',
-          'X-Idempotency-Key': this.generateIdempotencyKey()
+          'Authorization': `Bearer ${anonKey}`,
         },
         body: JSON.stringify({
-          transaction_amount: params.amount,
+          amount: params.amount,
           description: params.description,
-          payment_method_id: 'bolbradesco', // ou outro banco
-          date_of_expiration: dueDate.toISOString(),
+          due_date: dueDate.toISOString(),
           payer: {
-            email: params.payer_email || 'customer@example.com',
-            first_name: params.payer_name || 'Cliente',
-            last_name: '',
-            identification: params.payer_document ? {
-              type: params.payer_document.length === 11 ? 'CPF' : 'CNPJ',
-              number: params.payer_document
-            } : undefined,
-            address: params.payer_address ? {
-              street_name: params.payer_address.street,
-              street_number: params.payer_address.number,
-              neighborhood: params.payer_address.neighborhood,
-              city: params.payer_address.city,
-              federal_unit: params.payer_address.state,
-              zip_code: params.payer_address.zip_code
-            } : undefined
-          },
-          notification_url: acquirer.webhook_url
+            name: params.payer_name,
+            email: params.payer_email,
+            document: params.payer_document,
+            address: params.payer_address
+          }
         })
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        console.error('❌ Erro ao criar boleto:', error)
-        throw new Error(error.message || 'Erro ao criar boleto')
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        console.error('❌ Erro ao criar boleto (Edge Function):', data)
+        throw new Error(data.error || 'Erro ao criar boleto')
       }
 
-      const data = await response.json()
-      console.log('✅ Boleto criado:', data.id)
+      console.log('✅ Boleto criado (Edge Function):', data.id)
 
       // 5. Salvar no banco de dados
       const { data: transaction, error: dbError } = await supabase
@@ -128,8 +104,8 @@ class BoletoService {
           expires_at: dueDate.toISOString(),
           metadata: {
             payment_method: 'boleto',
-            barcode: data.barcode?.content,
-            digitable_line: data.transaction_details?.external_resource_url,
+            barcode: data.barcode,
+            digitable_line: data.digitable_line,
             mercadopago_payment_id: data.id
           }
         })
@@ -144,10 +120,10 @@ class BoletoService {
       return {
         success: true,
         boleto_id: transaction.id,
-        barcode: data.barcode?.content,
-        digitable_line: data.transaction_details?.external_resource_url,
-        pdf_url: data.transaction_details?.external_resource_url,
-        due_date: dueDate.toISOString()
+        barcode: data.barcode,
+        digitable_line: data.digitable_line,
+        pdf_url: data.pdf_url,
+        due_date: data.date_of_expiration || dueDate.toISOString()
       }
 
     } catch (error: any) {
@@ -270,13 +246,6 @@ class BoletoService {
       const percentageFee = amount * 0.025
       return Math.max(percentageFee, 2.00)
     }
-  }
-
-  /**
-   * Gerar chave de idempotência
-   */
-  private generateIdempotencyKey(): string {
-    return `boleto-${Date.now()}-${Math.random().toString(36).substring(7)}`
   }
 
   /**
