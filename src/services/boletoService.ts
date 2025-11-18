@@ -87,39 +87,10 @@ class BoletoService {
 
       console.log('✅ Boleto criado (Edge Function):', data.id)
 
-      // 5. Salvar no banco de dados
-      const { data: transaction, error: dbError } = await supabase
-        .from('pix_transactions')
-        .insert({
-          user_id: params.user_id,
-          transaction_type: 'deposit',
-          amount: params.amount,
-          fee_amount: feeAmount,
-          net_amount: netAmount,
-          status: 'pending',
-          pix_txid: data.id.toString(),
-          description: params.description,
-          payer_name: params.payer_name,
-          payer_document: params.payer_document,
-          expires_at: dueDate.toISOString(),
-          metadata: {
-            payment_method: 'boleto',
-            barcode: data.barcode,
-            digitable_line: data.digitable_line,
-            mercadopago_payment_id: data.id
-          }
-        })
-        .select()
-        .single()
-
-      if (dbError) {
-        console.error('❌ Erro ao salvar no banco:', dbError)
-        throw new Error('Erro ao salvar boleto')
-      }
-
+      // 5. Retornar dados do boleto; o registro em invoices_boletos é feito na Faturas.tsx
       return {
         success: true,
-        boleto_id: transaction.id,
+        boleto_id: data.id?.toString(),
         barcode: data.barcode,
         digitable_line: data.digitable_line,
         pdf_url: data.pdf_url,
