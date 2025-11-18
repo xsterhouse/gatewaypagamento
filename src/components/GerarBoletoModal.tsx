@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { FileText, Plus, Copy, Check, Download } from 'lucide-react'
+import { FileText, Plus, Copy, Check, Download, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { boletoService } from '@/services/boletoService'
 
 interface GerarBoletoModalProps {
   open: boolean
@@ -54,10 +54,17 @@ export function GerarBoletoModal({ open, onOpenChange }: GerarBoletoModalProps) 
 
   const calculateTax = () => {
     const amount = Number(valor.replace(/\./g, '').replace(',', '.')) || 0
-    return amount * 0.01 // 1% de taxa
+    // Taxa padrão: 2.5% (mín: R$ 2,00)
+    const percentageFee = amount * 0.025
+    return Math.max(percentageFee, 2.00)
   }
 
   const generateBoleto = async () => {
+    if (!effectiveUserId) {
+      toast.error('Usuário não autenticado')
+      return
+    }
+
     if (!valor || Number(valor.replace(/\./g, '').replace(',', '.')) < 5) {
       toast.error('Valor mínimo é R$ 5,00')
       return
@@ -68,55 +75,47 @@ export function GerarBoletoModal({ open, onOpenChange }: GerarBoletoModalProps) 
       const amount = Number(valor.replace(/\./g, '').replace(',', '.'))
       
       // Calcular data de vencimento (padrão 3 dias)
-      const defaultDueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      const selectedDueDate = dueDate || defaultDueDate
+      let dueDateObj: Date | undefined
+      if (dueDate) {
+        dueDateObj = new Date(dueDate)
+      } else {
+        dueDateObj = new Date()
+        dueDateObj.setDate(dueDateObj.getDate() + 3)
+      }
 
-      const response = await fetch('/api/efi_create_pix', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount,
-          description: descricao || 'Depósito via Boleto',
-          dueDate: selectedDueDate
-        }),
+      // Usar o novo serviço de boletos
+      const result = await boletoService.createBoleto({
+        user_id: effectiveUserId,
+        amount,
+        description: descricao || 'Depósito via Boleto',
+        due_date: dueDateObj
       })
-
-      const result = await response.json()
 
       if (!result.success) {
         toast.error(result.error || 'Erro ao gerar boleto')
         return
       }
 
-      // Criar registro no banco
-      const { error } = await supabase
-        .from('boleto_transactions')
-        .insert({
-          user_id: effectiveUserId,
+      // Formatar resultado para exibição
+      setBoletoData({
+        charge: {
+          id: result.boleto_id,
           amount: amount,
-          description: descricao || 'Depósito via Boleto',
-          charge_id: result.charge.id,
-          loc_id: result.charge.loc_id,
-          status: 'pending',
-          due_date: result.charge.due_date,
-          barcode: result.payment_codes.barcode,
-          linha_digitavel: result.payment_codes.linha_digitavel,
-          pix_code: result.payment_codes.pix_code,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Erro ao criar registro do boleto:', error)
-      }
-
-      setBoletoData(result)
+          due_date: result.due_date,
+          description: descricao || 'Depósito via Boleto'
+        },
+        payment_codes: {
+          barcode: result.barcode,
+          linha_digitavel: result.digitable_line
+        },
+        files: {
+          pdf_url: result.pdf_url
+        }
+      })
+      
       setShowBoleto(true)
       toast.success('Boleto gerado com sucesso!')
-      console.log('🧾 Boleto criado via EFI:', result.charge.id)
+      console.log('🧾 Boleto criado via Mercado Pago:', result.boleto_id)
     } catch (error) {
       console.error('Erro ao gerar boleto:', error)
       toast.error('Erro ao processar solicitação')

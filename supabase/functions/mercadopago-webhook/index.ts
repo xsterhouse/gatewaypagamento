@@ -33,6 +33,11 @@ Deno.serve(async (req: Request) => {
 
       const payment = await mpResponse.json()
       console.log('💰 Payment details:', JSON.stringify(payment, null, 2))
+      
+      // Identificar tipo de pagamento
+      const paymentMethod = payment.payment_method_id
+      const isBoleto = paymentMethod && paymentMethod.startsWith('bol')
+      console.log(`📋 Tipo de pagamento: ${isBoleto ? 'Boleto' : 'PIX'}`)
 
       // Atualizar status no banco
       const supabaseClient = createClient(
