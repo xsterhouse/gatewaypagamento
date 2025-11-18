@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { 
-  Wallet, TrendingUp, TrendingDown, Calendar, RefreshCw, Download, 
-  Filter, Eye, CreditCard, FileText, DollarSign, Activity, 
+  TrendingUp, TrendingDown, Calendar, RefreshCw, Download, 
+  Eye, CreditCard, FileText, Activity, 
   ArrowUpRight, ArrowDownRight, Search, Clock, CheckCircle
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { exportInvoicesToPDF } from '@/lib/pdfExportSimple'
 import { InvoiceDetailsModal } from '@/components/InvoiceDetailsModal'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 
 interface Invoice {
   id: string
