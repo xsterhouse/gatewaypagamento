@@ -305,15 +305,20 @@ export function AdminDashboard() {
         
         const totalFeesCollected = adminWallet?.balance || 0
 
+        // Obter início do dia atual no horário de Brasília (UTC-3)
         const now = new Date()
-        const yesterday = new Date(now)
-        yesterday.setDate(yesterday.getDate() - 1)
+        const todayBrasilia = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
+        todayBrasilia.setHours(0, 0, 0, 0)
+        
+        // Converter para UTC para a query no Supabase
+        const startOfDayUTC = new Date(todayBrasilia.getTime() + (3 * 60 * 60 * 1000))
         
         const { data: adminTodayTransactions } = await supabase
           .from('wallet_transactions')
           .select('amount, created_at')
           .eq('wallet_id', adminWallet?.id)
-          .gte('created_at', yesterday.toISOString())
+          .eq('transaction_type', 'credit')
+          .gte('created_at', startOfDayUTC.toISOString())
         
         const todayFees = (adminTodayTransactions || []).reduce((sum, t) => sum + Number(t.amount || 0), 0)
         
