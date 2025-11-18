@@ -40,35 +40,48 @@ export function PixPendingModal({ open, onOpenChange, onRefresh }: PixPendingMod
     try {
       setLoading(true)
       
-      const { data, error } = await supabase
+      // Buscar transações PIX pendentes
+      const { data: pixData, error: pixError } = await supabase
         .from('pix_transactions')
-        .select(`
-          *,
-          users!user_id(name, email)
-        `)
+        .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
 
-      console.log('📡 Resposta do Supabase PIX:', { data, error })
-
-      if (error) {
-        console.error('Erro ao carregar PIX pendentes:', error)
+      if (pixError) {
+        console.error('Erro ao carregar PIX pendentes:', pixError)
         
         // Mensagens de erro mais específicas
-        if (error.code === 'PGRST116') {
+        if (pixError.code === 'PGRST116') {
           toast.error('Tabela pix_transactions não encontrada. Execute o script SQL no Supabase.')
-        } else if (error.code === '42501') {
+        } else if (pixError.code === '42501') {
           toast.error('Sem permissão para acessar transações PIX. Verifique as políticas RLS.')
         } else {
-          toast.error(`Erro ao carregar PIX pendentes: ${error.message}`)
+          toast.error(`Erro ao carregar PIX pendentes: ${pixError.message}`)
         }
         return
       }
 
-      setPixTransactions(data || [])
+      // Buscar dados dos usuários separadamente
+      const transactionsWithUsers = await Promise.all(
+        (pixData || []).map(async (pix) => {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('name, email')
+            .eq('id', pix.user_id)
+            .single()
+          
+          return {
+            ...pix,
+            users: userData
+          }
+        })
+      )
+
+      console.log('📡 Transações PIX carregadas:', transactionsWithUsers.length)
+      setPixTransactions(transactionsWithUsers)
       
-      if (data && data.length > 0) {
-        toast.success(`Carregados ${data.length} PIX pendentes`)
+      if (transactionsWithUsers && transactionsWithUsers.length > 0) {
+        toast.success(`Carregados ${transactionsWithUsers.length} PIX pendentes`)
       } else {
         toast.info('Nenhuma transação PIX pendente encontrada')
       }
