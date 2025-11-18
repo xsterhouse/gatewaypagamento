@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { PixPendingModal } from '@/components/PixPendingModal'
 import { InvoicesManagementModal } from '@/components/InvoicesManagementModal'
+import { BoletosManagementModal } from '@/components/BoletosManagementModal'
 
 interface DashboardStats {
   totalUsers: number
@@ -107,6 +108,7 @@ export function AdminDashboard() {
   // New Modals State
   const [showPixPendingModal, setShowPixPendingModal] = useState(false)
   const [showInvoicesModal, setShowInvoicesModal] = useState(false)
+  const [showBoletosModal, setShowBoletosModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
 
 
@@ -639,15 +641,15 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Gerenciar Faturas */}
+        {/* Gerenciar Boletos */}
         <Card 
           className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
-          onClick={() => setShowInvoicesModal(true)}
+          onClick={() => setShowBoletosModal(true)}
         >
           <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-xs">Gerenciar Faturas</p>
+                <p className="text-muted-foreground text-xs">Gerenciar Boletos</p>
                 <p className="text-lg sm:text-xl font-bold text-blue-500">Painel</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Cliente
@@ -1084,6 +1086,12 @@ export function AdminDashboard() {
       <InvoicesManagementModal 
         open={showInvoicesModal}
         onOpenChange={setShowInvoicesModal}
+        onRefresh={loadDashboardData}
+      />
+
+      <BoletosManagementModal 
+        open={showBoletosModal}
+        onOpenChange={setShowBoletosModal}
         onRefresh={loadDashboardData}
       />
 
