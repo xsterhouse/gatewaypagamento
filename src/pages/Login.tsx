@@ -223,24 +223,43 @@ export function Login() {
       </div>
 
       {/* Lado Direito - Background com Hexágonos */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#0f1117] items-center justify-center">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#0f1117] flex-col items-center justify-center p-12">
         {/* Padrão Hexagonal */}
         <div className="absolute inset-0 hexagon-pattern opacity-5"></div>
         
         {/* Gradiente Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent"></div>
         
-        {/* Conteúdo */}
-        <div className="relative z-10 max-w-md text-left px-12">
-          <div className="flex items-center gap-2 mb-8">
-            <div className="w-1 h-12 bg-primary rounded-full"></div>
+        {/* Logo no topo */}
+        <div className="relative z-10 mb-auto pt-8">
+          <img 
+            src="/logo-dimpay.png" 
+            alt="DiMPay" 
+            className="h-16 w-auto opacity-80"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+              const fallback = document.createElement('div')
+              fallback.className = 'text-3xl font-bold text-white opacity-80'
+              fallback.textContent = 'DiMPay'
+              e.currentTarget.parentElement?.appendChild(fallback)
+            }}
+          />
+        </div>
+        
+        {/* Conteúdo Central */}
+        <div className="relative z-10 max-w-md text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-32 bg-primary rounded-full"></div>
             <div>
-              <h2 className="text-white text-4xl font-bold tracking-tight">INOVAÇÃO</h2>
-              <h3 className="text-white text-2xl font-light tracking-wider">FUTURO</h3>
-              <h3 className="text-white text-2xl font-light tracking-wider">TECNOLOGIA</h3>
+              <h2 className="text-white text-5xl font-bold tracking-tight leading-tight">INOVAÇÃO</h2>
+              <h3 className="text-white text-3xl font-light tracking-wider mt-1">FUTURO</h3>
+              <h3 className="text-white text-3xl font-light tracking-wider mt-1">TECNOLOGIA</h3>
             </div>
           </div>
         </div>
+
+        {/* Espaço inferior */}
+        <div className="mb-auto"></div>
 
         {/* Elementos Decorativos */}
         <div className="absolute top-20 right-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
