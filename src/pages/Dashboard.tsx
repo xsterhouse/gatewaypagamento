@@ -24,7 +24,7 @@ import { formatCurrency, cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { GerarPixModal } from '@/components/GerarPixModal'
-import { SolicitarSaqueModal } from '@/components/SolicitarSaqueModal'
+import { SaquePixModal } from '@/components/SaquePixModal'
 
 interface DashboardMetrics {
   availableBalance: number
@@ -729,7 +729,11 @@ export function Dashboard() {
 
       {/* Modais */}
       <GerarPixModal open={isPixModalOpen} onOpenChange={setIsPixModalOpen} />
-      <SolicitarSaqueModal open={isSaqueModalOpen} onOpenChange={setIsSaqueModalOpen} />
+      <SaquePixModal 
+        open={isSaqueModalOpen} 
+        onOpenChange={setIsSaqueModalOpen}
+        onSuccess={loadMetrics}
+      />
     </div>
   )
 }

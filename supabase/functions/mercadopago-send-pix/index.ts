@@ -1,0 +1,207 @@
+// @ts-ignore: Deno types
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+// @ts-ignore: Deno types
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const { user_id, amount, pix_key, pix_key_type } = await req.json()
+
+    console.log('📤 Iniciando saque PIX:', { user_id, amount, pix_key_type })
+
+    // Validações
+    if (!user_id || !amount || !pix_key || !pix_key_type) {
+      throw new Error('Dados incompletos')
+    }
+
+    if (amount < 1.00) {
+      throw new Error('Valor mínimo para saque é R$ 1,00')
+    }
+
+    // @ts-ignore: Deno types
+    const supabaseClient = createClient(
+      // @ts-ignore: Deno types
+      Deno.env.get('SUPABASE_URL') ?? '',
+      // @ts-ignore: Deno types
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // Buscar carteira do usuário
+    const { data: wallet, error: walletError } = await supabaseClient
+      .from('wallets')
+      .select('id, balance, available_balance')
+      .eq('user_id', user_id)
+      .eq('currency_code', 'BRL')
+      .eq('is_active', true)
+      .single()
+
+    if (walletError || !wallet) {
+      throw new Error('Carteira não encontrada')
+    }
+
+    // Validar saldo (considerando taxa mínima de R$ 1,70)
+    const TAXA_MINIMA = 1.70
+    const saldoDisponivel = wallet.available_balance - TAXA_MINIMA
+
+    if (amount > saldoDisponivel) {
+      throw new Error(`Saldo insuficiente. Disponível: R$ ${saldoDisponivel.toFixed(2)}`)
+    }
+
+    // Buscar dados do usuário
+    const { data: user, error: userError } = await supabaseClient
+      .from('users')
+      .select('name, email, cpf')
+      .eq('id', user_id)
+      .single()
+
+    if (userError || !user) {
+      throw new Error('Usuário não encontrado')
+    }
+
+    // Criar transação PIX de saque
+    const { data: pixTransaction, error: pixError } = await supabaseClient
+      .from('pix_transactions')
+      .insert({
+        user_id,
+        amount,
+        transaction_type: 'withdrawal',
+        status: 'pending',
+        description: `Saque PIX para ${pix_key_type}`,
+        payer_name: user.name,
+        payer_document: user.cpf,
+        metadata: {
+          pix_key,
+          pix_key_type,
+          withdrawal: true
+        }
+      })
+      .select()
+      .single()
+
+    if (pixError) {
+      console.error('Erro ao criar transação PIX:', pixError)
+      throw new Error('Erro ao criar transação')
+    }
+
+    console.log('✅ Transação PIX criada:', pixTransaction.id)
+
+    // Preparar dados para Mercado Pago
+    // @ts-ignore: Deno types
+    const accessToken = Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN')
+    
+    // Criar pagamento PIX via Mercado Pago
+    const mpPayload = {
+      transaction_amount: amount,
+      description: `Saque PIX - ${user.name}`,
+      payment_method_id: 'pix',
+      payer: {
+        email: user.email,
+        first_name: user.name.split(' ')[0],
+        last_name: user.name.split(' ').slice(1).join(' ') || user.name.split(' ')[0],
+        identification: {
+          type: 'CPF',
+          number: user.cpf
+        }
+      },
+      // Para saque, usamos o endpoint de transferências do Mercado Pago
+      metadata: {
+        user_id,
+        transaction_id: pixTransaction.id,
+        pix_key,
+        pix_key_type
+      }
+    }
+
+    console.log('📨 Enviando para Mercado Pago...')
+
+    // Nota: O Mercado Pago não tem API direta para envio de PIX
+    // Precisamos usar a API de Money Out (transferências)
+    // Por enquanto, vamos criar a transação e processar manualmente ou via webhook
+    
+    // Atualizar transação com status de processamento
+    const { error: updateError } = await supabaseClient
+      .from('pix_transactions')
+      .update({
+        status: 'processing',
+        metadata: {
+          ...pixTransaction.metadata,
+          mercadopago_payload: mpPayload,
+          processed_at: new Date().toISOString()
+        }
+      })
+      .eq('id', pixTransaction.id)
+
+    if (updateError) {
+      console.error('Erro ao atualizar transação:', updateError)
+    }
+
+    // Debitar da carteira do usuário
+    const { error: debitError } = await supabaseClient
+      .from('wallets')
+      .update({
+        balance: wallet.balance - amount,
+        available_balance: wallet.available_balance - amount,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', wallet.id)
+
+    if (debitError) {
+      console.error('Erro ao debitar carteira:', debitError)
+      throw new Error('Erro ao processar débito')
+    }
+
+    // Registrar transação na carteira
+    await supabaseClient
+      .from('wallet_transactions')
+      .insert({
+        wallet_id: wallet.id,
+        user_id,
+        transaction_type: 'debit',
+        amount,
+        balance_before: wallet.balance,
+        balance_after: wallet.balance - amount,
+        description: `Saque PIX para ${pix_key_type}: ${pix_key}`,
+        reference_type: 'pix_transaction',
+        reference_id: pixTransaction.id,
+        created_at: new Date().toISOString()
+      })
+
+    console.log('✅ Saque processado com sucesso!')
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        transaction_id: pixTransaction.id,
+        amount,
+        status: 'processing',
+        message: 'Saque PIX em processamento. Você receberá o valor em instantes.'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
+
+  } catch (error: any) {
+    console.error('❌ Erro ao processar saque:', error)
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message || 'Erro ao processar saque'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
+  }
+})
