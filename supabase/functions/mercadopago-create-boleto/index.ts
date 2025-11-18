@@ -25,6 +25,12 @@ Deno.serve(async (req: Request) => {
     // Calcular data de expiração
     const expirationDate = due_date ? new Date(due_date) : new Date()
 
+    // Dividir nome completo em primeiro e último nome
+    const fullName = payer?.name || 'Cliente Teste'
+    const nameParts = fullName.trim().split(' ')
+    const firstName = nameParts[0] || 'Cliente'
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Teste'
+
     const body = {
       transaction_amount: amount,
       description,
@@ -32,8 +38,8 @@ Deno.serve(async (req: Request) => {
       date_of_expiration: expirationDate.toISOString(),
       payer: {
         email: payer?.email || 'customer@example.com',
-        first_name: payer?.name || 'Cliente',
-        last_name: '',
+        first_name: firstName,
+        last_name: lastName,
         identification: payer?.document ? {
           type: payer.document.length === 11 ? 'CPF' : 'CNPJ',
           number: payer.document
