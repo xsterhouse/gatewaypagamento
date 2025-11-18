@@ -46,14 +46,15 @@ class BoletoService {
       console.log('📄 Criando boleto...', params)
 
       // 1. Buscar configuração do Mercado Pago
-      const { data: acquirer } = await supabase
+      const { data: acquirer, error: acquirerError } = await supabase
         .from('bank_acquirers')
         .select('*')
-        .eq('acquirer_name', 'Mercado Pago')
+        .eq('name', 'Mercado Pago')
         .eq('is_active', true)
         .single()
 
-      if (!acquirer) {
+      if (acquirerError || !acquirer) {
+        console.error('Erro ao buscar Mercado Pago:', acquirerError)
         throw new Error('Mercado Pago não configurado')
       }
 
@@ -180,7 +181,7 @@ class BoletoService {
       const { data: acquirer } = await supabase
         .from('bank_acquirers')
         .select('*')
-        .eq('acquirer_name', 'Mercado Pago')
+        .eq('name', 'Mercado Pago')
         .eq('is_active', true)
         .single()
 
