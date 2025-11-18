@@ -45,11 +45,7 @@ class BoletoService {
     try {
       console.log('📄 Criando boleto...', params)
 
-      // 1. Calcular taxa
-      const feeAmount = await this.calculateFee(params.amount, 'boleto')
-      const netAmount = params.amount - feeAmount
-
-      // 2. Calcular data de vencimento (padrão: 3 dias)
+      // 1. Calcular data de vencimento (padrão: 3 dias)
       const dueDate = params.due_date || new Date()
       if (!params.due_date) {
         dueDate.setDate(dueDate.getDate() + 3)
