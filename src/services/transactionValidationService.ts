@@ -254,7 +254,7 @@ class TransactionValidationService {
   async validateDuplication(
     user_id: string,
     amount: number,
-    description: string
+    _description: string
   ): Promise<ValidationResult> {
     try {
       // Buscar transações similares nos últimos 5 minutos
