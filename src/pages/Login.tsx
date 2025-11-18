@@ -224,17 +224,24 @@ export function Login() {
 
       {/* Lado Direito - Background com Imagem */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#0f1117] flex-col items-center justify-center p-12">
-        {/* Imagem de Fundo */}
+        {/* Imagem de Fundo ou Gradiente Fallback */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: 'url(/login-bg.jpg)',
+            backgroundImage: 'url(/login-bg.jpg), linear-gradient(135deg, #1a1d29 0%, #0f1117 50%, #1a1d29 100%)',
             filter: 'brightness(0.3)'
           }}
         ></div>
         
+        {/* Padrão Hexagonal de Fundo */}
+        <div className="absolute inset-0 hexagon-pattern opacity-5"></div>
+        
         {/* Overlay escuro */}
         <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-black/60"></div>
+        
+        {/* Círculos decorativos */}
+        <div className="absolute top-20 right-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 left-20 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
         
         {/* Logo no topo */}
         <div className="relative z-10 mb-auto pt-8">
