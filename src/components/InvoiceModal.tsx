@@ -34,12 +34,9 @@ export function InvoiceModal({ open, onOpenChange }: InvoiceModalProps) {
     try {
       if (!effectiveUserId) return
 
-      const { data, error } = await supabase
+      const { data: invoicesData, error } = await supabase
         .from('invoices')
-        .select(`
-          *,
-          customers!customer_id(*)
-        `)
+        .select('*')
         .eq('user_id', effectiveUserId)
         .order('created_at', { ascending: false })
 
@@ -49,7 +46,23 @@ export function InvoiceModal({ open, onOpenChange }: InvoiceModalProps) {
         return
       }
 
-      setInvoices(data || [])
+      // Buscar dados dos customers separadamente
+      const invoicesWithCustomers = await Promise.all(
+        (invoicesData || []).map(async (invoice) => {
+          const { data: customerData } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('id', invoice.customer_id)
+            .single()
+          
+          return {
+            ...invoice,
+            customers: customerData
+          }
+        })
+      )
+
+      setInvoices(invoicesWithCustomers)
     } catch (error) {
       console.error('Erro ao carregar faturas:', error)
       toast.error('Erro ao carregar faturas')

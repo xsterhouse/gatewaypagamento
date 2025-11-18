@@ -161,10 +161,7 @@ export function Gerente() {
     try {
       const { data, error } = await supabase
         .from('ticket_messages')
-        .select(`
-          *,
-          users!sender_id(name)
-        `)
+        .select('*')
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true })
 
@@ -173,13 +170,24 @@ export function Gerente() {
         return
       }
 
-      const formattedMessages = data?.map(msg => ({
-        ...msg,
-        sender_name: msg.users?.name
-      })) || []
+      // Buscar dados dos usuários separadamente
+      const messagesWithUsers = await Promise.all(
+        (data || []).map(async (msg) => {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('name')
+            .eq('id', msg.sender_id)
+            .single()
+          
+          return {
+            ...msg,
+            sender_name: userData?.name
+          }
+        })
+      )
 
-      setChatMessages(formattedMessages)
-      console.log('💬 Mensagens do chat:', formattedMessages.length)
+      setChatMessages(messagesWithUsers)
+      console.log('💬 Mensagens do chat:', messagesWithUsers.length)
     } catch (error) {
       console.error('Erro ao carregar chat:', error)
     }

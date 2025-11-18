@@ -54,13 +54,10 @@ export function InvoicesManagementModal({ open, onOpenChange, onRefresh }: Invoi
     try {
       setLoading(true)
       
+      // Buscar faturas
       let query = supabase
         .from('invoices')
-        .select(`
-          *,
-          customers!customer_id(name, email, cpf),
-          users!user_id(name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       // Aplicar filtro se não for 'all'
@@ -68,28 +65,53 @@ export function InvoicesManagementModal({ open, onOpenChange, onRefresh }: Invoi
         query = query.eq('status', filter)
       }
 
-      const { data, error } = await query
+      const { data: invoicesData, error: invoicesError } = await query
 
-      console.log('📡 Resposta do Supabase Invoices:', { data, error })
-
-      if (error) {
-        console.error('Erro ao carregar faturas:', error)
+      if (invoicesError) {
+        console.error('Erro ao carregar faturas:', invoicesError)
         
         // Mensagens de erro mais específicas
-        if (error.code === 'PGRST116') {
+        if (invoicesError.code === 'PGRST116') {
           toast.error('Tabela invoices não encontrada. Execute o script SQL no Supabase.')
-        } else if (error.code === '42501') {
+        } else if (invoicesError.code === '42501') {
           toast.error('Sem permissão para acessar faturas. Verifique as políticas RLS.')
         } else {
-          toast.error(`Erro ao carregar faturas: ${error.message}`)
+          toast.error(`Erro ao carregar faturas: ${invoicesError.message}`)
         }
         return
       }
 
-      setInvoices(data || [])
+      // Buscar dados de customers e users separadamente
+      const invoicesWithRelations = await Promise.all(
+        (invoicesData || []).map(async (invoice) => {
+          const [customerData, userData] = await Promise.all([
+            supabase
+              .from('customers')
+              .select('name, email, cpf')
+              .eq('id', invoice.customer_id)
+              .single()
+              .then(res => res.data),
+            supabase
+              .from('users')
+              .select('name, email')
+              .eq('id', invoice.user_id)
+              .single()
+              .then(res => res.data)
+          ])
+          
+          return {
+            ...invoice,
+            customers: customerData,
+            users: userData
+          }
+        })
+      )
+
+      console.log('📡 Faturas carregadas:', invoicesWithRelations.length)
+      setInvoices(invoicesWithRelations)
       
-      if (data && data.length > 0) {
-        toast.success(`Carregadas ${data.length} faturas`)
+      if (invoicesWithRelations && invoicesWithRelations.length > 0) {
+        toast.success(`Carregadas ${invoicesWithRelations.length} faturas`)
       } else {
         toast.info('Nenhuma fatura encontrada')
       }
