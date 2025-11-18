@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
           zip_code: payer.address.zip_code
         } : undefined
       },
-      notification_url: `$${'{'}
+      notification_url: `${
         // @ts-ignore: Deno types
         Deno.env.get('SUPABASE_URL')
       }/functions/v1/mercadopago-webhook`
