@@ -243,24 +243,8 @@ export function Login() {
         <div className="absolute top-20 right-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 left-20 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
         
-        {/* Logo no topo */}
-        <div className="relative z-10 mb-auto pt-8">
-          <img 
-            src="/logo-dimpay.png" 
-            alt="DiMPay" 
-            className="h-16 w-auto drop-shadow-2xl"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-              const fallback = document.createElement('div')
-              fallback.className = 'text-3xl font-bold text-white'
-              fallback.textContent = 'DiMPay'
-              e.currentTarget.parentElement?.appendChild(fallback)
-            }}
-          />
-        </div>
-        
         {/* Conteúdo Central */}
-        <div className="relative z-10 max-w-md text-left">
+        <div className="relative z-10 max-w-md text-left flex items-center h-full">
           <div className="flex items-center gap-4">
             <div className="w-1.5 h-40 bg-primary rounded-full shadow-lg shadow-primary/50"></div>
             <div>
@@ -276,9 +260,6 @@ export function Login() {
             </div>
           </div>
         </div>
-
-        {/* Espaço inferior */}
-        <div className="mb-auto"></div>
       </div>
       
       <style>{`
