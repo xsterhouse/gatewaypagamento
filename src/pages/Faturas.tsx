@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
   FileText, Plus, Copy, Check, Download, Trash2, Eye, 
-  Calendar, DollarSign, User, MapPin, Clock, CheckCircle, 
+  DollarSign, User, MapPin, Clock, CheckCircle, 
   XCircle, AlertCircle, RefreshCw
 } from 'lucide-react'
 import { toast } from 'sonner'
