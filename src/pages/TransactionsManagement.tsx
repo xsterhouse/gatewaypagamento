@@ -91,15 +91,47 @@ export function TransactionsManagement() {
     try {
       setLoading(true)
       
+      // Buscar transações regulares
       const { data: transData, error: transError } = await supabase
         .from('transactions')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(500)
 
-      if (transError) throw transError
+      if (transError && !transError.message.includes('does not exist')) {
+        console.error('Erro ao carregar transactions:', transError)
+      }
 
-      const userIds = [...new Set(transData?.map(t => t.user_id).filter(Boolean))]
+      // Buscar transações PIX
+      const { data: pixData, error: pixError } = await supabase
+        .from('pix_transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500)
+
+      if (pixError) {
+        console.error('Erro ao carregar pix_transactions:', pixError)
+      }
+
+      // Combinar todas as transações
+      const allTransData = [
+        ...(transData || []),
+        ...(pixData || []).map(p => ({
+          id: p.id,
+          user_id: p.user_id,
+          type: p.transaction_type === 'deposit' ? 'credit' : 'debit',
+          amount: p.amount,
+          status: p.status === 'completed' ? 'completed' : p.status === 'paid' ? 'completed' : p.status,
+          description: p.description || 'Transação PIX',
+          created_at: p.created_at,
+          payment_method: 'PIX'
+        }))
+      ]
+
+      // Ordenar por data
+      allTransData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+      const userIds = [...new Set(allTransData.map(t => t.user_id).filter(Boolean))]
       let usersMap = new Map()
       
       if (userIds.length > 0) {
@@ -113,7 +145,7 @@ export function TransactionsManagement() {
         })
       }
 
-      const formattedTrans = (transData || []).map(t => {
+      const formattedTrans = allTransData.map(t => {
         const user = usersMap.get(t.user_id)
         return {
           id: t.id,
@@ -121,11 +153,11 @@ export function TransactionsManagement() {
           user_name: user?.name || 'Desconhecido',
           user_email: user?.email || '',
           type: t.type,
-          amount: t.amount,
+          amount: Number(t.amount),
           status: t.status,
           description: t.description || '',
           created_at: t.created_at,
-          payment_method: t.payment_method
+          payment_method: t.payment_method || 'Não especificado'
         }
       })
 
