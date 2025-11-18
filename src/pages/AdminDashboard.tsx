@@ -25,6 +25,7 @@ import { toast } from 'sonner'
 import { PixPendingModal } from '@/components/PixPendingModal'
 import { InvoicesManagementModal } from '@/components/InvoicesManagementModal'
 import { BoletosManagementModal } from '@/components/BoletosManagementModal'
+import { ContaMaeModal } from '@/components/ContaMaeModal'
 
 interface DashboardStats {
   totalUsers: number
@@ -109,6 +110,7 @@ export function AdminDashboard() {
   const [showPixPendingModal, setShowPixPendingModal] = useState(false)
   const [showInvoicesModal, setShowInvoicesModal] = useState(false)
   const [showBoletosModal, setShowBoletosModal] = useState(false)
+  const [showContaMaeModal, setShowContaMaeModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
 
 
@@ -767,7 +769,10 @@ export function AdminDashboard() {
         </h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30 transition-all hover:shadow-lg hover:scale-105">
+        <Card 
+          className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
+          onClick={() => setShowContaMaeModal(true)}
+        >
           <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
@@ -1093,6 +1098,11 @@ export function AdminDashboard() {
         open={showBoletosModal}
         onOpenChange={setShowBoletosModal}
         onRefresh={loadDashboardData}
+      />
+
+      <ContaMaeModal 
+        open={showContaMaeModal}
+        onOpenChange={setShowContaMaeModal}
       />
 
       <style>{`
