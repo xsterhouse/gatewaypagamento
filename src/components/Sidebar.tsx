@@ -20,8 +20,7 @@ import {
   Receipt,
   Building2,
   Book,
-  RefreshCw,
-  Download
+  RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -32,7 +31,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Wallet, label: 'Carteiras', path: '/wallets' },
   { icon: ArrowUpDown, label: 'Exchange', path: '/exchange' },
-  { icon: Download, label: 'Depósitos', path: '/deposits' },
+  { icon: FileText, label: 'Faturas', path: '/faturas' },
   { icon: MessageSquare, label: 'Gerente', path: '/gerente' },
   { icon: Wallet, label: 'Financeiro', path: '/financeiro' },
   { icon: FileText, label: 'Relatórios', path: '/relatorios' },

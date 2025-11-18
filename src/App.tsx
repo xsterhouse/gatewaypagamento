@@ -34,7 +34,7 @@ import { TransactionsManagement } from './pages/TransactionsManagement'
 import { ActivityLogs } from './pages/ActivityLogs'
 import { Wallets } from './pages/Wallets'
 import { Exchange } from './pages/Exchange'
-import { Deposits } from './pages/Deposits'
+import { Faturas } from './pages/Faturas'
 import { AdminWallets } from './pages/AdminWallets'
 import { AdminExchange } from './pages/AdminExchange'
 // import { AdminDeposits } from './pages/AdminDeposits' // REMOVIDO: Redundante
@@ -103,7 +103,7 @@ function App() {
             <Route path="/admin/med" element={<AdminMED />} />
             <Route path="wallets" element={<Wallets />} />
             <Route path="exchange" element={<Exchange />} />
-            <Route path="deposits" element={<Deposits />} />
+            <Route path="faturas" element={<Faturas />} />
             <Route path="documents" element={<Documents />} />
             <Route path="kyc-documents" element={<KYCDocuments />} />
             <Route path="calendar" element={<FullCalendar />} />
