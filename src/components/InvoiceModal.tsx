@@ -38,7 +38,7 @@ export function InvoiceModal({ open, onOpenChange }: InvoiceModalProps) {
         .from('invoices')
         .select(`
           *,
-          customer:customers(*)
+          customers!customer_id(*)
         `)
         .eq('user_id', effectiveUserId)
         .order('created_at', { ascending: false })
@@ -61,7 +61,7 @@ export function InvoiceModal({ open, onOpenChange }: InvoiceModalProps) {
   const handleGeneratePDF = async (invoice: InvoiceWithCustomer) => {
     try {
       const pdfBlob = await generateInvoicePDF({
-        customer: invoice.customer,
+        customer: invoice.customers,
         invoice: invoice
       })
       
@@ -69,7 +69,7 @@ export function InvoiceModal({ open, onOpenChange }: InvoiceModalProps) {
       const url = URL.createObjectURL(pdfBlob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `fatura-${invoice.id.slice(0, 8)}-${invoice.customer.name.replace(/\s+/g, '-').toLowerCase()}.pdf`
+      a.download = `fatura-${invoice.id.slice(0, 8)}-${invoice.customers.name.replace(/\s+/g, '-').toLowerCase()}.pdf`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -167,7 +167,7 @@ export function InvoiceModal({ open, onOpenChange }: InvoiceModalProps) {
                           <div>
                             <CardTitle className="text-base">{invoice.description}</CardTitle>
                             <p className="text-sm text-gray-500 mt-1">
-                              Cliente: {invoice.customer.name}
+                              Cliente: {invoice.customers.name}
                             </p>
                           </div>
                           <div className="flex flex-col items-end gap-2">
@@ -185,7 +185,7 @@ export function InvoiceModal({ open, onOpenChange }: InvoiceModalProps) {
                         <div className="flex justify-between items-center">
                           <div className="text-sm text-gray-500">
                             <p>Vencimento: {new Date(invoice.due_date).toLocaleDateString('pt-BR')}</p>
-                            <p>CPF: {invoice.customer.cpf}</p>
+                            <p>CPF: {invoice.customers.cpf}</p>
                           </div>
                           <div className="flex gap-2">
                             <Button

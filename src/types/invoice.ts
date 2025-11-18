@@ -34,5 +34,5 @@ export interface Invoice {
 }
 
 export interface InvoiceWithCustomer extends Invoice {
-  customer: Customer
+  customers: Customer
 }

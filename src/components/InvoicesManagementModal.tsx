@@ -27,12 +27,12 @@ interface Invoice {
   url_pdf?: string
   created_at: string
   updated_at: string
-  customer?: {
+  customers?: {
     name: string
     email: string
     cpf: string
   }
-  user?: {
+  users?: {
     name: string
     email: string
   }
@@ -58,8 +58,8 @@ export function InvoicesManagementModal({ open, onOpenChange, onRefresh }: Invoi
         .from('invoices')
         .select(`
           *,
-          customer:customers(name, email, cpf),
-          user:users(name, email)
+          customers!customer_id(name, email, cpf),
+          users!user_id(name, email)
         `)
         .order('created_at', { ascending: false })
 
@@ -337,19 +337,19 @@ export function InvoicesManagementModal({ open, onOpenChange, onRefresh }: Invoi
                           </div>
                           <div>
                             <span className="text-muted-foreground">Cliente:</span>
-                            <span className="ml-2">{invoice.customer?.name || 'N/A'}</span>
+                            <span className="ml-2">{invoice.customers?.name || 'N/A'}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">CPF Cliente:</span>
-                            <span className="ml-2">{invoice.customer?.cpf || 'N/A'}</span>
+                            <span className="ml-2">{invoice.customers?.cpf || 'N/A'}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Usuário:</span>
-                            <span className="ml-2">{invoice.user?.name || 'N/A'}</span>
+                            <span className="ml-2">{invoice.users?.name || 'N/A'}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Email Usuário:</span>
-                            <span className="ml-2 text-xs">{invoice.user?.email || 'N/A'}</span>
+                            <span className="ml-2 text-xs">{invoice.users?.email || 'N/A'}</span>
                           </div>
                           {invoice.nosso_numero && (
                             <div>

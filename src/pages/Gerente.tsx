@@ -163,7 +163,7 @@ export function Gerente() {
         .from('ticket_messages')
         .select(`
           *,
-          sender:users(name)
+          users!sender_id(name)
         `)
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true })
@@ -175,7 +175,7 @@ export function Gerente() {
 
       const formattedMessages = data?.map(msg => ({
         ...msg,
-        sender_name: msg.sender?.name
+        sender_name: msg.users?.name
       })) || []
 
       setChatMessages(formattedMessages)

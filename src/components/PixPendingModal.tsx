@@ -19,7 +19,7 @@ interface PixTransaction {
   updated_at: string
   e2e_id?: string
   transaction_id?: string
-  user?: {
+  users?: {
     name: string
     email: string
   }
@@ -44,7 +44,7 @@ export function PixPendingModal({ open, onOpenChange, onRefresh }: PixPendingMod
         .from('pix_transactions')
         .select(`
           *,
-          user:users(name, email)
+          users!user_id(name, email)
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -270,11 +270,11 @@ export function PixPendingModal({ open, onOpenChange, onRefresh }: PixPendingMod
                           </div>
                           <div>
                             <span className="text-muted-foreground">Usuário:</span>
-                            <span className="ml-2">{pix.user?.name || 'N/A'}</span>
+                            <span className="ml-2">{pix.users?.name || 'N/A'}</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Email:</span>
-                            <span className="ml-2 text-xs">{pix.user?.email || 'N/A'}</span>
+                            <span className="ml-2 text-xs">{pix.users?.email || 'N/A'}</span>
                           </div>
                           {pix.description && (
                             <div className="md:col-span-2">
