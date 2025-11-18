@@ -168,54 +168,6 @@ class BoletoService {
   }
 
   /**
-   * Calcular taxa do boleto
-   */
-  private async calculateFee(amount: number, payment_type: string): Promise<number> {
-    try {
-      // Buscar configuração de taxa
-      const { data: feeConfig } = await supabase
-        .from('payment_fees')
-        .select('*')
-        .eq('payment_type', payment_type)
-        .eq('is_active', true)
-        .single()
-
-      if (!feeConfig) {
-        // Taxa padrão para boleto: 2.5% (mín: R$ 2,00)
-        const percentageFee = amount * 0.025
-        return Math.max(percentageFee, 2.00)
-      }
-
-      let fee = 0
-
-      // Calcular taxa baseado no tipo
-      if (feeConfig.fee_type === 'fixed') {
-        fee = feeConfig.fixed_amount
-      } else if (feeConfig.fee_type === 'percentage') {
-        fee = amount * (feeConfig.percentage / 100)
-      } else if (feeConfig.fee_type === 'mixed') {
-        fee = feeConfig.fixed_amount + (amount * (feeConfig.percentage / 100))
-      }
-
-      // Aplicar limites
-      if (feeConfig.min_amount && fee < feeConfig.min_amount) {
-        fee = feeConfig.min_amount
-      }
-      if (feeConfig.max_amount && fee > feeConfig.max_amount) {
-        fee = feeConfig.max_amount
-      }
-
-      return Number(fee.toFixed(2))
-
-    } catch (error) {
-      console.error('❌ Erro ao calcular taxa:', error)
-      // Taxa padrão
-      const percentageFee = amount * 0.025
-      return Math.max(percentageFee, 2.00)
-    }
-  }
-
-  /**
    * Listar boletos do usuário
    */
   async listUserBoletos(user_id: string): Promise<any[]> {
