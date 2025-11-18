@@ -222,24 +222,30 @@ export function Login() {
         </div>
       </div>
 
-      {/* Lado Direito - Background com Hexágonos */}
+      {/* Lado Direito - Background com Imagem */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#0f1117] flex-col items-center justify-center p-12">
-        {/* Padrão Hexagonal */}
-        <div className="absolute inset-0 hexagon-pattern opacity-5"></div>
+        {/* Imagem de Fundo */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(/login-bg.jpg)',
+            filter: 'brightness(0.3)'
+          }}
+        ></div>
         
-        {/* Gradiente Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent"></div>
+        {/* Overlay escuro */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-black/60"></div>
         
         {/* Logo no topo */}
         <div className="relative z-10 mb-auto pt-8">
           <img 
             src="/logo-dimpay.png" 
             alt="DiMPay" 
-            className="h-16 w-auto opacity-80"
+            className="h-16 w-auto drop-shadow-2xl"
             onError={(e) => {
               e.currentTarget.style.display = 'none'
               const fallback = document.createElement('div')
-              fallback.className = 'text-3xl font-bold text-white opacity-80'
+              fallback.className = 'text-3xl font-bold text-white'
               fallback.textContent = 'DiMPay'
               e.currentTarget.parentElement?.appendChild(fallback)
             }}
@@ -248,22 +254,24 @@ export function Login() {
         
         {/* Conteúdo Central */}
         <div className="relative z-10 max-w-md text-left">
-          <div className="flex items-center gap-3">
-            <div className="w-1 h-32 bg-primary rounded-full"></div>
+          <div className="flex items-center gap-4">
+            <div className="w-1.5 h-40 bg-primary rounded-full shadow-lg shadow-primary/50"></div>
             <div>
-              <h2 className="text-white text-5xl font-bold tracking-tight leading-tight">INOVAÇÃO</h2>
-              <h3 className="text-white text-3xl font-light tracking-wider mt-1">FUTURO</h3>
-              <h3 className="text-white text-3xl font-light tracking-wider mt-1">TECNOLOGIA</h3>
+              <h2 className="text-white text-6xl font-bold tracking-tight leading-tight drop-shadow-lg">
+                INOVAÇÃO
+              </h2>
+              <h3 className="text-white text-4xl font-light tracking-wider mt-2 drop-shadow-lg">
+                FUTURO
+              </h3>
+              <h3 className="text-white text-4xl font-light tracking-wider mt-2 drop-shadow-lg">
+                TECNOLOGIA
+              </h3>
             </div>
           </div>
         </div>
 
         {/* Espaço inferior */}
         <div className="mb-auto"></div>
-
-        {/* Elementos Decorativos */}
-        <div className="absolute top-20 right-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 left-20 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
       </div>
       
       <style>{`
