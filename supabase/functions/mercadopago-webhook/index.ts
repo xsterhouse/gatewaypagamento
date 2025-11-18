@@ -88,6 +88,34 @@ Deno.serve(async (req: Request) => {
 
       const transaction = transactions && transactions.length > 0 ? transactions[0] : null
 
+      // Se não encontrou em pix_transactions, buscar em invoices_boletos
+      if (!transaction) {
+        console.log('🔍 Buscando em invoices_boletos...')
+        const { data: invoice } = await supabaseClient
+          .from('invoices_boletos')
+          .select('*')
+          .eq('mercadopago_payment_id', paymentId.toString())
+          .single()
+
+        if (invoice && payment.status === 'approved') {
+          console.log('📄 Fatura encontrada, processando pagamento...')
+          
+          // Chamar função para processar pagamento
+          const { error: processError } = await supabaseClient
+            .rpc('process_invoice_payment', {
+              p_invoice_id: invoice.id,
+              p_payment_id: paymentId.toString(),
+              p_paid_amount: payment.transaction_amount
+            })
+
+          if (processError) {
+            console.error('❌ Erro ao processar pagamento da fatura:', processError)
+          } else {
+            console.log('✅ Pagamento da fatura processado com sucesso!')
+          }
+        }
+      }
+
       if (transaction) {
         let newStatus = 'pending'
         
