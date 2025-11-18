@@ -3,12 +3,14 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, FormLabel, FormMessage } from '@/components/ui/form'
+import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 
 export function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
   const navigate = useNavigate()
@@ -39,7 +41,6 @@ export function Login() {
 
     setLoading(true)
     try {
-      // Login com Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -56,17 +57,13 @@ export function Login() {
         return
       }
 
-      // Buscar dados do usuário na tabela users
       let { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', authData.user.id)
         .single()
 
-      // Se usuário não existe na tabela users, criar registro
       if (userError && userError.code === 'PGRST116') {
-        console.log('Usuário não encontrado na tabela, criando registro...')
-        
         const { error: insertError } = await supabase
           .from('users')
           .insert({
@@ -85,7 +82,6 @@ export function Login() {
           return
         }
 
-        // Buscar novamente após criar
         const { data: newUserData, error: newUserError } = await supabase
           .from('users')
           .select('*')
@@ -107,7 +103,6 @@ export function Login() {
         return
       }
 
-      // Verificar se conta está suspensa ou bloqueada
       if (userData?.status === 'suspended') {
         toast.error('Sua conta está suspensa. Entre em contato com o suporte.')
         await supabase.auth.signOut()
@@ -122,7 +117,6 @@ export function Login() {
 
       toast.success('Login realizado com sucesso!')
       
-      // Redirecionar admin para painel admin, usuário normal para dashboard cliente
       if (userData.role === 'admin') {
         navigate('/admin/dashboard')
       } else {
@@ -139,208 +133,126 @@ export function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Lado Esquerdo - Formulário */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-[#0a0e13] via-[#1a1f2e] to-[#0f172a]">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[#1a1d29]">
         <div className="w-full max-w-md">
           {/* Logo */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-2">
-              <img 
-                src="/logo-dimpay.png" 
-                alt="DiMPay" 
-                className="h-12 w-auto"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                  const fallback = document.createElement('div')
-                  fallback.className = 'text-2xl font-bold text-primary'
-                  fallback.textContent = 'DiMPay'
-                  e.currentTarget.parentElement?.appendChild(fallback)
-                }}
-              />
-            </div>
-            <p className="text-gray-400 text-sm">Sistema de Pagamentos Inteligente</p>
+          <div className="mb-10">
+            <img 
+              src="/logo-dimpay.png" 
+              alt="DiMPay" 
+              className="h-16 w-auto mb-2"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallback = document.createElement('div')
+                fallback.className = 'text-3xl font-bold text-primary'
+                fallback.textContent = 'DiMPay'
+                e.currentTarget.parentElement?.appendChild(fallback)
+              }}
+            />
           </div>
 
           {/* Título */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">Faça seu Login.</h1>
-            <p className="text-gray-400">Acesse sua conta para continuar</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Acesse sua conta</h1>
+            <p className="text-gray-400 text-sm">Insira os dados para realizar seu login em nossa plataforma.</p>
           </div>
 
           {/* Formulário */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <FormField>
-              <FormLabel className="text-white text-sm mb-2">Email</FormLabel>
+              <FormLabel className="text-white text-sm font-medium">Email *</FormLabel>
               <Input
                 type="email"
-                placeholder="seu@email.com"
+                placeholder="Digite seu e-mail"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-transparent border-2 border-gray-700 text-white placeholder:text-gray-500 h-12 rounded-xl focus:border-primary transition-colors"
+                className="bg-[#2a2f3f] border-[#3a3f4f] text-white placeholder:text-gray-500 h-12 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all"
               />
-              {errors.email && <FormMessage>{errors.email}</FormMessage>}
+              {errors.email && <FormMessage className="text-red-400 text-xs mt-1">{errors.email}</FormMessage>}
             </FormField>
 
             <FormField>
-              <FormLabel className="text-white text-sm mb-2">Senha</FormLabel>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-transparent border-2 border-gray-700 text-white placeholder:text-gray-500 h-12 rounded-xl focus:border-primary transition-colors"
-              />
-              {errors.password && <FormMessage>{errors.password}</FormMessage>}
+              <FormLabel className="text-white text-sm font-medium">Senha *</FormLabel>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Digite sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-[#2a2f3f] border-[#3a3f4f] text-white placeholder:text-gray-500 h-12 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              {errors.password && <FormMessage className="text-red-400 text-xs mt-1">{errors.password}</FormMessage>}
             </FormField>
 
-            <div className="flex items-center justify-end text-sm">
+            <div className="flex items-center justify-end">
               <Link 
                 to="/forgot-password" 
-                className="text-white hover:text-primary transition-colors underline"
+                className="text-primary text-sm hover:underline transition-all"
               >
-                Esqueci minha senha
+                Esqueceu a senha?
               </Link>
             </div>
 
             <Button 
               type="submit" 
-              className="w-full h-12 text-base font-medium rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-primary/50" 
+              className="w-full h-12 text-base font-semibold rounded-lg bg-white text-black hover:bg-gray-100 transition-all shadow-lg" 
               disabled={loading}
             >
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading ? 'Acessando...' : 'Acessar'}
             </Button>
 
-            <div className="text-center text-sm text-gray-400 pt-4">
-              <span className="mr-2">Ainda não tem uma conta?</span>
+            <div className="text-center text-sm text-gray-400 pt-2">
+              <span>Ainda não possui uma conta? </span>
               <Link 
                 to="/register" 
-                className="text-white hover:text-primary transition-colors underline font-semibold"
+                className="text-white font-semibold hover:text-primary transition-colors"
               >
-                Abra sua conta grátis agora
+                Criar conta agora.
               </Link>
             </div>
           </form>
-
-          {/* Footer */}
-          <div className="mt-12 text-center text-xs text-gray-500">
-            <p>2025 | DiMPay - Todos os direitos reservados</p>
-          </div>
         </div>
       </div>
 
-      {/* Lado Direito - Background Visual */}
-      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569]">
-        {/* Efeito de Grid */}
-        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+      {/* Lado Direito - Background com Hexágonos */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#0f1117] items-center justify-center">
+        {/* Padrão Hexagonal */}
+        <div className="absolute inset-0 hexagon-pattern opacity-5"></div>
         
         {/* Gradiente Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-primary/10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent"></div>
         
-        {/* Círculos decorativos */}
-        <div className="absolute top-20 right-20 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        
-        {/* Conteúdo Visual */}
-        <div className="relative h-full flex flex-col items-center justify-center p-12 text-white">
-          <div className="max-w-lg text-center space-y-6">
-            {/* Logo Dimpay */}
-            <div className="inline-flex items-center justify-center mb-8">
-              <img 
-                src="/logo-dimpay.png" 
-                alt="DiMPay Gateway" 
-                className="h-20 w-auto drop-shadow-2xl"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                  const fallback = document.createElement('div')
-                  fallback.className = 'text-5xl font-bold text-white'
-                  fallback.textContent = 'DiMPay'
-                  e.currentTarget.parentElement?.appendChild(fallback)
-                }}
-              />
-            </div>
-            
-            <h2 className="text-3xl font-semibold leading-tight bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent mb-4">
-              Pagamentos digitais que impulsionam seu negócio
-            </h2>
-            
-            <p className="text-base text-gray-300 leading-relaxed mb-8">
-              Aceite pagamentos online com <span className="text-primary font-medium">velocidade, segurança e simplicidade</span>. 
-              O gateway Dimpay potencializa suas vendas e oferece a melhor experiência para seus clientes.
-            </p>
-            
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10 mb-8">
-              <p className="text-sm text-white font-medium mb-4 flex items-center gap-2">
-                <span className="text-primary">⚡</span>
-                Vantagens Dimpay
-              </p>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="flex items-start gap-2">
-                  <span className="text-primary/80 text-xs mt-0.5">●</span>
-                  <div>
-                    <strong className="text-white text-xs">Integração rápida</strong>
-                    <div className="text-gray-400">APIs simples e documentação completa</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-primary/80 text-xs mt-0.5">●</span>
-                  <div>
-                    <strong className="text-white text-xs">Taxas competitivas</strong>
-                    <div className="text-gray-400">Melhores condições do mercado</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-primary/80 text-xs mt-0.5">●</span>
-                  <div>
-                    <strong className="text-white text-xs">Liquidez imediata</strong>
-                    <div className="text-gray-400">Receba em 1 dia útil</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-primary/80 text-xs mt-0.5">●</span>
-                  <div>
-                    <strong className="text-white text-xs">Segurança máxima</strong>
-                    <div className="text-gray-400">Proteção PCI-DSS em todas transações</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-4 pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary mb-1">99.9%</div>
-                <div className="text-xs text-gray-400">Uptime garantido</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary mb-1">256-bit</div>
-                <div className="text-xs text-gray-400">Criptografia de ponta</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary mb-1">24/7</div>
-                <div className="text-xs text-gray-400">Suporte especializado</div>
-              </div>
+        {/* Conteúdo */}
+        <div className="relative z-10 max-w-md text-left px-12">
+          <div className="flex items-center gap-2 mb-8">
+            <div className="w-1 h-12 bg-primary rounded-full"></div>
+            <div>
+              <h2 className="text-white text-4xl font-bold tracking-tight">INOVAÇÃO</h2>
+              <h3 className="text-white text-2xl font-light tracking-wider">FUTURO</h3>
+              <h3 className="text-white text-2xl font-light tracking-wider">TECNOLOGIA</h3>
             </div>
           </div>
         </div>
+
+        {/* Elementos Decorativos */}
+        <div className="absolute top-20 right-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 left-20 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
       </div>
       
       <style>{`
-        .bg-grid-pattern {
+        .hexagon-pattern {
           background-image: 
-            linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-          background-size: 50px 50px;
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 0.2; transform: scale(1); }
-          50% { opacity: 0.3; transform: scale(1.05); }
-        }
-        
-        .animate-pulse {
-          animation: pulse 4s ease-in-out infinite;
-        }
-        
-        .delay-1000 {
-          animation-delay: 2s;
+            repeating-linear-gradient(0deg, transparent, transparent 35px, rgba(255, 255, 255, 0.03) 35px, rgba(255, 255, 255, 0.03) 70px),
+            repeating-linear-gradient(60deg, transparent, transparent 35px, rgba(255, 255, 255, 0.03) 35px, rgba(255, 255, 255, 0.03) 70px),
+            repeating-linear-gradient(120deg, transparent, transparent 35px, rgba(255, 255, 255, 0.03) 35px, rgba(255, 255, 255, 0.03) 70px);
         }
       `}</style>
     </div>
