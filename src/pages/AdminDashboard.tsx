@@ -412,6 +412,8 @@ export function AdminDashboard() {
         return <span className="text-green-500 text-xs">✓ Concluída</span>
       case 'pending':
         return <span className="text-yellow-500 text-xs">⏳ Pendente</span>
+      case 'processing':
+        return <span className="text-blue-500 text-xs">🔄 Processando</span>
       case 'failed':
         return <span className="text-red-500 text-xs">✗ Falhou</span>
       case 'cancelled':
