@@ -85,19 +85,28 @@ serve(async (req: Request) => {
     }
 
     // Criar transação PIX de saque
+    console.log('📝 Criando transação PIX com dados:', {
+      user_id,
+      amount,
+      transaction_type: 'withdrawal',
+      status: 'pending',
+      user_name: user.name,
+      user_cpf: user.cpf
+    })
+
     const { data: pixTransaction, error: pixError } = await supabaseClient
       .from('pix_transactions')
       .insert({
         user_id,
         amount,
+        pix_key,
+        pix_key_type,
         transaction_type: 'withdrawal',
         status: 'pending',
         description: `Saque PIX para ${pix_key_type}`,
-        payer_name: user.name,
-        payer_document: user.cpf,
         metadata: {
-          pix_key,
-          pix_key_type,
+          payer_name: user.name,
+          payer_document: user.cpf,
           withdrawal: true
         }
       })
@@ -106,7 +115,8 @@ serve(async (req: Request) => {
 
     if (pixError) {
       console.error('Erro ao criar transação PIX:', pixError)
-      throw new Error('Erro ao criar transação')
+      console.error('Detalhes do erro:', JSON.stringify(pixError))
+      throw new Error(`Erro ao criar transação: ${pixError.message || pixError.code || JSON.stringify(pixError)}`)
     }
 
     console.log('✅ Transação PIX criada:', pixTransaction.id)
