@@ -20,13 +20,24 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { user_id, amount, pix_key, pix_key_type } = await req.json()
+    const body = await req.json()
+    const { user_id, amount, pix_key, pix_key_type } = body
 
-    console.log('📤 Iniciando saque PIX:', { user_id, amount, pix_key_type })
+    console.log('📤 Iniciando saque PIX - Body recebido:', JSON.stringify(body))
+    console.log('📤 Dados extraídos:', { user_id, amount, pix_key_type, pix_key_length: pix_key?.length })
 
     // Validações
-    if (!user_id || !amount || !pix_key || !pix_key_type) {
-      throw new Error('Dados incompletos')
+    if (!user_id) {
+      throw new Error('user_id é obrigatório')
+    }
+    if (!amount) {
+      throw new Error('amount é obrigatório')
+    }
+    if (!pix_key) {
+      throw new Error('pix_key é obrigatória')
+    }
+    if (!pix_key_type) {
+      throw new Error('pix_key_type é obrigatório')
     }
 
     if (amount < 1.00) {
