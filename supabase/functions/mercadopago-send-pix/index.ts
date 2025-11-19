@@ -210,10 +210,15 @@ serve(async (req: Request) => {
 
   } catch (error: any) {
     console.error('❌ Erro ao processar saque:', error)
+    console.error('❌ Stack trace:', error.stack)
+    console.error('❌ Error details:', JSON.stringify(error))
+    
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Erro ao processar saque'
+        error: error.message || 'Erro ao processar saque',
+        details: error.toString(),
+        timestamp: new Date().toISOString()
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

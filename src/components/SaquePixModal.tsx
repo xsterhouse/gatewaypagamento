@@ -178,10 +178,16 @@ export function SaquePixModal({ open, onOpenChange, onSuccess }: SaquePixModalPr
         }
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('Erro na chamada da função:', error)
+        throw error
+      }
 
-      if (data.error) {
-        throw new Error(data.error)
+      console.log('Resposta da função:', data)
+
+      if (data?.error) {
+        console.error('Erro retornado pela função:', data)
+        throw new Error(data.error + (data.details ? ` - ${data.details}` : ''))
       }
 
       toast.success('Saque PIX solicitado com sucesso!')
@@ -193,7 +199,8 @@ export function SaquePixModal({ open, onOpenChange, onSuccess }: SaquePixModalPr
       onOpenChange(false)
     } catch (error: any) {
       console.error('Erro ao processar saque:', error)
-      toast.error(error.message || 'Erro ao processar saque')
+      const errorMessage = error.message || error.toString() || 'Erro ao processar saque'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
