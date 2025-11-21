@@ -48,6 +48,7 @@ import { PaymentPage } from './pages/PaymentPage'
 import { AccountBlocked } from './pages/AccountBlocked'
 import { MEDRequests } from './pages/MEDRequests'
 import { AdminMED } from './pages/AdminMED'
+import { AdminWhatsapp } from './pages/AdminWhatsapp'
 
 function App() {
   return (
@@ -101,6 +102,7 @@ function App() {
             <Route path="/admin/bank-acquirers" element={<BankAcquirers />} />
             <Route path="/admin/acquirers" element={<BankAcquirers />} />
             <Route path="/admin/med" element={<AdminMED />} />
+            <Route path="/admin/whatsapp" element={<AdminWhatsapp />} />
             <Route path="wallets" element={<Wallets />} />
             <Route path="exchange" element={<Exchange />} />
             <Route path="faturas" element={<Faturas />} />

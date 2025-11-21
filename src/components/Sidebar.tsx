@@ -20,7 +20,8 @@ import {
   Receipt,
   Building2,
   Book,
-  RefreshCw
+  RefreshCw,
+  MessageCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -50,6 +51,7 @@ const adminMenuItems = [
   { icon: UserCog, label: 'Usuários', path: '/admin' },
   { icon: Shield, label: 'KYC', path: '/kyc' },
   { icon: RefreshCw, label: 'MED', path: '/admin/med' },
+  { icon: MessageCircle, label: 'Envio WhatsApp', path: '/admin/whatsapp' },
   { icon: MessageSquare, label: 'Suporte', path: '/admin/tickets' },
   { icon: Wallet, label: 'Transações', path: '/admin/transactions' },
   { icon: FileText, label: 'Logs', path: '/admin/logs' },
