@@ -18,13 +18,15 @@ import {
   AlertCircle,
   Upload,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Send
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { GerarPixModal } from '@/components/GerarPixModal'
 import { SaquePixModal } from '@/components/SaquePixModal'
+import { EnviarPixModal } from '@/components/EnviarPixModal'
 
 interface DashboardMetrics {
   availableBalance: number
@@ -54,6 +56,7 @@ export function Dashboard() {
   const [chartData, setChartData] = useState<any[]>([])
   const [isPixModalOpen, setIsPixModalOpen] = useState(false)
   const [isSaqueModalOpen, setIsSaqueModalOpen] = useState(false)
+  const [isEnviarPixModalOpen, setIsEnviarPixModalOpen] = useState(false)
   const [hasPendingMED, setHasPendingMED] = useState(false)
   const [medCount, setMedCount] = useState(0)
 
@@ -527,6 +530,26 @@ export function Dashboard() {
 
         <Card 
           className="bg-card border-border hover:border-emerald-500/50 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
+          onClick={() => setIsEnviarPixModalOpen(true)}
+        >
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                  <Send className="text-blue-400" size={18} />
+                </div>
+                <div>
+                  <p className="text-foreground font-medium text-xs">Enviar PIX</p>
+                  <p className="text-muted-foreground text-xs">Transferir para chave</p>
+                </div>
+              </div>
+              <ArrowRight className="text-muted-foreground" size={16} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="bg-card border-border hover:border-emerald-500/50 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
           onClick={() => setIsSaqueModalOpen(true)}
         >
           <CardContent className="p-3 sm:p-4">
@@ -729,6 +752,11 @@ export function Dashboard() {
 
       {/* Modais */}
       <GerarPixModal open={isPixModalOpen} onOpenChange={setIsPixModalOpen} />
+      <EnviarPixModal 
+        open={isEnviarPixModalOpen} 
+        onClose={() => setIsEnviarPixModalOpen(false)}
+        onSuccess={loadMetrics}
+      />
       <SaquePixModal 
         open={isSaqueModalOpen} 
         onOpenChange={setIsSaqueModalOpen}

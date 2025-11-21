@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { 
   TrendingUp, TrendingDown, Calendar, RefreshCw, Download, 
   Eye, CreditCard, FileText, Activity, 
-  ArrowUpRight, ArrowDownRight, Search, Clock, CheckCircle
+  ArrowUpRight, ArrowDownRight, Search, Clock, CheckCircle, Send
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { exportInvoicesToPDF } from '@/lib/pdfExportSimple'
 import { InvoiceDetailsModal } from '@/components/InvoiceDetailsModal'
+import { EnviarPixModal } from '@/components/EnviarPixModal'
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 
 interface Invoice {
@@ -70,6 +71,7 @@ export function Financeiro() {
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([])
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  const [isEnviarPixModalOpen, setIsEnviarPixModalOpen] = useState(false)
   const [chartData, setChartData] = useState<any[]>([])
 
   useEffect(() => {
@@ -339,6 +341,15 @@ export function Financeiro() {
           <p className="text-muted-foreground text-sm mt-1">Gerencie suas faturas, pagamentos e histórico financeiro</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="default"
+            onClick={() => setIsEnviarPixModalOpen(true)}
+            size="sm"
+            className="gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            <Send size={16} />
+            Enviar PIX
+          </Button>
           <Button
             variant="outline"
             onClick={handleRefresh}
@@ -696,6 +707,13 @@ export function Financeiro() {
           setSelectedInvoice(null)
         }}
         onPaymentInitiated={loadData}
+      />
+      
+      {/* Modal de Enviar PIX */}
+      <EnviarPixModal 
+        open={isEnviarPixModalOpen} 
+        onClose={() => setIsEnviarPixModalOpen(false)}
+        onSuccess={loadData}
       />
     </div>
   )
