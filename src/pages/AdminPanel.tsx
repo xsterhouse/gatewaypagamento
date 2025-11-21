@@ -18,8 +18,7 @@ import {
   Unlock,
   LogIn,
   TrendingUp,
-  AlertCircle,
-  MoreVertical
+  AlertCircle
 } from 'lucide-react'
 
 interface User {
