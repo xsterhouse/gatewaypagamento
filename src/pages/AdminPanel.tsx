@@ -16,7 +16,10 @@ import {
   Minus,
   Lock,
   Unlock,
-  LogIn
+  LogIn,
+  TrendingUp,
+  AlertCircle,
+  MoreVertical
 } from 'lucide-react'
 
 interface User {
@@ -287,121 +290,139 @@ export function AdminPanel() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-gray-400">Carregando...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground text-sm">Carregando dados...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Painel Administrativo</h1>
-        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Gerencie usuários, saldos e permissões</p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header Moderno */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Gestão de Usuários</h1>
+          <p className="text-sm text-muted-foreground mt-1">Controle total sobre contas e saldos</p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-lg">
+          <TrendingUp className="text-primary" size={18} />
+          <span className="text-sm font-medium text-primary">{stats.total} Clientes</span>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-sm">Total de Usuários</p>
-                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-              </div>
-              <Users className="text-gray-500" size={32} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-sm">Usuários Ativos</p>
-                <p className="text-2xl font-bold text-green-500">{stats.active}</p>
-              </div>
-              <CheckCircle className="text-green-500" size={32} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-sm">Suspensos</p>
-                <p className="text-2xl font-bold text-yellow-500">{stats.suspended}</p>
-              </div>
-              <Ban className="text-yellow-500" size={32} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-sm">Saldo Total</p>
-                <p className="text-2xl font-bold text-primary">
-                  R$ {stats.totalBalance.toFixed(2)}
-                </p>
-              </div>
-              <DollarSign className="text-primary" size={32} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search */}
-      <Card className="bg-card border-border">
-        <CardContent className="pt-6">
+      {/* Stats Cards Modernos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-5 hover:shadow-lg transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500" />
           <div className="relative">
-            <Search className="absolute left-3 top-3 text-muted-foreground" size={18} />
-            <Input
-              placeholder="Buscar por nome ou email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-input border-border text-foreground pl-10"
-            />
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Users className="text-blue-500" size={20} />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">Total</span>
+            </div>
+            <p className="text-3xl font-bold text-foreground">{stats.total}</p>
+            <p className="text-xs text-muted-foreground mt-1">Usuários cadastrados</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Users List */}
-      <div className="space-y-3 sm:space-y-4">
+        <div className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-5 hover:shadow-lg transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <CheckCircle className="text-green-500" size={20} />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">Ativos</span>
+            </div>
+            <p className="text-3xl font-bold text-green-500">{stats.active}</p>
+            <p className="text-xs text-muted-foreground mt-1">Contas ativas</p>
+          </div>
+        </div>
+
+        <div className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-5 hover:shadow-lg transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-yellow-500/10 rounded-lg">
+                <AlertCircle className="text-yellow-500" size={20} />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">Suspensos</span>
+            </div>
+            <p className="text-3xl font-bold text-yellow-500">{stats.suspended}</p>
+            <p className="text-xs text-muted-foreground mt-1">Contas suspensas</p>
+          </div>
+        </div>
+
+        <div className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-5 hover:shadow-lg transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <DollarSign className="text-primary" size={20} />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">Volume</span>
+            </div>
+            <p className="text-2xl font-bold text-primary">R$ {stats.totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            <p className="text-xs text-muted-foreground mt-1">Saldo total em custódia</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search Bar Moderno */}
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+        <Input
+          placeholder="Buscar usuário por nome ou email..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-12 h-12 bg-card border-border text-foreground rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 transition-all"
+        />
+        {searchTerm && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+            {filteredUsers.length} resultado{filteredUsers.length !== 1 ? 's' : ''}
+          </div>
+        )}
+      </div>
+
+      {/* Users List - Design Moderno */}
+      <div className="space-y-3">
         {filteredUsers.length === 0 ? (
-          <Card className="bg-card border-border">
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground text-sm">Nenhum usuário encontrado</p>
-            </CardContent>
-          </Card>
+          <div className="bg-card border border-border rounded-xl p-12 text-center">
+            <Users className="mx-auto text-muted-foreground mb-3" size={48} />
+            <p className="text-muted-foreground">Nenhum usuário encontrado</p>
+          </div>
         ) : (
           filteredUsers.map((user) => (
-            <Card key={user.id} className="bg-card border-border">
-              <CardHeader className="p-3 sm:p-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
-                  <div className="space-y-1 flex-1 min-w-0 w-full sm:w-auto">
-                    <CardTitle className="text-foreground text-sm sm:text-base lg:text-lg truncate">
-                      {user.name}
-                    </CardTitle>
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{user.email}</p>
+            <div key={user.id} className="group bg-gradient-to-br from-card to-card/50 border border-border rounded-xl overflow-hidden hover:shadow-xl hover:border-primary/20 transition-all duration-300">
+              {/* Header do Card */}
+              <div className="flex items-center justify-between p-4 border-b border-border/50">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-primary font-bold text-sm">
+                      {user.name.charAt(0).toUpperCase()}
+                    </span>
                   </div>
-                  {getStatusBadge(user.status)}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{user.name}</h3>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6">
-                {/* Balance */}
-                <div className="bg-accent/50 rounded-lg p-3 sm:p-4 border border-border">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Saldo Disponível</p>
-                      <p className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
-                        R$ {Number(user.balance || 0).toFixed(2)}
-                      </p>
-                    </div>
-                    <DollarSign className="text-primary flex-shrink-0" size={20} />
+                {getStatusBadge(user.status)}
+              </div>
+
+              {/* Conteúdo do Card */}
+              <div className="p-4 space-y-4">
+                {/* Saldo - Design Compacto */}
+                <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Saldo Disponível</p>
+                    <p className="text-xl font-bold text-primary">
+                      R$ {Number(user.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
                   </div>
-                  
                   <div className="flex gap-2">
                     <Input
                       type="number"
@@ -411,7 +432,7 @@ export function AdminPanel() {
                         ...editingBalance,
                         [user.id]: e.target.value
                       })}
-                      className="bg-input border-border text-foreground text-sm"
+                      className="w-24 h-9 bg-background border-border text-foreground text-sm"
                     />
                     <Button
                       onClick={() => {
@@ -419,8 +440,8 @@ export function AdminPanel() {
                         if (amount > 0) addBalance(user.id, amount)
                       }}
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700 h-9 w-9 p-0"
-                      title="Adicionar"
+                      className="bg-green-600 hover:bg-green-700 h-9 w-9 p-0 shadow-sm"
+                      title="Adicionar saldo"
                     >
                       <Plus size={16} />
                     </Button>
@@ -432,16 +453,15 @@ export function AdminPanel() {
                       size="sm"
                       variant="outline"
                       className="border-red-500 text-red-500 hover:bg-red-500/10 h-9 w-9 p-0"
-                      title="Remover"
+                      title="Remover saldo"
                     >
                       <Minus size={16} />
                     </Button>
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-wrap gap-2 pt-3 sm:pt-4 border-t border-border">
-                  {/* Botão Logar como Cliente */}
+                {/* Ações Rápidas */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <Button
                     onClick={async () => {
                       try {
@@ -451,78 +471,75 @@ export function AdminPanel() {
                         toast.error('Erro ao logar como cliente')
                       }
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm h-8 sm:h-9"
+                    variant="outline"
                     size="sm"
+                    className="border-blue-500/50 text-blue-500 hover:bg-blue-500/10 h-9"
                   >
-                    <LogIn size={14} className="mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Logar como Cliente</span>
-                    <span className="sm:hidden">Logar</span>
+                    <LogIn size={14} className="mr-2" />
+                    <span className="text-xs">Acessar</span>
                   </Button>
 
-                  {/* Botão MED - Bloquear Saldo */}
                   <Button
                     onClick={() => setLockModalOpen(user.id)}
                     variant="outline"
-                    className="border-orange-500 text-orange-500 hover:bg-orange-500/10 text-xs sm:text-sm h-8 sm:h-9"
                     size="sm"
+                    className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 h-9"
                   >
-                    <Lock size={14} className="mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">MED - Bloquear</span>
-                    <span className="sm:hidden">MED</span>
+                    <Lock size={14} className="mr-2" />
+                    <span className="text-xs">MED</span>
                   </Button>
 
                   {user.status === 'active' ? (
-                    <>
-                      <Input
-                        placeholder="Motivo da suspensão"
-                        value={suspensionReason[user.id] || ''}
-                        onChange={(e) => setSuspensionReason({
-                          ...suspensionReason,
-                          [user.id]: e.target.value
-                        })}
-                        className="bg-input border-border text-foreground flex-1 min-w-[150px] text-xs sm:text-sm h-8 sm:h-9"
-                      />
-                      <Button
-                        onClick={() => suspendUser(user.id)}
-                        variant="outline"
-                        className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10 text-xs sm:text-sm h-8 sm:h-9"
-                        size="sm"
-                      >
-                        <Ban size={14} className="mr-1 sm:mr-2" />
-                        Suspender
-                      </Button>
-                    </>
+                    <Button
+                      onClick={() => {
+                        const reason = prompt('Digite o motivo da suspensão:')
+                        if (reason) {
+                          setSuspensionReason({ ...suspensionReason, [user.id]: reason })
+                          suspendUser(user.id)
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 h-9"
+                    >
+                      <Ban size={14} className="mr-2" />
+                      <span className="text-xs">Suspender</span>
+                    </Button>
                   ) : (
                     <Button
                       onClick={() => activateUser(user.id)}
-                      className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm h-8 sm:h-9"
+                      variant="outline"
                       size="sm"
+                      className="border-green-500/50 text-green-500 hover:bg-green-500/10 h-9"
                     >
-                      <Unlock size={14} className="mr-1 sm:mr-2" />
-                      Ativar
+                      <Unlock size={14} className="mr-2" />
+                      <span className="text-xs">Ativar</span>
                     </Button>
                   )}
-                  
+
                   <Button
                     onClick={() => deleteUser(user.id)}
                     variant="outline"
-                    className="border-red-500 text-red-500 hover:bg-red-500/10 text-xs sm:text-sm h-8 sm:h-9"
                     size="sm"
+                    className="border-red-500/50 text-red-500 hover:bg-red-500/10 h-9"
                   >
-                    <Trash2 size={14} className="mr-1 sm:mr-2" />
-                    Excluir
+                    <Trash2 size={14} className="mr-2" />
+                    <span className="text-xs">Excluir</span>
                   </Button>
                 </div>
 
+                {/* Motivo de Suspensão */}
                 {user.suspension_reason && (
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2 sm:p-3">
-                    <p className="text-yellow-300 text-xs sm:text-sm">
-                      <strong>Motivo da suspensão:</strong> {user.suspension_reason}
-                    </p>
+                  <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <AlertCircle className="text-yellow-500 flex-shrink-0 mt-0.5" size={16} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-yellow-500 mb-1">Motivo da Suspensão</p>
+                      <p className="text-xs text-yellow-200/80">{user.suspension_reason}</p>
+                    </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))
         )}
       </div>
