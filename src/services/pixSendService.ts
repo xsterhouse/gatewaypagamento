@@ -33,10 +33,14 @@ class PixSendService {
     try {
       console.log('💸 Processando envio de PIX:', params)
       
-      // 1. Validar saldo disponível
+      // 1. Validar saldo disponível (pré-validação no frontend)
       const availableBalance = await walletService.getAvailableBalance(params.user_id)
       
-      // Calcular taxas
+      // Calcular taxas (apenas para exibição/estimativa)
+      // Nota: As taxas reais serão aplicadas pela Edge Function ou ajustadas aqui se necessário
+      // A Edge Function atualmente debita apenas o valor enviado, as taxas devem ser tratadas à parte ou incluídas
+      // Por enquanto, vamos manter a lógica de verificar se tem saldo para Valor + Taxas
+      
       const bankFee = params.amount * 0.0350 + 0.60 // Taxa do banco
       const systemFee = await systemFeeService.calculateFee('pix_send', params.amount) // Taxa do sistema
       const totalAmount = params.amount + bankFee + systemFee
@@ -44,7 +48,7 @@ class PixSendService {
       console.log(`💰 Valor a enviar: R$ ${params.amount.toFixed(2)}`)
       console.log(`🏦 Taxa do banco: R$ ${bankFee.toFixed(2)}`)
       console.log(`💵 Taxa do sistema: R$ ${systemFee.toFixed(2)}`)
-      console.log(`📊 Total a debitar: R$ ${totalAmount.toFixed(2)}`)
+      console.log(`📊 Total estimado a debitar: R$ ${totalAmount.toFixed(2)}`)
       
       if (availableBalance < totalAmount) {
         return {
@@ -62,79 +66,82 @@ class PixSendService {
         }
       }
       
-      // 3. Debitar saldo (bloqueio temporário)
-      const debitResult = await walletService.debit(
-        params.user_id,
-        totalAmount,
-        `PIX para ${params.pix_key} - ${params.description}`,
-        undefined,
-        'pix_send'
-      )
+      // 3. Chamar Edge Function para realizar o envio real
+      console.log('🚀 Chamando Edge Function mercadopago-send-pix...')
       
-      if (!debitResult.success) {
-        return {
-          success: false,
-          error: debitResult.error
-        }
-      }
-      
-      // 4. Enviar PIX através do adquirente
-      const sendResult = await bankAcquirerService.sendPix(params)
-      
-      if (!sendResult.success) {
-        // Reverter débito em caso de falha
-        await walletService.credit(
-          params.user_id,
-          totalAmount,
-          `Estorno PIX - ${params.description}`,
-          sendResult.transaction_id,
-          'pix_send_reversal'
-        )
-        
-        // Notificar falha
-        await notificationService.notifyPixFailed(
-          params.user_id,
-          params.amount,
-          sendResult.transaction_id || '',
-          sendResult.error
-        )
-        
-        return {
-          success: false,
-          error: sendResult.error
-        }
-      }
-      
-      // 5. Registrar coleta de taxa do sistema
-      await systemFeeService.collectFee({
-        user_id: params.user_id,
-        transaction_id: sendResult.transaction_id,
-        operation_type: 'pix_send',
-        transaction_amount: params.amount,
-        fee_amount: systemFee,
-        metadata: {
-          bank_fee: bankFee,
-          total_debited: totalAmount,
-          pix_key: params.pix_key
-        }
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const response = await fetch(`${supabaseUrl}/functions/v1/mercadopago-send-pix`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          user_id: params.user_id,
+          amount: params.amount, // A Edge Function vai debitar este valor da carteira
+          pix_key: params.pix_key,
+          pix_key_type: params.pix_key_type,
+          description: params.description
+        })
       })
-      
-      // 6. Atualizar transação com referência da wallet
-      if (sendResult.transaction_id) {
-        await supabase
-          .from('pix_transactions')
-          .update({
-            metadata: {
-              wallet_debit_id: debitResult.wallet?.id,
-              total_debited: totalAmount,
-              bank_fee: bankFee,
-              system_fee: systemFee
-            }
-          })
-          .eq('id', sendResult.transaction_id)
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        console.error('❌ Erro na Edge Function:', data)
+        return {
+          success: false,
+          error: data.error || data.message || 'Erro ao processar envio de PIX'
+        }
       }
       
-      // 7. Notificar sucesso
+      // 4. Processar Taxas (separadamente, já que a Edge Function debita apenas o valor principal)
+      // Debitar taxas da carteira
+      const feesTotal = bankFee + systemFee
+      
+      if (feesTotal > 0) {
+        console.log('💸 Debitando taxas separadamente:', feesTotal)
+        await walletService.debit(
+          params.user_id,
+          feesTotal,
+          `Taxas PIX - Envio para ${params.pix_key}`,
+          data.transaction_id,
+          'fee_collection'
+        )
+        
+        // Registrar coleta de taxa do sistema
+        await systemFeeService.collectFee({
+          user_id: params.user_id,
+          transaction_id: data.transaction_id,
+          operation_type: 'pix_send',
+          transaction_amount: params.amount,
+          fee_amount: systemFee,
+          metadata: {
+            bank_fee: bankFee,
+            total_debited: totalAmount,
+            pix_key: params.pix_key
+          }
+        })
+        
+        // Atualizar transação com informações de taxas
+        if (data.transaction_id) {
+           await supabase
+            .from('pix_transactions')
+            .update({
+              fee_amount: feesTotal,
+              net_amount: totalAmount, // Valor + Taxas
+              metadata: {
+                ...data.metadata, // Manter metadados existentes
+                bank_fee: bankFee,
+                system_fee: systemFee,
+                total_debited: totalAmount
+              }
+            })
+            .eq('id', data.transaction_id)
+        }
+      }
+
+      // 5. Notificar sucesso
       await notificationService.create({
         user_id: params.user_id,
         title: '✅ PIX Enviado',
@@ -143,8 +150,7 @@ class PixSendService {
         category: 'pix',
         action_url: '/financeiro',
         metadata: {
-          transaction_id: sendResult.transaction_id,
-          e2e_id: sendResult.e2e_id,
+          transaction_id: data.transaction_id,
           amount: params.amount,
           bank_fee: bankFee,
           system_fee: systemFee,
@@ -152,13 +158,13 @@ class PixSendService {
         }
       })
       
-      console.log('✅ PIX enviado e saldo debitado')
+      console.log('✅ PIX enviado com sucesso via Edge Function')
       
       return {
         success: true,
-        transaction_id: sendResult.transaction_id,
-        e2e_id: sendResult.e2e_id,
-        balance_after: debitResult.wallet?.balance
+        transaction_id: data.transaction_id,
+        e2e_id: data.pix_e2e_id, // Se a Edge Function retornar
+        balance_after: availableBalance - totalAmount // Estimativa
       }
       
     } catch (error: any) {
