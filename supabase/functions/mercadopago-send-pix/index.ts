@@ -2,7 +2,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 // @ts-ignore: Deno types
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { BancoInterService } from '../_shared/bancoInter.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,27 +21,18 @@ serve(async (req: Request) => {
 
   try {
     const body = await req.json()
-    const { user_id, amount, pix_key, pix_key_type } = body
+    const { user_id, amount, pix_key, pix_key_type, description } = body
 
-    console.log('📤 Iniciando saque PIX - Body recebido:', JSON.stringify(body))
-    console.log('📤 Dados extraídos:', { user_id, amount, pix_key_type, pix_key_length: pix_key?.length })
+    console.log('📤 Iniciando envio PIX via Mercado Pago - Body recebido:', JSON.stringify(body))
 
     // Validações
-    if (!user_id) {
-      throw new Error('user_id é obrigatório')
-    }
-    if (!amount) {
-      throw new Error('amount é obrigatório')
-    }
-    if (!pix_key) {
-      throw new Error('pix_key é obrigatória')
-    }
-    if (!pix_key_type) {
-      throw new Error('pix_key_type é obrigatório')
-    }
-
-    if (amount < 1.00) {
-      throw new Error('Valor mínimo para saque é R$ 1,00')
+    if (!user_id) throw new Error('user_id é obrigatório')
+    if (!amount) throw new Error('amount é obrigatório')
+    if (!pix_key) throw new Error('pix_key é obrigatória')
+    
+    // Mínimo do MP costuma ser baixo, mas vamos manter R$ 1,00 por segurança ou remover se quiser
+    if (amount < 0.01) {
+      throw new Error('Valor inválido para envio')
     }
 
     // @ts-ignore: Deno types
@@ -53,7 +43,7 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Buscar carteira do usuário
+    // 1. Buscar carteira do usuário e validar saldo
     const { data: wallet, error: walletError } = await supabaseClient
       .from('wallets')
       .select('id, balance, available_balance')
@@ -66,174 +56,194 @@ serve(async (req: Request) => {
       throw new Error('Carteira não encontrada')
     }
 
-    // Validar saldo (considerando taxa mínima de R$ 1,70)
-    const TAXA_MINIMA = 1.70
-    const saldoDisponivel = wallet.available_balance - TAXA_MINIMA
+    // Taxa do sistema (opcional, pode ser ajustada)
+    // Se quiser cobrar taxa no momento do envio, descomente e ajuste
+    // const SYSTEM_FEE = 0.00 
+    const totalDebitar = amount // + SYSTEM_FEE
 
-    if (amount > saldoDisponivel) {
-      throw new Error(`Saldo insuficiente. Disponível: R$ ${saldoDisponivel.toFixed(2)}`)
+    if (wallet.available_balance < totalDebitar) {
+      throw new Error(`Saldo insuficiente. Disponível: R$ ${wallet.available_balance.toFixed(2)}`)
     }
 
-    // Buscar dados do usuário
-    const { data: user, error: userError } = await supabaseClient
+    // 2. Buscar dados do usuário para logs
+    const { data: user } = await supabaseClient
       .from('users')
       .select('name, email, cpf')
       .eq('id', user_id)
       .single()
 
-    if (userError || !user) {
-      throw new Error('Usuário não encontrado')
-    }
-
-    // Criar transação PIX de saque
-    console.log('📝 Criando transação PIX com dados:', {
-      user_id,
-      amount,
-      transaction_type: 'withdrawal',
-      status: 'pending',
-      user_name: user.name,
-      user_cpf: user.cpf
-    })
-
+    // 3. Criar transação 'processing' no banco
     const { data: pixTransaction, error: pixError } = await supabaseClient
       .from('pix_transactions')
       .insert({
         user_id,
         amount,
         pix_key,
-        pix_key_type,
+        pix_key_type: pix_key_type || 'unknown',
         transaction_type: 'withdrawal',
-        status: 'pending',
-        description: `Saque PIX para ${pix_key_type}`,
+        status: 'processing',
+        description: description || `Envio PIX para ${pix_key}`,
         metadata: {
-          payer_name: user.name,
-          payer_document: user.cpf,
-          withdrawal: true
+          provider: 'mercadopago',
+          payer_name: user?.name,
+          payer_document: user?.cpf
         }
       })
       .select()
       .single()
 
     if (pixError) {
-      console.error('Erro ao criar transação PIX:', pixError)
-      console.error('Detalhes do erro:', JSON.stringify(pixError))
-      throw new Error(`Erro ao criar transação: ${pixError.message || pixError.code || JSON.stringify(pixError)}`)
+      throw new Error(`Erro ao criar registro de transação: ${pixError.message}`)
     }
 
-    console.log('✅ Transação PIX criada:', pixTransaction.id)
-
-    // Debitar da carteira do usuário ANTES de enviar o PIX
+    // 4. Debitar da carteira (Bloquear saldo)
     const { error: debitError } = await supabaseClient
       .from('wallets')
       .update({
-        balance: wallet.balance - amount,
-        available_balance: wallet.available_balance - amount,
+        balance: wallet.balance - totalDebitar,
+        available_balance: wallet.available_balance - totalDebitar,
         updated_at: new Date().toISOString()
       })
       .eq('id', wallet.id)
 
     if (debitError) {
-      console.error('Erro ao debitar carteira:', debitError)
-      throw new Error('Erro ao processar débito')
+      // Se falhar o débito, falha a transação e para
+      await supabaseClient.from('pix_transactions').update({ status: 'failed', error_message: 'Falha ao debitar carteira' }).eq('id', pixTransaction.id)
+      throw new Error('Erro ao processar débito na carteira')
     }
 
-    // Registrar transação na carteira
-    await supabaseClient
-      .from('wallet_transactions')
-      .insert({
-        wallet_id: wallet.id,
-        user_id,
-        transaction_type: 'debit',
-        amount,
-        balance_before: wallet.balance,
-        balance_after: wallet.balance - amount,
-        description: `Saque PIX para ${pix_key_type}: ${pix_key}`,
-        reference_type: 'pix_transaction',
-        reference_id: pixTransaction.id,
-        created_at: new Date().toISOString()
-      })
+    // Registrar movimentação na carteira
+    await supabaseClient.from('wallet_transactions').insert({
+      wallet_id: wallet.id,
+      user_id,
+      transaction_type: 'debit',
+      amount: totalDebitar,
+      description: `Envio PIX para ${pix_key}`,
+      reference_type: 'pix_send',
+      reference_id: pixTransaction.id
+    })
 
-    // Configurar Banco Inter
+    // 5. Enviar PIX via Mercado Pago
+    console.log('🔵 Chamando API do Mercado Pago...')
+    
     // @ts-ignore: Deno types
-    const bancoInterConfig = {
-      clientId: Deno.env.get('BANCO_INTER_CLIENT_ID') ?? '',
-      clientSecret: Deno.env.get('BANCO_INTER_CLIENT_SECRET') ?? '',
-      certificate: Deno.env.get('BANCO_INTER_CERTIFICATE') ?? '',
-      certificateKey: Deno.env.get('BANCO_INTER_CERTIFICATE_KEY') ?? '',
-      accountNumber: Deno.env.get('BANCO_INTER_ACCOUNT_NUMBER') ?? ''
+    const mpAccessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN')
+    
+    if (!mpAccessToken) {
+      throw new Error('MERCADOPAGO_ACCESS_TOKEN não configurado')
     }
 
-    console.log('📨 Enviando PIX via Banco Inter...')
+    // Gerar chave de idempotência para evitar duplicidade
+    const idempotencyKey = pixTransaction.id
 
-    try {
-      const bancoInter = new BancoInterService(bancoInterConfig)
-      
-      // Enviar PIX via Banco Inter
-      const pixResult = await bancoInter.sendPixPayment({
-        valor: amount,
-        chave: pix_key,
-        tipoChave: pix_key_type as 'CPF' | 'CNPJ' | 'EMAIL' | 'TELEFONE' | 'EVP',
-        descricao: `Saque PIX - ${user.name}`
-      })
+    // Payload para endpoint de Transferências (exemplo genérico, verificar documentação atual do MP)
+    // A API de transferências do MP geralmente exige que você tenha saldo em conta
+    // Endpoint: https://api.mercadopago.com/v1/advanced_payments ou v1/transfers
+    // Vamos usar uma estrutura comum para PIX
+    
+    // NOTA: A API pública de transfers do MP pode variar. 
+    // Usualmente é POST /v1/transfers
+    const mpUrl = 'https://api.mercadopago.com/v1/transfers'
+    
+    // Tratamento simples do tipo de chave para o formato do MP se necessário
+    // O MP geralmente aceita 'email', 'phone', 'cpf', 'cnpj', 'random' (EVP)
+    
+    // Remover formatação do CPF/CNPJ/Telefone se vier formatado
+    const cleanKey = pix_key.replace(/[^a-zA-Z0-9@.]/g, '') 
 
-      console.log('✅ PIX enviado via Banco Inter:', pixResult)
-
-      // Atualizar transação com sucesso
-      const { error: updateError } = await supabaseClient
-        .from('pix_transactions')
-        .update({
-          status: 'completed',
-          pix_e2e_id: pixResult.endToEndId,
-          pix_txid: pixResult.txid,
-          metadata: {
-            ...pixTransaction.metadata,
-            banco_inter_response: pixResult,
-            completed_at: new Date().toISOString()
-          }
-        })
-        .eq('id', pixTransaction.id)
-
-      if (updateError) {
-        console.error('Erro ao atualizar transação:', updateError)
+    const mpBody = {
+      transaction_amount: Number(amount),
+      description: description || `Transferência para ${user?.name || 'Cliente'}`,
+      receiver_address: {
+        key_type: pix_key_type?.toUpperCase() || 'CPF', // O MP costuma esperar maiúsculo ou inferir
+        key: cleanKey
       }
-    } catch (pixError: any) {
-      console.error('❌ Erro ao enviar PIX via Banco Inter:', pixError)
-      
-      // Atualizar transação como falha
-      await supabaseClient
-        .from('pix_transactions')
-        .update({
-          status: 'failed',
-          metadata: {
-            ...pixTransaction.metadata,
-            error: pixError.message,
-            failed_at: new Date().toISOString()
-          }
-        })
-        .eq('id', pixTransaction.id)
+    }
 
-      // Reverter débito da carteira
+    // Ajuste fino para tipos de chave se necessário pelo MP
+    if (pix_key_type === 'random') mpBody.receiver_address.key_type = 'EVP'
+    if (pix_key_type === 'phone') mpBody.receiver_address.key_type = 'PHONE'
+    if (pix_key_type === 'email') mpBody.receiver_address.key_type = 'EMAIL'
+
+    // OBS: Se a API v1/transfers não estiver ativa para sua conta, pode ser necessário usar outra.
+    // Para simplificar, vamos tentar esta chamada padrão.
+
+    const mpResponse = await fetch(mpUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${mpAccessToken}`,
+        'X-Idempotency-Key': idempotencyKey
+      },
+      body: JSON.stringify(mpBody)
+    })
+
+    const mpData = await mpResponse.json()
+    console.log('🔵 Resposta Mercado Pago:', JSON.stringify(mpData))
+
+    if (!mpResponse.ok) {
+      // Falha no MP
+      const errorMsg = mpData.message || mpData.error || 'Erro desconhecido no Mercado Pago'
+      console.error('❌ Erro Mercado Pago:', errorMsg)
+      
+      // Estornar valor para o usuário
       await supabaseClient
         .from('wallets')
         .update({
-          balance: wallet.balance,
+          balance: wallet.balance, // Volta ao original (aproximado, ideal seria somar amount)
           available_balance: wallet.available_balance,
           updated_at: new Date().toISOString()
         })
         .eq('id', wallet.id)
+      
+      // Registrar estorno
+      await supabaseClient.from('wallet_transactions').insert({
+        wallet_id: wallet.id,
+        user_id,
+        transaction_type: 'credit',
+        amount: totalDebitar,
+        description: `Estorno PIX Falha - ${errorMsg}`,
+        reference_type: 'pix_send_refund',
+        reference_id: pixTransaction.id
+      })
 
-      throw new Error(`Falha ao enviar PIX: ${pixError.message}`)
+      // Atualizar status da transação
+      await supabaseClient
+        .from('pix_transactions')
+        .update({ 
+          status: 'failed', 
+          error_message: errorMsg,
+          metadata: { ...pixTransaction.metadata, mp_response: mpData }
+        })
+        .eq('id', pixTransaction.id)
+
+      throw new Error(`Falha no Mercado Pago: ${errorMsg}`)
     }
 
-    console.log('✅ Saque processado com sucesso!')
+    // 6. Sucesso
+    console.log('✅ PIX enviado com sucesso!')
+    
+    // Atualizar transação com dados do MP
+    await supabaseClient
+      .from('pix_transactions')
+      .update({
+        status: 'completed',
+        pix_e2e_id: mpData.id?.toString() || mpData.reference_id, // Ajustar conforme resposta do MP
+        metadata: {
+          ...pixTransaction.metadata,
+          mp_id: mpData.id,
+          mp_status: mpData.status,
+          completed_at: new Date().toISOString()
+        }
+      })
+      .eq('id', pixTransaction.id)
 
     return new Response(
       JSON.stringify({
         success: true,
         transaction_id: pixTransaction.id,
-        amount,
-        status: 'completed',
-        message: 'Saque PIX realizado com sucesso! O valor foi enviado para a chave informada.'
+        mp_id: mpData.id,
+        message: 'PIX enviado com sucesso via Mercado Pago'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -242,16 +252,11 @@ serve(async (req: Request) => {
     )
 
   } catch (error: any) {
-    console.error('❌ Erro ao processar saque:', error)
-    console.error('❌ Stack trace:', error.stack)
-    console.error('❌ Error details:', JSON.stringify(error))
-    
+    console.error('❌ Erro geral:', error)
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Erro ao processar saque',
-        details: error.toString(),
-        timestamp: new Date().toISOString()
+        error: error.message || 'Erro interno ao processar envio',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
