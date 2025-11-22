@@ -73,8 +73,11 @@ function registerWebhook(token: string, cert: string, key: string, pixKey: strin
             let body = '';
             res.on('data', (chunk) => body += chunk);
             res.on('end', () => {
+                // CORREÇÃO: Verificar sucesso e tratar corpo vazio
                 if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-                    resolve(body ? JSON.parse(body) : {});
+                    console.log('✅ Webhook registrado com sucesso no Inter (Status:', res.statusCode, ')');
+                    // Se o corpo for vazio (comum em 204 No Content), resolve com sucesso
+                    resolve(body ? JSON.parse(body) : { success: true });
                 } else {
                     const err = new Error(`Erro HTTP ${res.statusCode} ao registrar webhook`);
                     (err as any).responseBody = body;
@@ -96,6 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const { webhookUrl, pixKey } = req.body;
+        console.log('[API] Recebido pedido para registrar webhook:', { webhookUrl, pixKey });
 
         if (!webhookUrl || !pixKey) {
             return res.status(400).json({ error: 'webhookUrl e pixKey são obrigatórios' });
@@ -109,19 +113,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } = process.env;
 
         if (!BANCO_INTER_CLIENT_ID || !BANCO_INTER_CLIENT_SECRET || !BANCO_INTER_CERTIFICATE || !BANCO_INTER_CERTIFICATE_KEY) {
+            console.error('[API] Variáveis de ambiente do Banco Inter não configuradas!');
             return res.status(500).json({ error: 'Variáveis de ambiente do Banco Inter não configuradas' });
         }
 
-        console.log('Obtendo token...');
+        console.log('[API] Obtendo token de acesso...');
         const token = await getAccessToken(
             BANCO_INTER_CERTIFICATE,
             BANCO_INTER_CERTIFICATE_KEY,
             BANCO_INTER_CLIENT_ID,
             BANCO_INTER_CLIENT_SECRET
         );
-        console.log('Token obtido com sucesso.');
+        console.log('[API] Token obtido com sucesso.');
 
-        console.log('Registrando webhook...');
+        console.log('[API] Registrando webhook no Banco Inter...');
         await registerWebhook(
             token,
             BANCO_INTER_CERTIFICATE,
@@ -129,12 +134,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             pixKey,
             webhookUrl
         );
-        console.log('Webhook registrado com sucesso.');
+        console.log('[API] Webhook registrado com sucesso.');
 
         return res.status(200).json({ success: true, message: 'Webhook registrado com sucesso!' });
 
     } catch (error: any) {
-        console.error('Erro na serverless function:', error);
+        console.error('[API] Erro na serverless function:', error);
         return res.status(500).json({ 
             error: 'Falha ao registrar webhook', 
             details: error.message,
