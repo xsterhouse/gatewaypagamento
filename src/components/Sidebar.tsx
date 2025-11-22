@@ -21,7 +21,8 @@ import {
   Building2,
   Book,
   RefreshCw,
-  MessageCircle
+  MessageCircle as WhatsappIcon,
+  Webhook
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -48,10 +49,11 @@ const adminMenuItems = [
   // { icon: CreditCard, label: 'Depósitos', path: '/admin/deposits' }, // REMOVIDO: Redundante
   { icon: Receipt, label: 'Faturas', path: '/admin/invoices' },
   { icon: Building2, label: 'Adquirentes', path: '/admin/acquirers' },
+  { icon: Webhook, label: 'Webhook Inter', path: '/admin/inter-setup' },
   { icon: UserCog, label: 'Usuários', path: '/admin' },
   { icon: Shield, label: 'KYC', path: '/kyc' },
   { icon: RefreshCw, label: 'MED', path: '/admin/med' },
-  { icon: MessageCircle, label: 'Envio WhatsApp', path: '/admin/whatsapp' },
+  { icon: WhatsappIcon, label: 'Envio WhatsApp', path: '/admin/whatsapp' },
   { icon: MessageSquare, label: 'Suporte', path: '/admin/tickets' },
   { icon: Wallet, label: 'Transações', path: '/admin/transactions' },
   { icon: FileText, label: 'Logs', path: '/admin/logs' },

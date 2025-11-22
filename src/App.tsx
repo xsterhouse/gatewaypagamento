@@ -49,6 +49,7 @@ import { AccountBlocked } from './pages/AccountBlocked'
 import { MEDRequests } from './pages/MEDRequests'
 import { AdminMED } from './pages/AdminMED'
 import { AdminWhatsapp } from './pages/AdminWhatsapp'
+import { AdminInterSetup } from './pages/AdminInterSetup'
 
 function App() {
   return (
@@ -103,6 +104,7 @@ function App() {
             <Route path="/admin/acquirers" element={<BankAcquirers />} />
             <Route path="/admin/med" element={<AdminMED />} />
             <Route path="/admin/whatsapp" element={<AdminWhatsapp />} />
+            <Route path="/admin/inter-setup" element={<AdminInterSetup />} />
             <Route path="wallets" element={<Wallets />} />
             <Route path="exchange" element={<Exchange />} />
             <Route path="faturas" element={<Faturas />} />
