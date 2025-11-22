@@ -589,25 +589,46 @@ class BankAcquirerService {
    */
   private generatePixCode(amount: number, acquirer: BankAcquirer): string {
     const pixKey = acquirer.pix_key || 'chavepix@exemplo.com'
-    const merchantName = acquirer.name.substring(0, 25)
+    // Remove acentos e garante maiúsculas
+    const merchantName = (acquirer.name || 'MERCHANT NAME')
+      .substring(0, 25)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      
+    const merchantCity = 'SAO PAULO'
     
     // Gerar ID único para a transação
-    const txid = this.generateTxId()
+    // TxID deve ter até 25 caracteres alfanuméricos
+    const txid = this.generateTxId().replace(/[^a-zA-Z0-9]/g, '').substring(0, 25)
     
-    // Formato EMV do PIX
-    const payload = [
-      '00020126', // Payload Format Indicator
-      '580014br.gov.bcb.pix', // Merchant Account Information
-      `0136${pixKey}`, // Chave PIX
-      '52040000', // Merchant Category Code
-      '5303986', // Transaction Currency (986 = BRL)
-      `54${String(amount.toFixed(2)).length.toString().padStart(2, '0')}${amount.toFixed(2)}`,
-      '5802BR', // Country Code
-      `59${merchantName.length.toString().padStart(2, '0')}${merchantName}`,
-      '6009SAO PAULO',
-      `62${(7 + txid.length).toString().padStart(2, '0')}05${txid.length.toString().padStart(2, '0')}${txid}`,
-      '6304' // CRC16 placeholder
-    ].join('')
+    // Helper para formatar campos TLV
+    const formatField = (id: string, value: string) => {
+      const len = value.length.toString().padStart(2, '0')
+      return `${id}${len}${value}`
+    }
+    
+    // Montar Payload
+    let payload = formatField('00', '01') // Payload Format Indicator
+    
+    // Merchant Account Information (26)
+    const gui = formatField('00', 'br.gov.bcb.pix')
+    const key = formatField('01', pixKey)
+    payload += formatField('26', gui + key)
+    
+    payload += formatField('52', '0000') // Merchant Category Code
+    payload += formatField('53', '986')  // Transaction Currency (BRL)
+    payload += formatField('54', amount.toFixed(2)) // Amount
+    payload += formatField('58', 'BR')   // Country Code
+    payload += formatField('59', merchantName) // Merchant Name
+    payload += formatField('60', merchantCity) // Merchant City
+    
+    // Additional Data Field Template (62)
+    const txIdField = formatField('05', txid)
+    payload += formatField('62', txIdField)
+    
+    // CRC16 (63)
+    payload += '6304'
     
     // Calcular CRC16
     const crc = this.calculateCRC16(payload)
