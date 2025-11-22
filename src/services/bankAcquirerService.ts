@@ -530,7 +530,8 @@ class BankAcquirerService {
       }
       
       // 7. Para outros bancos: gerar código PIX simulado
-      const pixCode = this.generatePixCode(params.amount, acquirer)
+      const txid = this.generateTxId().replace(/[^a-zA-Z0-9]/g, '').substring(0, 25)
+      const pixCode = this.generatePixCode(params.amount, acquirer, txid)
       const pixQrCode = await this.generateQRCode(pixCode)
       
       // 8. Criar transação no banco com código simulado
@@ -545,6 +546,7 @@ class BankAcquirerService {
         pix_qr_code: pixQrCode,
         pix_key: acquirer.pix_key,
         pix_key_type: acquirer.pix_key_type,
+        pix_txid: txid,
         status: 'pending',
         description: params.description,
         expires_at: expiresAt.toISOString(),
@@ -587,7 +589,7 @@ class BankAcquirerService {
   /**
    * Gera código PIX EMV (padrão brasileiro)
    */
-  private generatePixCode(amount: number, acquirer: BankAcquirer): string {
+  private generatePixCode(amount: number, acquirer: BankAcquirer, txid: string): string {
     const pixKey = acquirer.pix_key || 'chavepix@exemplo.com'
     // Remove acentos e garante maiúsculas
     const merchantName = (acquirer.name || 'MERCHANT NAME')
@@ -597,10 +599,6 @@ class BankAcquirerService {
       .toUpperCase()
       
     const merchantCity = 'SAO PAULO'
-    
-    // Gerar ID único para a transação
-    // TxID deve ter até 25 caracteres alfanuméricos
-    const txid = this.generateTxId().replace(/[^a-zA-Z0-9]/g, '').substring(0, 25)
     
     // Helper para formatar campos TLV
     const formatField = (id: string, value: string) => {
