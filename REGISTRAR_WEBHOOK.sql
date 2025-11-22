@@ -1,52 +1,35 @@
--- ==================================================
--- REGISTRAR WEBHOOK BANCO INTER
--- ==================================================
+-- =================================================
+-- SCRIPT PARA REGISTRAR WEBHOOK DO BANCO INTER
+-- =================================================
+-- Execute este script no SQL Editor do Supabase
 
--- 0. Ativar extensão HTTP (necessário)
-CREATE EXTENSION IF NOT EXISTS "http" WITH SCHEMA "extensions";
+-- 1. Defina a URL do seu webhook
+--    Esta é a URL da função que o Banco Inter vai chamar
+set vars.webhook_url = 'https://plbcnvnsvytzqrhgybjd.supabase.co/functions/v1/banco-inter-webhook';
 
--- 1. Descobrir a URL do seu projeto Supabase
--- Substitua 'SUA_PROJECT_REF' pelo ID do seu projeto (ex: plbcnvnsvytzqrhgybjd)
--- A URL será: https://SUA_PROJECT_REF.supabase.co/functions/v1/banco-inter-webhook
+-- 2. Invoque a Edge Function para registrar o webhook
+select
+  net.http_post(
+    url := 'https://plbcnvnsvytzqrhgybjd.supabase.co/functions/v1/banco-inter-register-webhook',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer seu_anon_key_aqui"}'::jsonb,
+    body := jsonb_build_object('webhookUrl', current_setting('vars.webhook_url'))
+  ) as response;
 
-DO $$
-DECLARE
-  project_ref text := 'plbcnvnsvytzqrhgybjd'; -- SEU PROJECT REF AQUI
-  webhook_url text;
-  register_url text;
-  response_status int;
-  response_body text;
-  request_id int;
-BEGIN
-  webhook_url := 'https://' || project_ref || '.supabase.co/functions/v1/banco-inter-webhook';
-  register_url := 'https://' || project_ref || '.supabase.co/functions/v1/banco-inter-register-webhook';
+-- =================================================
+-- SCRIPT PARA TESTAR OS CERTIFICADOS
+-- =================================================
+-- Execute este script para diagnosticar problemas com os certificados
 
-  RAISE NOTICE 'Tentando registrar webhook: %', webhook_url;
+select
+  net.http_post(
+    url := 'https://plbcnvnsvytzqrhgybjd.supabase.co/functions/v1/debug-cert',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer seu_anon_key_aqui"}'::jsonb,
+    body := '{}'::jsonb
+  ) as response;
 
-  -- Chamar a Edge Function para registrar usando a extensão http
-  -- Nota: Removido o cast explícito que estava dando erro
-  SELECT 
-    status,
-    content::text
-  INTO
-    response_status,
-    response_body
-  FROM
-    extensions.http((
-      'POST',
-      register_url,
-      ARRAY[extensions.http_header('Content-Type', 'application/json')],
-      'application/json',
-      json_build_object('webhookUrl', webhook_url)::text
-    ));
-
-  RAISE NOTICE 'Status: %', response_status;
-  RAISE NOTICE 'Resposta: %', response_body;
-
-  IF response_status = 200 THEN
-    RAISE NOTICE '✅ Webhook registrado com sucesso!';
-  ELSE
-    RAISE NOTICE '❌ Erro ao registrar webhook.';
-  END IF;
-
-END $$;
+-- =================================================
+-- NOTAS:
+-- 1. Substitua 'seu_anon_key_aqui' pela sua chave anônima (public) do Supabase.
+-- 2. Após executar, verifique os logs da Edge Function no dashboard do Supabase.
+-- 3. Se o registro for bem-sucedido, você verá uma mensagem de sucesso.
+-- 4. Se falhar, os logs detalhados ajudarão a identificar o problema.
